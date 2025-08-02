@@ -6,8 +6,8 @@ Um jogo de space shooter clássico desenvolvido com Three.js em arquitetura mono
 ## Fase 1: Core Game (Single Player)
 
 ### 1.1 Setup do Monorepo
-- [ ] Configurar Yarn Workspaces
-- [ ] Criar packages (shared, client, server)
+- [x] Configurar Yarn Workspaces
+- [x] Criar packages (shared, client, server)
 - [ ] Setup TypeScript para todo o projeto
 - [ ] Configurar Vite para cliente
 - [ ] Configurar scripts de desenvolvimento
