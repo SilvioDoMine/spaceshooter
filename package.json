@@ -1,11 +1,23 @@
 {
-  "name": "spaceshooter",
-  "version": "1.0.0",
+  "name": "spaceshooter-monorepo",
+  "private": true,
+  "version": "0.0.1",
   "description": "Spaceshooter JS Game",
   "main": "index.js",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "concurrently \"yarn workspace @spaceshooter/client dev\" \"yarn workspace @spaceshooter/server dev\"",
+    "dev:client": "yarn workspace @spaceshooter/client dev",
+    "dev:server": "yarn workspace @spaceshooter/server dev",
+    "build": "yarn workspaces run build"
   },
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "packageManager": "yarn@4.9.2+sha512.1fc009bc09d13cfd0e19efa44cbfc2b9cf6ca61482725eb35bbc5e257e093ebf4130db6dfe15d604ff4b79efd8e1e8e99b25fa7d0a6197c9f9826358d4d65c3c",
+  "devDependencies": {
+    "concurrently": "^9.2.0",
+    "typescript": "^5.9.2"
+  }
 }

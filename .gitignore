@@ -49,3 +49,8 @@ Thumbs.db
 # Temporary files
 tmp/
 temp/
+
+# Yarn specific files
+.yarn/
+.pnp.cjs
+.pnp.loader.mjs
