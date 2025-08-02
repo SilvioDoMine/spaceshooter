@@ -27,8 +27,9 @@ Um jogo de space shooter clássico desenvolvido com Three.js em arquitetura mono
 - [x] Configurar Vite e dependências (Three.js)
 - [x] Estrutura básica do cliente
 - [x] Integração com package shared funcionando
-- [ ] Setup Three.js e cena básica
-- [ ] Sistema de renderização
+- [x] Setup Three.js e cena básica
+- [x] Sistema de renderização (RenderingSystem)
+- [x] Configuração mobile-friendly (sem zoom)
 - [ ] Sistema de input
 - [ ] Loading de assets (modelos, texturas)
 - [ ] Sistema de áudio
