@@ -10,10 +10,17 @@ let renderingSystem: RenderingSystem;
 let inputSystem: InputSystem;
 let testCube: THREE.Mesh;
 
-function init() {
+async function init() {
   // Inicializar sistema de renderização
   renderingSystem = new RenderingSystem();
   renderingSystem.attachToDOM('game-container');
+
+  // Carregar assets básicos
+  console.log('Carregando assets...');
+  await renderingSystem.loadAssets((progress) => {
+    console.log(`Loading progress: ${progress.toFixed(1)}%`);
+  });
+  console.log('Assets carregados!');
 
   // Inicializar sistema de input
   inputSystem = new InputSystem();
@@ -29,9 +36,12 @@ function onInputChange(action: keyof InputState, pressed: boolean) {
 
 function createTestCube() {
   const geometry = new THREE.BoxGeometry(1, 1, 1);
-  const material = new THREE.MeshPhongMaterial({ 
+  
+  // Usar AssetLoader para criar material
+  const material = renderingSystem.createTexturedMaterial({
     color: 0x00ff00,
-    shininess: 100 
+    roughness: 0.3,
+    metalness: 0.7
   });
   
   testCube = new THREE.Mesh(geometry, material);

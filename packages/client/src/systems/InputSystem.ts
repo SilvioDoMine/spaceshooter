@@ -9,6 +9,44 @@ export interface InputState {
 
 export type InputCallback = (action: keyof InputState, pressed: boolean) => void;
 
+/**
+ * Sistema de Input do Space Shooter
+ * 
+ * Captura e processa eventos de teclado, mapeando teclas para ações do jogo.
+ * Suporta múltiplas teclas por ação e callbacks para notificação de mudanças.
+ * 
+ * @example
+ * ```typescript
+ * const inputSystem = new InputSystem();
+ * 
+ * // Adicionar callback para receber eventos
+ * inputSystem.addInputCallback((action, pressed) => {
+ *   console.log(`${action}: ${pressed ? 'pressed' : 'released'}`);
+ * });
+ * 
+ * // Verificar estado atual no loop do jogo
+ * function gameLoop() {
+ *   const input = inputSystem.getInputState();
+ *   
+ *   if (input.up) player.moveUp();
+ *   if (input.left) player.moveLeft();
+ *   if (input.shoot) player.shoot();
+ * }
+ * ```
+ * 
+ * @keymap
+ * - Movimento: WASD, Arrow Keys
+ * - Tiro: Space
+ * - Pause: P, Escape
+ * 
+ * @features
+ * - Mapeamento configurável de teclas
+ * - Estado contínuo para movimento suave
+ * - Callbacks para eventos discretos
+ * - Prevenção de comportamentos padrão do browser
+ * - Reset automático quando janela perde foco
+ * - Prevenção de repeat de teclas
+ */
 export class InputSystem {
   private keysPressed: Set<string> = new Set();
   private inputState: InputState = {
