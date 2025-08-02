@@ -1,4 +1,13 @@
-let number1: number = 1;
-let number2: number = 6;
+import { DEFAULT_GAME_CONFIG, Player, Vector2D } from '@spaceshooter/shared';
 
-console.log("The sum of the two numbers is: " + (number1 + number2));
+console.log('Servidor iniciado');
+console.log('Config do jogo:', DEFAULT_GAME_CONFIG);
+
+const player: Player = {
+  id: 'player1',
+  position: { x: 0, y: 0 },
+  velocity: { x: 0, y: 0 },
+  health: 100
+};
+
+console.log('Player criado:', player);
