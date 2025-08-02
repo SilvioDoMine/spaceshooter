@@ -1,0 +1,17 @@
+{
+  "name": "@spaceshooter/server",
+  "version": "0.0.1",
+  "type": "module",
+  "main": "./src/server.js",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "build": "echo \"Server build complete\"",
+    "start": "node src/server.js"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  },
+  "dependencies": {
+    "@spaceshooter/shared": "workspace:^"
+  }
+}
