@@ -94,4 +94,73 @@ export class Enemy {
 
 ---
 
+### Qual a diferença entre Yarn, Yarn Workspaces e como seria efetivo para nosso projeto?
+
+**Yarn vs NPM:**
+- Yarn e NPM são gerenciadores de pacotes equivalentes
+- Yarn é geralmente mais rápido e tem melhor cache
+- Para projeto simples, tanto faz
+
+**Yarn Workspaces vs Projeto Simples:**
+
+**Projeto Simples (recomendado para começar):**
+```
+spaceshooter/
+├── package.json
+├── src/
+│   ├── shared/     # Código compartilhado (entidades, physics)
+│   ├── client/     # Código só do cliente (rendering, UI)
+│   └── server/     # Código só do servidor (networking, auth)
+└── build/
+    ├── client/     # Build do cliente
+    └── server/     # Build do servidor
+```
+
+**Yarn Workspaces (para projetos maiores):**
+```
+spaceshooter/
+├── package.json           # Configuração principal
+├── packages/
+│   ├── shared/
+│   │   ├── package.json   # Dependências específicas
+│   │   └── src/
+│   ├── client/
+│   │   ├── package.json
+│   │   └── src/
+│   └── server/
+│       ├── package.json
+│       └── src/
+```
+
+**Vantagens do Yarn Workspaces:**
+- Dependências compartilhadas (economiza espaço)
+- Builds independentes por package
+- Versionamento separado
+- Publicação independente no NPM
+
+**Para nosso projeto espacial:**
+- **Comece simples**: Uma pasta com subpastas
+- **Evolua para Workspaces** quando tiver:
+  - Servidor separado rodando
+  - Diferentes dependências cliente/servidor
+  - Equipe maior trabalhando
+
+**Setup Yarn Workspaces** (quando chegar a hora):
+```json
+// package.json raiz
+{
+  "name": "spaceshooter-monorepo",
+  "workspaces": ["packages/*"],
+  "scripts": {
+    "dev:client": "yarn workspace client dev",
+    "dev:server": "yarn workspace server dev",
+    "build": "yarn workspaces run build"
+  }
+}
+```
+
+**Conclusão**: Comece simples, evolua conforme necessidade!
+
+---
+
 <!-- Adicione novas perguntas abaixo desta linha -->

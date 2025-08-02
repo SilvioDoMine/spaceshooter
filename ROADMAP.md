@@ -1,45 +1,46 @@
 # Space Shooter Game - Roadmap
 
 ## Visão Geral do Projeto
-Um jogo de space shooter clássico desenvolvido com Three.js, com arquitetura preparada para futuro modo multiplayer.
+Um jogo de space shooter clássico desenvolvido com Three.js em arquitetura monorepo (Yarn Workspaces), permitindo compartilhamento de código entre cliente e servidor.
 
 ## Fase 1: Core Game (Single Player)
 
-### 1.1 Setup Inicial
-- [ ] Configurar ambiente de desenvolvimento
-- [ ] Setup Three.js básico
-- [ ] Criar estrutura de pastas do projeto
-- [ ] Configurar bundler (Vite/Webpack)
+### 1.1 Setup do Monorepo
+- [ ] Configurar Yarn Workspaces
+- [ ] Criar packages (shared, client, server)
+- [ ] Setup TypeScript para todo o projeto
+- [ ] Configurar Vite para cliente
+- [ ] Configurar scripts de desenvolvimento
 
-### 1.2 Sistema de Renderização
-- [ ] Criar scene, camera e renderer básicos
-- [ ] Implementar sistema de loading de assets
-- [ ] Criar background/skybox espacial
-- [ ] Sistema de partículas básico
+### 1.2 Package Shared
+- [ ] Implementar entidades base (Player, Enemy, Projectile)
+- [ ] Criar sistema de componentes (Transform, Health)
+- [ ] Utils matemáticos compartilhados
+- [ ] Interfaces TypeScript
+- [ ] Sistema de eventos
 
-### 1.3 Entidades do Jogo
-- [ ] Criar classe Player (nave do jogador)
-- [ ] Criar classe Enemy (naves inimigas)
-- [ ] Criar classe Projectile (projéteis)
-- [ ] Sistema de spawn de inimigos
-- [ ] Sistema de colisões
+### 1.3 Package Client (Frontend)
+- [ ] Setup Three.js e cena básica
+- [ ] Sistema de renderização
+- [ ] Sistema de input
+- [ ] Loading de assets (modelos, texturas)
+- [ ] Sistema de áudio
+- [ ] Interface do usuário
 
-### 1.4 Sistema de Input
-- [ ] Captura de eventos de teclado
-- [ ] Movimento da nave do jogador
-- [ ] Sistema de disparo
-- [ ] Controles responsivos
+### 1.4 Package Server (Backend)
+- [ ] Setup Node.js com Express
+- [ ] WebSocket server básico
+- [ ] Sistema de rooms/lobbies
+- [ ] API REST para scores
+- [ ] Sistema de autenticação simples
 
-### 1.5 Game Loop
-- [ ] Update loop principal
-- [ ] Sistema de states (menu, jogo, game over)
+### 1.5 Game Logic Integrado
+- [ ] Sistema de física (compartilhado)
+- [ ] Detecção de colisões
+- [ ] Game loop principal
+- [ ] Sistema de states
+- [ ] Spawn de inimigos
 - [ ] Sistema de pontuação
-- [ ] Condições de vitória/derrota
-
-### 1.6 Audio e Efeitos
-- [ ] Sistema de audio (tiros, explosões)
-- [ ] Efeitos visuais (explosões, trails)
-- [ ] Feedback visual de dano
 
 ## Fase 2: Melhorias e Polish
 
@@ -61,49 +62,105 @@ Um jogo de space shooter clássico desenvolvido com Three.js, com arquitetura pr
 - [ ] Level of detail (LOD)
 - [ ] Otimização de renderização
 
-## Fase 3: Preparação Multiplayer
+## Fase 3: Multiplayer Básico
 
-### 3.1 Refatoração da Arquitetura
-- [ ] Separar lógica de apresentação
-- [ ] Sistema de estados determinístico
-- [ ] Separar input de ações
-- [ ] Sistema de eventos
+### 3.1 Networking Foundation
+- [ ] WebSocket client/server comunicação
+- [ ] Protocolo de mensagens (em shared)
+- [ ] Input commands serializables
+- [ ] Estado do jogo compartilhável
 
-### 3.2 Networking Foundation
-- [ ] Escolher tecnologia (WebSockets/WebRTC)
-- [ ] Implementar client-server básico
-- [ ] Sistema de sincronização
-- [ ] Handling de latência
+### 3.2 Sincronização Básica
+- [ ] Server-side game loop
+- [ ] Client-side prediction
+- [ ] State reconciliation
+- [ ] Basic lag compensation
 
-### 3.3 Multiplayer Features
-- [ ] Lobby system
-- [ ] Matchmaking
-- [ ] Sincronização de jogadores
-- [ ] Sistema de rooms
+### 3.3 Features Multiplayer
+- [ ] Sistema de rooms funcional
+- [ ] Matchmaking simples
+- [ ] Spectator mode
+- [ ] Reconnection handling
+
+## Fase 4: Multiplayer Avançado
+
+### 4.1 Otimizações de Rede
+- [ ] Delta compression
+- [ ] Interest management
+- [ ] Adaptive tick rate
+- [ ] Bandwidth optimization
+
+### 4.2 Features Avançadas
+- [ ] Replay system
+- [ ] Anti-cheat measures
+- [ ] Leaderboards
+- [ ] Tournament mode
 
 ## Tecnologias e Decisões
 
-### Stack Tecnológico
-- **Renderização**: Three.js
-- **Linguagem**: JavaScript ou TypeScript (a decidir)
-- **Bundler**: Vite (recomendado para desenvolvimento rápido)
-- **Audio**: Web Audio API ou Howler.js
-- **Networking futuro**: Socket.io ou ws
+### Stack Tecnológico Final
+- **Arquitetura**: Yarn Workspaces (Monorepo)
+- **Linguagem**: TypeScript
+- **Frontend**: Three.js + Vite
+- **Backend**: Node.js + Express + WebSockets
+- **Shared**: Código compartilhado (entidades, tipos, utils)
+- **Audio**: Web Audio API
 
-### Estrutura de Arquivos Sugerida
+### Estrutura Final do Monorepo
 ```
-src/
-├── core/           # Game engine básico
-├── entities/       # Player, Enemy, Projectile
-├── systems/        # Input, Rendering, Collision
-├── utils/          # Helpers e utilitários
-├── assets/         # Modelos, texturas, sons
-├── networking/     # Futuro código multiplayer
-└── ui/            # Interface do usuário
+spaceshooter/
+├── package.json              # Workspace config
+├── packages/
+│   ├── shared/               # Código compartilhado
+│   │   └── src/
+│   │       ├── entities/     # Player, Enemy, Projectile
+│   │       ├── components/   # Transform, Health, Movement
+│   │       ├── physics/      # Collision, Movement
+│   │       ├── types/        # TypeScript interfaces
+│   │       └── utils/        # Math, helpers
+│   ├── client/               # Frontend
+│   │   └── src/
+│   │       ├── systems/      # Rendering, Input, Audio
+│   │       ├── ui/           # Interface
+│   │       └── assets/       # Modelos, texturas, sons
+│   └── server/               # Backend
+│       └── src/
+│           ├── systems/      # GameServer, NetworkManager
+│           ├── rooms/        # Room management
+│           └── api/          # REST endpoints
+└── tsconfig.json            # TypeScript config
 ```
 
-## Próximos Passos
-1. Definir se vai usar JS ou TS
-2. Configurar ambiente de desenvolvimento
-3. Implementar protótipo básico (nave + movimento)
-4. Incrementar funcionalidades conforme roadmap
+## Comandos de Desenvolvimento
+
+```bash
+# Setup inicial
+yarn install
+yarn workspace @spaceshooter/shared build
+
+# Desenvolvimento
+yarn dev          # Cliente + Servidor
+yarn dev:client   # Apenas cliente
+yarn dev:server   # Apenas servidor
+
+# Build e deploy
+yarn build        # Build completo
+yarn test         # Testes
+```
+
+## Próximos Passos Imediatos
+
+1. **Configurar monorepo** com Yarn Workspaces
+2. **Implementar package shared** com entidades base
+3. **Desenvolver cliente** com Three.js
+4. **Implementar servidor** básico
+5. **Integrar comunicação** cliente-servidor
+6. **Expandir features** conforme roadmap
+
+## Vantagens da Arquitetura Escolhida
+
+- **Reutilização de código**: Entidades e lógica compartilhadas
+- **Type safety**: TypeScript em todo o projeto
+- **Desenvolvimento eficiente**: Hot reload cliente + servidor
+- **Escalabilidade**: Fácil adição de novos packages
+- **Deploy flexvel**: Cliente e servidor independentes

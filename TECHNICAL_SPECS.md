@@ -1,42 +1,101 @@
 # Especificações Técnicas - Space Shooter
 
-## Configuração do Ambiente de Desenvolvimento
+## Configuração do Monorepo (Yarn Workspaces)
 
-### Opção 1: JavaScript Puro
+### Package.json Raiz
 ```json
-// package.json
 {
-  "name": "spaceshooter",
+  "name": "spaceshooter-monorepo",
+  "private": true,
+  "workspaces": ["packages/*"],
+  "scripts": {
+    "dev": "concurrently \"yarn workspace @spaceshooter/client dev\" \"yarn workspace @spaceshooter/server dev\"",
+    "dev:client": "yarn workspace @spaceshooter/client dev",
+    "dev:server": "yarn workspace @spaceshooter/server dev",
+    "build": "yarn workspaces run build",
+    "test": "yarn workspaces run test",
+    "lint": "yarn workspaces run lint"
+  },
+  "devDependencies": {
+    "concurrently": "^7.6.0",
+    "typescript": "^5.0.0"
+  }
+}
+```
+
+### packages/shared/package.json
+```json
+{
+  "name": "@spaceshooter/shared",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/uuid": "^9.0.0"
+  }
+}
+```
+
+### packages/client/package.json
+```json
+{
+  "name": "@spaceshooter/client",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
   },
+  "dependencies": {
+    "@spaceshooter/shared": "*",
+    "three": "^0.155.0"
+  },
   "devDependencies": {
+    "@types/three": "^0.155.0",
     "vite": "^4.4.0"
+  }
+}
+```
+
+### packages/server/package.json
+```json
+{
+  "name": "@spaceshooter/server",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "build": "echo \"Server build complete\"",
+    "start": "node src/server.js"
   },
   "dependencies": {
-    "three": "^0.155.0"
-  }
-}
-```
-
-### Opção 2: TypeScript
-```json
-// package.json adicional
-{
+    "@spaceshooter/shared": "*",
+    "express": "^4.18.0",
+    "ws": "^8.13.0",
+    "cors": "^2.8.5"
+  },
   "devDependencies": {
-    "typescript": "^5.0.0",
-    "@types/three": "^0.155.0"
+    "@types/express": "^4.17.0",
+    "@types/ws": "^8.5.0",
+    "nodemon": "^3.0.0"
   }
 }
 ```
 
-### Configuração Vite
+### Configuração Vite (packages/client/vite.config.js)
 ```javascript
-// vite.config.js
 import { defineConfig } from 'vite';
+import path from 'path';
 
 export default defineConfig({
   base: './',
@@ -47,8 +106,35 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     assetsDir: 'assets'
+  },
+  resolve: {
+    alias: {
+      '@shared': path.resolve(__dirname, '../shared/src')
+    }
   }
 });
+```
+
+### TypeScript Config (tsconfig.json raiz)
+```json
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": true,
+    "outDir": "./dist"
+  },
+  "references": [
+    { "path": "./packages/shared" },
+    { "path": "./packages/client" },
+    { "path": "./packages/server" }
+  ]
+}
 ```
 
 ## Especificações de Performance
@@ -348,20 +434,44 @@ class PerformanceMonitor {
 ## Build e Deploy
 
 ### Build Configuration
+
+**Cliente (packages/client/vite.config.js):**
 ```javascript
-// vite.config.js production
 export default defineConfig({
   build: {
     minify: 'terser',
     rollupOptions: {
       output: {
         manualChunks: {
-          three: ['three']
+          three: ['three'],
+          shared: ['@spaceshooter/shared']
         }
       }
     }
   }
 });
+```
+
+**Servidor (packages/server):**
+```json
+// package.json scripts
+{
+  "scripts": {
+    "build": "echo \"Server is Node.js, no build needed\"",
+    "start": "node src/server.js"
+  }
+}
+```
+
+**Shared (packages/shared):**
+```json
+// package.json scripts
+{
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch"
+  }
+}
 ```
 
 ### Asset Optimization

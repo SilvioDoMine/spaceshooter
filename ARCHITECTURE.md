@@ -1,5 +1,38 @@
 # Arquitetura do Space Shooter
 
+## Estrutura do Monorepo (Yarn Workspaces)
+
+```
+spaceshooter/
+├── package.json                # Configuração principal do monorepo
+├── packages/
+│   ├── shared/                 # Código compartilhado cliente/servidor
+│   │   ├── package.json
+│   │   └── src/
+│   │       ├── entities/       # Player, Enemy, Projectile
+│   │       ├── components/     # Transform, Health, Movement
+│   │       ├── physics/        # PhysicsSystem, CollisionDetector
+│   │       ├── types/          # TypeScript interfaces
+│   │       ├── utils/          # MathUtils, constantes
+│   │       └── events/         # EventBus, eventos do jogo
+│   ├── client/                 # Frontend (browser)
+│   │   ├── package.json
+│   │   └── src/
+│   │       ├── systems/        # RenderingSystem, InputSystem, AudioSystem
+│   │       ├── ui/             # Interface do usuário
+│   │       ├── assets/         # Modelos, texturas, sons
+│   │       └── main.js         # Entry point do cliente
+│   └── server/                 # Backend (Node.js)
+│       ├── package.json
+│       └── src/
+│           ├── systems/        # NetworkingSystem, MatchmakingSystem
+│           ├── rooms/          # Gerenciamento de salas
+│           ├── api/            # REST API
+│           └── server.js       # Entry point do servidor
+├── .gitignore
+└── README.md
+```
+
 ## Separação de Responsabilidades
 
 ### 1. Sistema de Renderização (Rendering System)
@@ -188,23 +221,36 @@ EventBus ←→ AudioSystem ←→ UISystem ←→ StateManager ←→ AssetMana
 
 ## Preparação para Multiplayer
 
-### Separação Cliente/Servidor
+### Separação Cliente/Servidor no Monorepo
+
+**packages/client/ (Frontend)**
 ```
-Client Side:
-- RenderingSystem
-- InputSystem  
-- UISystem
-- AudioSystem
+- RenderingSystem (Three.js)
+- InputSystem (Keyboard, Mouse)
+- UISystem (HTML/CSS)
+- AudioSystem (Web Audio API)
+- AssetLoader (Texturas, Modelos)
+```
 
-Shared (Client + Server):
-- EntitySystem
-- PhysicsSystem
-- GameLogic
+**packages/shared/ (Código Compartilhado)**
+```
+- EntitySystem (Player, Enemy, Projectile)
+- PhysicsSystem (Colisões, Movimento)
+- GameLogic (Regras do jogo)
+- Components (Transform, Health, etc)
+- Types (Interfaces TypeScript)
+- Utils (MathUtils, constantes)
+- Events (EventBus)
+```
 
-Server Side:
-- NetworkingSystem
-- AuthenticationSystem
-- MatchmakingSystem
+**packages/server/ (Backend)**
+```
+- NetworkingSystem (WebSockets)
+- AuthenticationSystem (Login, tokens)
+- MatchmakingSystem (Salas, lobbies)
+- RoomManager (Gerenciar partidas)
+- API (REST endpoints)
+- Database (Scores, stats)
 ```
 
 ### Comunicação Determinística
@@ -212,46 +258,65 @@ Server Side:
 - Servidor processa lógica e retorna state
 - Cliente faz interpolação/predição
 
-## Estrutura de Pastas Detalhada
+## Scripts de Desenvolvimento (package.json raiz)
 
-```
-src/
-├── core/
-│   ├── Engine.js           # Motor principal do jogo
-│   ├── EventBus.js         # Sistema de eventos
-│   └── GameLoop.js         # Loop principal do jogo
-├── systems/
-│   ├── RenderingSystem.js
-│   ├── InputSystem.js
-│   ├── PhysicsSystem.js
-│   ├── AudioSystem.js
-│   └── UISystem.js
-├── entities/
-│   ├── Player.js
-│   ├── Enemy.js
-│   ├── Projectile.js
-│   └── PowerUp.js
-├── components/
-│   ├── Transform.js
-│   ├── Health.js
-│   ├── Movement.js
-│   └── Renderer.js
-├── states/
-│   ├── MenuState.js
-│   ├── PlayingState.js
-│   └── GameOverState.js
-├── utils/
-│   ├── MathUtils.js
-│   ├── ObjectPool.js
-│   └── AssetLoader.js
-├── networking/           # Para futura implementação
-│   ├── Client.js
-│   ├── NetworkManager.js
-│   └── Protocol.js
-└── assets/
-    ├── models/
-    ├── textures/
-    └── sounds/
+```json
+{
+  "name": "spaceshooter-monorepo",
+  "workspaces": ["packages/*"],
+  "scripts": {
+    "dev": "concurrently \"yarn workspace client dev\" \"yarn workspace server dev\"",
+    "dev:client": "yarn workspace client dev",
+    "dev:server": "yarn workspace server dev",
+    "build": "yarn workspaces run build",
+    "build:client": "yarn workspace client build",
+    "build:server": "yarn workspace server build",
+    "test": "yarn workspaces run test",
+    "lint": "yarn workspaces run lint"
+  },
+  "devDependencies": {
+    "concurrently": "^7.6.0"
+  }
+}
 ```
 
-Esta arquitetura permite desenvolvimento incremental e fácil adição do modo multiplayer posteriormente.
+## Dependências por Package
+
+**packages/shared/package.json:**
+```json
+{
+  "name": "@spaceshooter/shared",
+  "dependencies": {
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
+```
+
+**packages/client/package.json:**
+```json
+{
+  "name": "@spaceshooter/client",
+  "dependencies": {
+    "@spaceshooter/shared": "*",
+    "three": "^0.155.0",
+    "vite": "^4.4.0"
+  }
+}
+```
+
+**packages/server/package.json:**
+```json
+{
+  "name": "@spaceshooter/server",
+  "dependencies": {
+    "@spaceshooter/shared": "*",
+    "ws": "^8.13.0",
+    "express": "^4.18.0"
+  }
+}
+```
+
+Esta arquitetura monorepo permite desenvolvimento eficiente com código compartilhado e builds independentes.

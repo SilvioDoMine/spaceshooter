@@ -41,25 +41,44 @@ class Player {
 }
 ```
 
-#### Depois (Multiplayer Ready)
+#### Depois (Multiplayer Ready com Monorepo)
 ```javascript
-// Cliente
-class PlayerClient {
+// packages/client/src/entities/PlayerClient.js
+import { Player } from '@spaceshooter/shared';
+import { NetworkClient } from '../network/NetworkClient.js';
+
+class PlayerClient extends Player {
   update(deltaTime) {
-    this.handleInput();        // Captura input
-    this.sendInputToServer();  // Envia para servidor
-    this.predictMovement();    // Predição local
-    this.render();            // Renderização
+    this.handleInput();                    // Captura input
+    NetworkClient.sendInput(this.input);  // Envia para servidor
+    this.predictMovement(deltaTime);       // Predição local
+    this.render();                        // Renderização
   }
 }
 
-// Servidor
-class PlayerServer {
+// packages/server/src/entities/PlayerServer.js
+import { Player } from '@spaceshooter/shared';
+
+class PlayerServer extends Player {
   update(deltaTime, inputs) {
-    this.processInputs(inputs);  // Processa inputs
-    this.updatePosition();       // Física autoritativa
-    this.checkCollisions();     // Colisão autoritativa
-    this.broadcastState();      // Envia estado
+    this.processInputs(inputs);    // Processa inputs
+    this.updatePosition(deltaTime); // Física autoritativa
+    this.checkCollisions();       // Colisão autoritativa
+    this.broadcastState();        // Envia estado
+  }
+}
+
+// packages/shared/src/entities/Player.js
+export class Player {
+  constructor() {
+    this.position = { x: 0, y: 0, z: 0 };
+    this.velocity = { x: 0, y: 0, z: 0 };
+    this.health = 100;
+  }
+  
+  // Lógica compartilhada cliente/servidor
+  applyInput(input, deltaTime) {
+    // Implementação compartilhada
   }
 }
 ```
@@ -131,30 +150,63 @@ const shootCommand = new InputCommand(
 
 ## Tecnologias de Networking
 
-### WebSockets (Recomendado)
+### WebSockets com Monorepo
+
+**packages/server/src/NetworkManager.js:**
 ```javascript
-// Servidor (Node.js + Socket.io)
-const io = require('socket.io')(3000);
+import { WebSocketServer } from 'ws';
+import { InputCommand } from '@spaceshooter/shared';
 
-io.on('connection', (socket) => {
-  socket.on('player:input', (inputCommand) => {
-    // Processar input do jogador
-    gameServer.processInput(socket.id, inputCommand);
-  });
+class NetworkManager {
+  constructor(gameServer) {
+    this.gameServer = gameServer;
+    this.wss = new WebSocketServer({ port: 8080 });
+    this.clients = new Map();
+  }
   
-  socket.on('join:room', (roomId) => {
-    socket.join(roomId);
-  });
-});
+  start() {
+    this.wss.on('connection', (ws) => {
+      const playerId = this.generatePlayerId();
+      this.clients.set(playerId, ws);
+      
+      ws.on('message', (data) => {
+        const message = JSON.parse(data);
+        this.handleMessage(playerId, message);
+      });
+      
+      ws.on('close', () => {
+        this.clients.delete(playerId);
+        this.gameServer.removePlayer(playerId);
+      });
+    });
+  }
+}
+```
 
-// Cliente
-const socket = io('ws://localhost:3000');
+**packages/client/src/NetworkClient.js:**
+```javascript
+import { InputCommand } from '@spaceshooter/shared';
 
-socket.on('game:state', (gameState) => {
-  game.updateFromServer(gameState);
-});
-
-socket.emit('player:input', inputCommand);
+class NetworkClient {
+  constructor() {
+    this.ws = new WebSocket('ws://localhost:8080');
+    this.playerId = null;
+  }
+  
+  connect() {
+    this.ws.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+      this.handleServerMessage(message);
+    };
+  }
+  
+  sendInput(inputCommand) {
+    this.ws.send(JSON.stringify({
+      type: 'player:input',
+      data: inputCommand.serialize()
+    }));
+  }
+}
 ```
 
 ### WebRTC (Para P2P - Futuro)
@@ -226,31 +278,41 @@ class LagCompensation {
 
 ## Estrutura do Servidor
 
-### Servidor Básico (Node.js)
+### Estrutura do Servidor no Monorepo
+
+**packages/server/src/GameServer.js:**
 ```javascript
-// server/GameServer.js
+import { GameState, Player } from '@spaceshooter/shared';
+import { WebSocketServer } from 'ws';
+
 class GameServer {
   constructor() {
     this.gameState = new GameState();
     this.players = new Map();
     this.rooms = new Map();
-    this.tickRate = 60; // Updates por segundo
+    this.tickRate = 60;
+    this.wss = new WebSocketServer({ port: 8080 });
   }
   
   start() {
+    this.setupWebSocketHandlers();
     setInterval(() => {
       this.update();
     }, 1000 / this.tickRate);
   }
   
+  setupWebSocketHandlers() {
+    this.wss.on('connection', (ws) => {
+      ws.on('message', (data) => {
+        const message = JSON.parse(data);
+        this.handleMessage(ws, message);
+      });
+    });
+  }
+  
   update() {
-    // Processa inputs de todos os jogadores
     this.processAllInputs();
-    
-    // Atualiza física do jogo
     this.updateGameLogic();
-    
-    // Envia estado para todos os clientes
     this.broadcastGameState();
   }
 }
@@ -338,31 +400,49 @@ const UPDATE_RATES = {
 };
 ```
 
-## Implementação por Fases
+## Implementação por Fases no Monorepo
 
-### Fase 1: Networking Foundation
-1. Configurar WebSocket server básico
-2. Implementar comunicação cliente-servidor
-3. Sistema de rooms simples
-4. Sincronização básica de posição
+### Fase 1: Setup do Monorepo
+1. **Configurar Yarn Workspaces**
+   ```bash
+   yarn install
+   yarn workspace @spaceshooter/shared build
+   ```
 
-### Fase 2: Game Logic Distribution
-1. Mover física para servidor
-2. Implementar input commands
-3. Client-side prediction básica
-4. Server reconciliation
+2. **Mover código comum para shared**
+   - Entidades (Player, Enemy, Projectile)
+   - Componentes (Transform, Health)
+   - Utils e tipos TypeScript
 
-### Fase 3: Otimizações
-1. Lag compensation
-2. Delta compression
-3. Interest management
-4. Reconnection handling
+3. **Setup básico cliente/servidor**
+   ```bash
+   yarn dev:client  # Roda Vite
+   yarn dev:server  # Roda Node.js
+   ```
 
-### Fase 4: Features Avançadas
-1. Spectator mode
-2. Replay system
-3. Anti-cheat measures
-4. Matchmaking
+### Fase 2: Networking Foundation
+1. **WebSocket server** em `packages/server/`
+2. **Cliente WebSocket** em `packages/client/`
+3. **Protocolo compartilhado** em `packages/shared/`
+4. **Sistema de rooms** básico
+
+### Fase 3: Game Logic Distribution
+1. **Física no servidor** usando `@spaceshooter/shared`
+2. **Input commands** definidos em shared
+3. **Client-side prediction** no cliente
+4. **State synchronization**
+
+### Fase 4: Otimizações
+1. **Lag compensation**
+2. **Delta compression** 
+3. **Interest management**
+4. **Reconnection handling**
+
+### Fase 5: Features Avançadas
+1. **Spectator mode**
+2. **Replay system**
+3. **Anti-cheat measures**
+4. **Matchmaking API**
 
 ## Considerações de Deploy
 
@@ -390,12 +470,60 @@ const metrics = {
 - Redis para cache e sessões
 - Message queue para comunicação entre servers
 
+## Comandos de Desenvolvimento
+
+```bash
+# Instalar dependências
+yarn install
+
+# Desenvolvimento (cliente + servidor)
+yarn dev
+
+# Apenas cliente
+yarn dev:client
+
+# Apenas servidor  
+yarn dev:server
+
+# Build completo
+yarn build
+
+# Testes
+yarn test
+```
+
+## Estrutura de Arquivos Final
+
+```
+spaceshooter/
+├── packages/
+│   ├── shared/
+│   │   └── src/
+│   │       ├── entities/     # Player, Enemy, Projectile
+│   │       ├── components/   # Transform, Health, Movement
+│   │       ├── physics/      # CollisionDetector, Physics
+│   │       ├── network/      # InputCommand, Protocol
+│   │       └── types/        # TypeScript interfaces
+│   ├── client/
+│   │   └── src/
+│   │       ├── systems/      # Rendering, Input, Audio
+│   │       ├── network/      # NetworkClient
+│   │       └── ui/           # Interface
+│   └── server/
+│       └── src/
+│           ├── systems/      # GameServer, NetworkManager
+│           ├── rooms/        # RoomManager
+│           └── api/          # REST endpoints
+└── package.json             # Workspace config
+```
+
 ## Próximos Passos
 
-1. **Completar single player primeiro**
-2. **Implementar networking foundation**
-3. **Refatorar código existente**
-4. **Testar com múltiplos clientes locais**
-5. **Deploy e teste de latência**
+1. **Configurar monorepo** com Yarn Workspaces
+2. **Mover código para packages/shared**
+3. **Implementar cliente básico** 
+4. **Implementar servidor básico**
+5. **Testar comunicação local**
+6. **Deploy e teste de latência**
 
-A transição deve ser gradual, mantendo sempre uma versão funcional do jogo.
+A estrutura monorepo facilita o compartilhamento de código e desenvolvimento paralelo cliente/servidor.
