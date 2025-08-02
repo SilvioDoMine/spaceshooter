@@ -2,15 +2,17 @@
   "name": "@spaceshooter/server",
   "version": "0.0.1",
   "type": "module",
-  "main": "./src/server.js",
+  "main": "./src/server.ts",
   "scripts": {
-    "dev": "nodemon src/server.js",
-    "build": "echo \"Server build complete\"",
-    "start": "node src/server.js"
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "build:dev": "tsc && tsx src/server.ts",
+    "start": "tsx src/server.ts"
   },
   "devDependencies": {
     "@types/node": "^24.1.0",
-    "nodemon": "^3.1.10"
+    "tsx": "^4.16.5",
+    "typescript": "^5.9.2"
   },
   "dependencies": {
     "@spaceshooter/shared": "workspace:^"
