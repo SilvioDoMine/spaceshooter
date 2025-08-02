@@ -30,7 +30,7 @@ Um jogo de space shooter clássico desenvolvido com Three.js em arquitetura mono
 - [x] Setup Three.js e cena básica
 - [x] Sistema de renderização (RenderingSystem)
 - [x] Configuração mobile-friendly (sem zoom)
-- [ ] Sistema de input
+- [x] Sistema de input (InputSystem com WASD/Espaço/P)
 - [ ] Loading de assets (modelos, texturas)
 - [ ] Sistema de áudio
 - [ ] Interface do usuário
