@@ -6,7 +6,7 @@
         "target": "ES2022",
         "lib": ["ES2022", "DOM"],
         "skipLibCheck": true,
-        "typeRoots": ["node_modules/@types"]
+        "typeRoots": ["node_modules/@types"],
     },
     "include": ["src/**/*"],
     "exclude": ["dist", "node_modules"]
