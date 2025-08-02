@@ -391,6 +391,7 @@ __metadata:
   resolution: "@spaceshooter/client@workspace:packages/client"
   dependencies:
     "@spaceshooter/shared": "workspace:^"
+    "@types/node": "npm:^24.1.0"
     "@types/three": "npm:^0.178.1"
     three: "npm:^0.179.1"
     vite: "npm:^7.0.6"
@@ -402,6 +403,7 @@ __metadata:
   resolution: "@spaceshooter/server@workspace:packages/server"
   dependencies:
     "@spaceshooter/shared": "workspace:^"
+    "@types/node": "npm:^24.1.0"
     nodemon: "npm:^3.1.10"
   languageName: unknown
   linkType: soft
@@ -423,6 +425,15 @@ __metadata:
   version: 1.0.8
   resolution: "@types/estree@npm:1.0.8"
   checksum: 10c0/39d34d1afaa338ab9763f37ad6066e3f349444f9052b9676a7cc0252ef9485a41c6d81c9c4e0d26e9077993354edf25efc853f3224dd4b447175ef62bdcc86a5
+  languageName: node
+  linkType: hard
+
+"@types/node@npm:^24.1.0":
+  version: 24.1.0
+  resolution: "@types/node@npm:24.1.0"
+  dependencies:
+    undici-types: "npm:~7.8.0"
+  checksum: 10c0/6c4686bc144f6ce7bffd4cadc3e1196e2217c1da4c639c637213719c8a3ee58b6c596b994befcbffeacd9d9eb0c3bff6529d2bc27da5d1cb9d58b1da0056f9f4
   languageName: node
   linkType: hard
 
@@ -1777,6 +1788,13 @@ __metadata:
   version: 2.0.5
   resolution: "undefsafe@npm:2.0.5"
   checksum: 10c0/96c0466a5fbf395917974a921d5d4eee67bca4b30d3a31ce7e621e0228c479cf893e783a109af6e14329b52fe2f0cb4108665fad2b87b0018c0df6ac771261d5
+  languageName: node
+  linkType: hard
+
+"undici-types@npm:~7.8.0":
+  version: 7.8.0
+  resolution: "undici-types@npm:7.8.0"
+  checksum: 10c0/9d9d246d1dc32f318d46116efe3cfca5a72d4f16828febc1918d94e58f6ffcf39c158aa28bf5b4fc52f410446bc7858f35151367bd7a49f21746cab6497b709b
   languageName: node
   linkType: hard
 

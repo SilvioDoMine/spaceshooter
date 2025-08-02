@@ -9,6 +9,7 @@
     "start": "node src/server.js"
   },
   "devDependencies": {
+    "@types/node": "^24.1.0",
     "nodemon": "^3.1.10"
   },
   "dependencies": {
