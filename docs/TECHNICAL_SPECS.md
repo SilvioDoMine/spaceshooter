@@ -2,23 +2,54 @@
 
 ## Configuração do Monorepo (Yarn Workspaces)
 
+### Yarn Workspaces Setup
+Este projeto utiliza **Yarn 4** com workspaces para gerenciar o monorepo. As dependências são **hoisted** para a raiz quando possível, com exceções específicas para ferramentas que precisam de dependências locais (como Vite).
+
+#### Estrutura de node_modules:
+- **Raiz**: Dependências compartilhadas (TypeScript, concurrently)
+- **packages/client**: Apenas dependências específicas do Vite
+- **packages/server**: Sem node_modules (usa dependências da raiz)
+- **packages/shared**: Sem node_modules (usa dependências da raiz)
+
+#### Configuração do IDE (VS Code):
+```json
+// .vscode/settings.json
+{
+  "typescript.preferences.includePackageJsonAutoImports": "on",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "typescript.tsdk": ".yarn/sdks/typescript/lib"
+}
+```
+
+#### Comandos importantes:
+```bash
+# Regenerar SDKs do Yarn (após mudanças de dependências)
+yarn dlx @yarnpkg/sdks vscode
+
+# Instalar dependência em workspace específico
+yarn workspace @spaceshooter/client add three
+
+# Rodar comando em todos os workspaces
+yarn workspaces run build
+```
+
 ### Package.json Raiz
 ```json
 {
   "name": "spaceshooter-monorepo",
   "private": true,
+  "version": "0.0.1",
   "workspaces": ["packages/*"],
   "scripts": {
     "dev": "concurrently \"yarn workspace @spaceshooter/client dev\" \"yarn workspace @spaceshooter/server dev\"",
     "dev:client": "yarn workspace @spaceshooter/client dev",
     "dev:server": "yarn workspace @spaceshooter/server dev",
-    "build": "yarn workspaces run build",
-    "test": "yarn workspaces run test",
-    "lint": "yarn workspaces run lint"
+    "build": "yarn workspaces run build"
   },
+  "packageManager": "yarn@4.9.2",
   "devDependencies": {
-    "concurrently": "^7.6.0",
-    "typescript": "^5.0.0"
+    "concurrently": "^9.2.0",
+    "typescript": "^5.9.2"
   }
 }
 ```
@@ -27,19 +58,16 @@
 ```json
 {
   "name": "@spaceshooter/shared",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "type": "module",
-  "main": "./src/index.js",
-  "types": "./src/index.d.ts",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch"
   },
-  "dependencies": {
-    "uuid": "^9.0.0"
-  },
   "devDependencies": {
-    "@types/uuid": "^9.0.0"
+    "typescript": "^5.9.2"
   }
 }
 ```
@@ -48,7 +76,7 @@
 ```json
 {
   "name": "@spaceshooter/client",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -56,12 +84,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@spaceshooter/shared": "*",
-    "three": "^0.155.0"
+    "@spaceshooter/shared": "workspace:^",
+    "three": "^0.179.1"
   },
   "devDependencies": {
-    "@types/three": "^0.155.0",
-    "vite": "^4.4.0"
+    "@types/node": "^24.1.0",
+    "@types/three": "^0.178.1",
+    "vite": "^7.0.6"
   }
 }
 ```
@@ -70,24 +99,22 @@
 ```json
 {
   "name": "@spaceshooter/server",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "type": "module",
-  "main": "src/server.js",
+  "main": "./src/server.ts",
   "scripts": {
-    "dev": "nodemon src/server.js",
-    "build": "echo \"Server build complete\"",
-    "start": "node src/server.js"
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "build:dev": "tsc && tsx src/server.ts",
+    "start": "tsx src/server.ts"
   },
   "dependencies": {
-    "@spaceshooter/shared": "*",
-    "express": "^4.18.0",
-    "ws": "^8.13.0",
-    "cors": "^2.8.5"
+    "@spaceshooter/shared": "workspace:^"
   },
   "devDependencies": {
-    "@types/express": "^4.17.0",
-    "@types/ws": "^8.5.0",
-    "nodemon": "^3.0.0"
+    "@types/node": "^24.1.0",
+    "tsx": "^4.16.5",
+    "typescript": "^5.9.2"
   }
 }
 ```
@@ -95,7 +122,6 @@
 ### Configuração Vite (packages/client/vite.config.js)
 ```javascript
 import { defineConfig } from 'vite';
-import path from 'path';
 
 export default defineConfig({
   base: './',
@@ -105,11 +131,15 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    assetsDir: 'assets'
-  },
-  resolve: {
-    alias: {
-      '@shared': path.resolve(__dirname, '../shared/src')
+    assetsDir: 'assets',
+    minify: 'terser',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          three: ['three'],
+          shared: ['@spaceshooter/shared']
+        }
+      }
     }
   }
 });
@@ -119,8 +149,9 @@ export default defineConfig({
 ```json
 {
   "compilerOptions": {
-    "target": "ES2020",
+    "target": "ES2022",
     "module": "ESNext",
+    "lib": ["ES2022"],
     "moduleResolution": "node",
     "strict": true,
     "esModuleInterop": true,
@@ -457,8 +488,9 @@ export default defineConfig({
 // package.json scripts
 {
   "scripts": {
-    "build": "echo \"Server is Node.js, no build needed\"",
-    "start": "node src/server.js"
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "tsx src/server.ts"
   }
 }
 ```

@@ -8,18 +8,25 @@ Um jogo de space shooter clássico desenvolvido com Three.js em arquitetura mono
 ### 1.1 Setup do Monorepo
 - [x] Configurar Yarn Workspaces
 - [x] Criar packages (shared, client, server)
-- [ ] Setup TypeScript para todo o projeto
-- [ ] Configurar Vite para cliente
-- [ ] Configurar scripts de desenvolvimento
+- [x] Setup TypeScript para todo o projeto
+- [x] Configurar Vite para cliente
+- [x] Configurar scripts de desenvolvimento
+- [x] Configurar VS Code workspace
+- [x] Setup Yarn SDKs para TypeScript
 
 ### 1.2 Package Shared
-- [ ] Implementar entidades base (Player, Enemy, Projectile)
+- [x] Criar estrutura básica do package shared
+- [x] Configurar build e tipos TypeScript
+- [x] Implementar interfaces básicas (GameConfig, Vector2D, Player)
+- [x] Utils matemáticos compartilhados (clamp function)
+- [ ] Implementar entidades base completas (Player, Enemy, Projectile)
 - [ ] Criar sistema de componentes (Transform, Health)
-- [ ] Utils matemáticos compartilhados
-- [ ] Interfaces TypeScript
 - [ ] Sistema de eventos
 
 ### 1.3 Package Client (Frontend)
+- [x] Configurar Vite e dependências (Three.js)
+- [x] Estrutura básica do cliente
+- [x] Integração com package shared funcionando
 - [ ] Setup Three.js e cena básica
 - [ ] Sistema de renderização
 - [ ] Sistema de input
@@ -28,6 +35,9 @@ Um jogo de space shooter clássico desenvolvido com Three.js em arquitetura mono
 - [ ] Interface do usuário
 
 ### 1.4 Package Server (Backend)
+- [x] Configurar TypeScript e tsx para desenvolvimento
+- [x] Estrutura básica do servidor
+- [x] Integração com package shared funcionando
 - [ ] Setup Node.js com Express
 - [ ] WebSocket server básico
 - [ ] Sistema de rooms/lobbies

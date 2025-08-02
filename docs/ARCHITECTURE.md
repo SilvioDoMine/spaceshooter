@@ -5,10 +5,18 @@
 ```
 spaceshooter/
 ├── package.json                # Configuração principal do monorepo
+├── .vscode/
+│   └── settings.json           # Configurações do VS Code para workspaces
+├── .yarn/
+│   └── sdks/                   # TypeScript SDKs do Yarn
+├── yarn.lock                   # Lock file do Yarn
 ├── packages/
 │   ├── shared/                 # Código compartilhado cliente/servidor
-│   │   ├── package.json
+│   │   ├── package.json        # Aponta para src/index.ts (desenvolvimento)
+│   │   ├── tsconfig.json       # Extends da configuração raiz
+│   │   ├── dist/               # Build output (gerado)
 │   │   └── src/
+│   │       ├── index.ts        # Entry point principal
 │   │       ├── entities/       # Player, Enemy, Projectile
 │   │       ├── components/     # Transform, Health, Movement
 │   │       ├── physics/        # PhysicsSystem, CollisionDetector
@@ -16,19 +24,25 @@ spaceshooter/
 │   │       ├── utils/          # MathUtils, constantes
 │   │       └── events/         # EventBus, eventos do jogo
 │   ├── client/                 # Frontend (browser)
-│   │   ├── package.json
+│   │   ├── package.json        # Vite + Three.js + tipos
+│   │   ├── tsconfig.json       # Configuração para desenvolvimento web
+│   │   ├── vite.config.js      # Configuração do Vite
+│   │   ├── index.html          # HTML principal
+│   │   ├── node_modules/       # Dependências locais do Vite
 │   │   └── src/
+│   │       ├── main.ts         # Entry point do cliente
 │   │       ├── systems/        # RenderingSystem, InputSystem, AudioSystem
 │   │       ├── ui/             # Interface do usuário
-│   │       ├── assets/         # Modelos, texturas, sons
-│   │       └── main.js         # Entry point do cliente
+│   │       └── assets/         # Modelos, texturas, sons
 │   └── server/                 # Backend (Node.js)
-│       ├── package.json
+│       ├── package.json        # tsx + TypeScript para servidor
+│       ├── tsconfig.json       # Configuração para Node.js
 │       └── src/
+│           ├── server.ts       # Entry point do servidor
 │           ├── systems/        # NetworkingSystem, MatchmakingSystem
 │           ├── rooms/          # Gerenciamento de salas
-│           ├── api/            # REST API
-│           └── server.js       # Entry point do servidor
+│           └── api/            # REST API
+├── docs/                       # Documentação do projeto
 ├── .gitignore
 └── README.md
 ```
@@ -263,19 +277,19 @@ EventBus ←→ AudioSystem ←→ UISystem ←→ StateManager ←→ AssetMana
 ```json
 {
   "name": "spaceshooter-monorepo",
+  "private": true,
+  "version": "0.0.1",
   "workspaces": ["packages/*"],
+  "packageManager": "yarn@4.9.2",
   "scripts": {
-    "dev": "concurrently \"yarn workspace client dev\" \"yarn workspace server dev\"",
-    "dev:client": "yarn workspace client dev",
-    "dev:server": "yarn workspace server dev",
-    "build": "yarn workspaces run build",
-    "build:client": "yarn workspace client build",
-    "build:server": "yarn workspace server build",
-    "test": "yarn workspaces run test",
-    "lint": "yarn workspaces run lint"
+    "dev": "concurrently \"yarn workspace @spaceshooter/client dev\" \"yarn workspace @spaceshooter/server dev\"",
+    "dev:client": "yarn workspace @spaceshooter/client dev",
+    "dev:server": "yarn workspace @spaceshooter/server dev",
+    "build": "yarn workspaces run build"
   },
   "devDependencies": {
-    "concurrently": "^7.6.0"
+    "concurrently": "^9.2.0",
+    "typescript": "^5.9.2"
   }
 }
 ```
@@ -286,11 +300,16 @@ EventBus ←→ AudioSystem ←→ UISystem ←→ StateManager ←→ AssetMana
 ```json
 {
   "name": "@spaceshooter/shared",
-  "dependencies": {
-    "uuid": "^9.0.0"
+  "version": "0.0.1",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
   },
   "devDependencies": {
-    "typescript": "^5.0.0"
+    "typescript": "^5.9.2"
   }
 }
 ```
@@ -299,10 +318,21 @@ EventBus ←→ AudioSystem ←→ UISystem ←→ StateManager ←→ AssetMana
 ```json
 {
   "name": "@spaceshooter/client",
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
   "dependencies": {
-    "@spaceshooter/shared": "*",
-    "three": "^0.155.0",
-    "vite": "^4.4.0"
+    "@spaceshooter/shared": "workspace:^",
+    "three": "^0.179.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.1.0",
+    "@types/three": "^0.178.1",
+    "vite": "^7.0.6"
   }
 }
 ```
@@ -311,12 +341,130 @@ EventBus ←→ AudioSystem ←→ UISystem ←→ StateManager ←→ AssetMana
 ```json
 {
   "name": "@spaceshooter/server",
+  "version": "0.0.1",
+  "type": "module",
+  "main": "./src/server.ts",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "tsx src/server.ts"
+  },
   "dependencies": {
-    "@spaceshooter/shared": "*",
-    "ws": "^8.13.0",
-    "express": "^4.18.0"
+    "@spaceshooter/shared": "workspace:^"
+  },
+  "devDependencies": {
+    "@types/node": "^24.1.0",
+    "tsx": "^4.16.5",
+    "typescript": "^5.9.2"
   }
 }
 ```
 
-Esta arquitetura monorepo permite desenvolvimento eficiente com código compartilhado e builds independentes.
+## Configuração do Workspace TypeScript
+
+### TypeScript Configuration (tsconfig.json raiz)
+```json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext", 
+    "lib": ["ES2022"],
+    "moduleResolution": "node",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": true,
+    "outDir": "./dist"
+  },
+  "references": [
+    { "path": "./packages/shared" },
+    { "path": "./packages/client" },
+    { "path": "./packages/server" }
+  ]
+}
+```
+
+### Configurações Específicas por Package
+
+**packages/shared/tsconfig.json:**
+```json
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "declaration": true,
+    "declarationMap": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["dist", "node_modules"]
+}
+```
+
+**packages/client/tsconfig.json:**
+```json
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "target": "ES2020",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "types": ["vite/client"]
+  },
+  "include": ["src/**/*"],
+  "exclude": ["dist", "node_modules"]
+}
+```
+
+**packages/server/tsconfig.json:**
+```json
+{
+  "extends": "../../tsconfig.json", 
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "skipLibCheck": true,
+    "typeRoots": ["node_modules/@types"]
+  },
+  "include": ["src/**/*"],
+  "exclude": ["dist", "node_modules"]
+}
+```
+
+### Gestão de Dependências
+
+**Hoisting do Yarn:**
+- Dependências compartilhadas ficam na raiz
+- `node_modules` locais apenas quando necessário
+- Vite precisa de dependências locais para funcionamento
+
+**Comandos importantes:**
+```bash
+# Adicionar dependência em workspace específico
+yarn workspace @spaceshooter/client add three
+
+# Regenerar SDKs após mudanças
+yarn dlx @yarnpkg/sdks vscode
+
+# Build de todos os packages
+yarn workspaces run build
+```
+
+**VS Code Configuration (.vscode/settings.json):**
+```json
+{
+  "typescript.preferences.includePackageJsonAutoImports": "on",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "typescript.tsdk": ".yarn/sdks/typescript/lib",
+  "search.exclude": {
+    "**/.yarn": true,
+    "**/.pnp.*": true
+  }
+}
+```
+
+Esta arquitetura monorepo permite desenvolvimento eficiente com código compartilhado, builds independentes e configuração moderna do TypeScript.

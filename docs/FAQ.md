@@ -227,4 +227,152 @@ Vite é inteligente e só bundla o que realmente precisa das `dependencies`!
 
 ---
 
+## Configuração e Setup
+
+### Por que minha IDE reclama que não encontra o módulo '@spaceshooter/shared'?
+
+Este é um problema comum em workspaces com TypeScript. O código **funciona** em runtime, mas a IDE não reconhece os tipos.
+
+**Soluções testadas:**
+
+1. **Regenerar Yarn SDKs** (primeira tentativa):
+```bash
+yarn dlx @yarnpkg/sdks vscode
+```
+
+2. **Configurar VS Code** (`.vscode/settings.json`):
+```json
+{
+  "typescript.preferences.includePackageJsonAutoImports": "on",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "typescript.tsdk": ".yarn/sdks/typescript/lib"
+}
+```
+
+3. **Restart TypeScript Server**:
+   - `Cmd+Shift+P` → "TypeScript: Restart TS Server"
+
+4. **Configuração do package shared**:
+```json
+// packages/shared/package.json
+{
+  "main": "./src/index.ts",    // Aponta direto pro fonte
+  "types": "./src/index.ts"    // Tipos no mesmo lugar
+}
+```
+
+**Por que isso acontece:**
+- Yarn Workspaces usa links simbólicos
+- TypeScript precisa saber onde encontrar os tipos
+- IDEs precisam dos SDKs do Yarn para entender a estrutura
+
+**Solução que funcionou**: Configuração correta do `main` e `types` no shared + restart do TS Server.
+
+### Por que só o cliente tem node_modules mas server e shared não?
+
+**Isso é normal e correto!** Com Yarn Workspaces:
+
+**Estratégia de hoisting:**
+- Yarn **eleva** dependências compartilhadas para a raiz
+- Só cria `node_modules` locais quando necessário
+
+**Por que client tem node_modules:**
+- **Vite** precisa de algumas dependências locais para funcionar
+- Ferramentas de build often precisam de acesso direto aos módulos
+
+**Server e shared sem node_modules:**
+- Usam dependências da raiz (`typescript`, etc.)
+- Mais eficiente em espaço e velocidade
+- Evita duplicação desnecessária
+
+**Vantagens desta arquitetura:**
+- ⚡ Instalação mais rápida
+- 💾 Menos espaço em disco
+- 🔧 Gerenciamento centralizado de versões
+- 🚀 Cache mais eficiente
+
+**Não mexa nisso!** É assim que workspaces modernos funcionam.
+
+### Quando devo usar TypeScript vs JavaScript no projeto?
+
+Depois de configurar o setup híbrido, aqui estão as recomendações:
+
+**Use TypeScript para:**
+- **Shared code** (tipos compartilhados, interfaces)
+- **Game logic** complexa (física, colisões, IA)
+- **APIs** e contratos entre cliente/servidor
+- **Configurações** importantes (game config, constants)
+
+**Use JavaScript para:**
+- **Protótipos** rápidos e experimentação
+- **Glue code** simples entre componentes
+- **Quando estiver aprendendo** algo novo
+- **Assets** e utilitários simples
+
+**Estratégia de migração:**
+1. Comece com `.js` se não souber como tipar
+2. Adicione `.ts` quando precisar de tipos
+3. Refatore `.js` → `.ts` quando entender o padrão
+4. Use `// @ts-check` em `.js` para verificação básica
+
+**Exemplo prático:**
+```javascript
+// utils.js - JavaScript simples
+export function randomBetween(min, max) {
+  return Math.random() * (max - min) + min;
+}
+```
+
+```typescript
+// gameState.ts - TypeScript para estruturas importantes
+interface GameState {
+  score: number;
+  level: number;
+  playerPosition: Vector3;
+}
+
+export class GameStateManager {
+  private state: GameState;
+  // ...
+}
+```
+
+### Como atualizar dependências no workspace?
+
+**Comando correto para cada situação:**
+
+```bash
+# Instalar nova dependência em workspace específico
+yarn workspace @spaceshooter/client add three
+yarn workspace @spaceshooter/server add express
+
+# Instalar devDependency
+yarn workspace @spaceshooter/client add -D @types/three
+
+# Atualizar dependência específica
+yarn workspace @spaceshooter/client up three
+
+# Atualizar todas as dependências de um workspace
+yarn workspace @spaceshooter/client up
+
+# Remover dependência
+yarn workspace @spaceshooter/client remove three
+
+# Verificar dependências outdated
+yarn workspaces run outdated
+```
+
+**Regenerar tipos após mudanças:**
+```bash
+# Sempre execute após mudanças de dependências
+yarn dlx @yarnpkg/sdks vscode
+```
+
+**Troubleshooting comum:**
+- Se imports não funcionam → restart TS server
+- Se tipos não aparecem → regenerar SDKs
+- Se builds falham → verificar se shared está buildado
+
+---
+
 <!-- Adicione novas perguntas abaixo desta linha -->
