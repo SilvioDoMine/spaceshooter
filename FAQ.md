@@ -163,4 +163,68 @@ spaceshooter/
 
 ---
 
+### Por que usar dependencies vs devDependencies? Tudo não vai ser buildado com Vite mesmo?
+
+Ótima pergunta! A diferença é importante mesmo em monorepos:
+
+**dependencies vs devDependencies:**
+- **`dependencies`**: Código que VAI PARA PRODUÇÃO
+- **`devDependencies`**: Ferramentas que só usamos durante desenvolvimento
+
+**Exemplo prático no nosso projeto:**
+
+**Cliente (packages/client):**
+```json
+{
+  "dependencies": {
+    "@spaceshooter/shared": "*",  // Código que vai pro build final
+    "three": "^0.155.0"          // Three.js vai pro bundle do browser
+  },
+  "devDependencies": {
+    "vite": "^4.4.0",            // Só pra desenvolvimento
+    "@types/three": "^0.155.0"   // Tipos TS - removidos no build
+  }
+}
+```
+
+**Servidor (packages/server):**
+```json
+{
+  "dependencies": {
+    "@spaceshooter/shared": "*",  // Código compartilhado
+    "express": "^4.18.0",        // Express roda em produção
+    "ws": "^8.13.0"              // WebSockets em produção
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.0",         // Só pra development (hot reload)
+    "@types/express": "^4.17.0"  // Tipos TS
+  }
+}
+```
+
+**Por que isso importa:**
+
+1. **Cliente (Vite build)**: Vite só inclui `dependencies` no bundle final
+2. **Servidor (Node.js)**: Em produção, só instala `dependencies` com `yarn install --production`
+3. **Docker/Deploy**: Economiza espaço não instalando ferramentas de dev
+4. **Performance**: Bundle menor = carregamento mais rápido
+
+**Regra prática:**
+- Se o código RODA em produção → `dependencies`
+- Se é ferramenta de desenvolvimento → `devDependencies`
+- Tipos TypeScript → sempre `devDependencies`
+
+**Exemplo de deploy:**
+```bash
+# Produção - só instala o necessário
+yarn install --production
+
+# Development - instala tudo
+yarn install
+```
+
+Vite é inteligente e só bundla o que realmente precisa das `dependencies`!
+
+---
+
 <!-- Adicione novas perguntas abaixo desta linha -->
