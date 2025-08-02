@@ -34,6 +34,64 @@ Mas conforme o projeto crescer, você vai querer:
 
 Vite é a opção mais simples para isso, mas você pode decidir depois se precisar.
 
+### Quão difícil seria permitir esse projeto aceitar tanto JavaScript quanto TypeScript ao mesmo tempo?
+
+É bem tranquilo misturar JS e TS no mesmo projeto! O TypeScript foi feito justamente para isso - migração gradual.
+
+**Como funciona:**
+- Arquivos `.ts` podem importar `.js` normalmente
+- Arquivos `.js` podem importar `.ts` (o bundler resolve)
+- Cada arquivo mantém sua própria "personalidade"
+
+**Setup necessário:**
+```json
+// tsconfig.json
+{
+  "compilerOptions": {
+    "allowJs": true,           // Permite arquivos .js
+    "checkJs": false,          // Não verifica tipos em .js
+    "moduleResolution": "node",
+    "target": "es2020",
+    "module": "esnext"
+  },
+  "include": ["src/**/*.ts", "src/**/*.js"]
+}
+```
+
+**Exemplo prático:**
+```javascript
+// player.js (JavaScript puro)
+export class Player {
+  constructor() {
+    this.health = 100;
+  }
+}
+```
+
+```typescript
+// enemy.ts (TypeScript)
+import { Player } from './player.js';
+
+interface EnemyConfig {
+  health: number;
+  speed: number;
+}
+
+export class Enemy {
+  constructor(config: EnemyConfig) {
+    // Pode usar Player normalmente
+  }
+}
+```
+
+**Vantagens:**
+- Migração gradual conforme você se sente confortável
+- Aprende TS aos poucos
+- Pode começar tipando só as partes críticas
+- Refatoração incremental
+
+**Com Vite**, isso funciona out-of-the-box. É uma estratégia muito boa para aprender TS sem pressão!
+
 ---
 
 <!-- Adicione novas perguntas abaixo desta linha -->
