@@ -17,11 +17,10 @@ export const GAME_ASSETS: AssetManifest = {
     // 'asteroid': '/assets/models/asteroid.glb'
   },
   sounds: {
-    // Sons do jogo (para futuro uso com AudioSystem)
-    // 'shoot': '/assets/sounds/shoot.wav',
-    // 'explosion': '/assets/sounds/explosion.wav',
-    // 'engine': '/assets/sounds/engine.wav',
-    // 'music': '/assets/sounds/background_music.mp3'
+    // Sons básicos do jogo
+    'shoot': '/assets/sounds/shoot.wav',
+    'explosion': '/assets/sounds/explosion.wav',
+    'hit': '/assets/sounds/hit.wav'
   }
 };
 

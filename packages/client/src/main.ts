@@ -3,6 +3,10 @@ import { DEFAULT_GAME_CONFIG, Projectile, PROJECTILE_CONFIG, Enemy, ENEMY_CONFIG
 import { RenderingSystem } from './systems/RenderingSystem';
 import { InputSystem, InputState } from './systems/InputSystem';
 import { UISystem } from './systems/UISystem';
+import { AudioSystem } from './systems/AudioSystem';
+import { ParticleSystem } from './systems/ParticleSystem';
+import { GameStateManager, GameState } from './systems/GameStateManager';
+import { MenuSystem } from './systems/MenuSystem';
 
 console.log('Cliente iniciado');
 console.log('Config do jogo:', DEFAULT_GAME_CONFIG);
@@ -10,6 +14,10 @@ console.log('Config do jogo:', DEFAULT_GAME_CONFIG);
 let renderingSystem: RenderingSystem;
 let inputSystem: InputSystem;
 let uiSystem: UISystem;
+let audioSystem: AudioSystem;
+let particleSystem: ParticleSystem;
+let gameStateManager: GameStateManager;
+let menuSystem: MenuSystem;
 let playerShip: THREE.Group;
 let projectiles: Map<string, { object: THREE.Mesh, data: Projectile }> = new Map();
 let enemies: Map<string, { object: THREE.Mesh, data: Enemy }> = new Map();
@@ -53,15 +61,57 @@ async function init() {
   uiSystem.updateAmmo(playerAmmo, playerMaxAmmo);
   uiSystem.updateScore(gameScore);
 
+  // Inicializar sistema de áudio
+  audioSystem = new AudioSystem();
+  
+  // Carregar sons do jogo (sem bloqueio)
+  if (GAME_ASSETS.sounds) {
+    audioSystem.loadSounds(GAME_ASSETS.sounds).catch(error => {
+      console.warn('Alguns sons não puderam ser carregados:', error);
+    });
+  }
+
+  // Inicializar sistema de partículas
+  particleSystem = new ParticleSystem(renderingSystem.scene);
+
+  // Inicializar gerenciador de estado do jogo
+  gameStateManager = new GameStateManager();
+  
+  // Inicializar sistema de menus
+  menuSystem = new MenuSystem();
+  setupMenuCallbacks();
+
+  // Configurar callbacks de mudança de estado
+  setupGameStateCallbacks();
+
   // Criar nave do jogador
   await createPlayerShip();
+
+  // Começar no menu principal
+  gameStateManager.setState(GameState.MENU);
 }
 
 function onInputChange(action: keyof InputState, pressed: boolean) {
   console.log(`${action}: ${pressed ? 'pressed' : 'released'}`);
   
-  if (action === 'shoot' && pressed) {
+  // Inicializar áudio na primeira interação do usuário
+  if (audioSystem && !audioSystem.isInitialized()) {
+    audioSystem.initialize().catch(error => {
+      console.warn('Erro ao inicializar áudio:', error);
+    });
+  }
+  
+  if (action === 'shoot' && pressed && gameStateManager.isPlaying()) {
     shoot();
+  }
+  
+  // Pause/unpause com P
+  if (action === 'pause' && pressed) {
+    if (gameStateManager.isPlaying()) {
+      gameStateManager.pauseGame();
+    } else if (gameStateManager.isPaused()) {
+      gameStateManager.resumeGame();
+    }
   }
 }
 
@@ -101,6 +151,91 @@ async function createPlayerShip() {
 }
 
 /**
+ * Configura callbacks do sistema de menus
+ */
+function setupMenuCallbacks() {
+  menuSystem.setCallbacks({
+    onStartGame: () => {
+      gameStateManager.startNewGame();
+    },
+    onResumeGame: () => {
+      gameStateManager.resumeGame();
+    },
+    onReturnToMenu: () => {
+      resetGame();
+      gameStateManager.returnToMenu();
+    },
+    onRestartGame: () => {
+      resetGame();
+      gameStateManager.startNewGame();
+    }
+  });
+}
+
+/**
+ * Configura callbacks de mudança de estado do jogo
+ */
+function setupGameStateCallbacks() {
+  gameStateManager.onStateChange(GameState.MENU, () => {
+    menuSystem.showMainMenu();
+  });
+  
+  gameStateManager.onStateChange(GameState.PLAYING, () => {
+    menuSystem.hideAllMenus();
+  });
+  
+  gameStateManager.onStateChange(GameState.PAUSED, () => {
+    menuSystem.showPauseScreen();
+  });
+  
+  gameStateManager.onStateChange(GameState.GAME_OVER, () => {
+    const stats = gameStateManager.getStats();
+    menuSystem.showGameOverScreen(stats);
+  });
+}
+
+/**
+ * Reseta o estado do jogo para começar uma nova partida
+ */
+function resetGame() {
+  // Reset player stats
+  playerHealth = playerMaxHealth;
+  playerAmmo = playerMaxAmmo;
+  gameScore = 0;
+  
+  // Update UI
+  uiSystem.updateHealth(playerHealth, playerMaxHealth);
+  uiSystem.updateAmmo(playerAmmo, playerMaxAmmo);
+  uiSystem.updateScore(gameScore);
+  
+  // Clear all projectiles
+  projectiles.forEach(projectile => {
+    renderingSystem.removeFromScene(projectile.object);
+  });
+  projectiles.clear();
+  
+  // Clear all enemies
+  enemies.forEach(enemy => {
+    renderingSystem.removeFromScene(enemy.object);
+  });
+  enemies.clear();
+  
+  // Clear particles
+  if (particleSystem) {
+    particleSystem.clear();
+  }
+  
+  // Reset timers
+  lastShotTime = 0;
+  lastEnemySpawnTime = 0;
+  
+  // Reset player position
+  if (playerShip) {
+    playerShip.position.set(0, 0, 0);
+  }
+}
+
+/**
  * Sistema de Tiro
  * 
  * Cria e gerencia projéteis do jogador. Os projéteis são representados visualmente
@@ -133,6 +268,9 @@ function shoot() {
   // Use ammo
   playerAmmo--;
   uiSystem.updateAmmo(playerAmmo, playerMaxAmmo);
+  
+  // Track shot fired
+  gameStateManager.incrementStat('shotsFired');
   
   const projectileId = `projectile_${currentTime}_${Math.random()}`;
   
@@ -171,6 +309,11 @@ function shoot() {
     object: projectileMesh,
     data: projectileData
   });
+  
+  // Play shoot sound
+  if (audioSystem) {
+    audioSystem.playSound('shoot', { volume: 0.3 });
+  }
   
   console.log('Projectile fired!', projectileId);
 }
@@ -250,39 +393,47 @@ function spawnEnemy() {
 function animate() {
   requestAnimationFrame(animate);
   
-  // Controlar nave do jogador
-  if (playerShip && inputSystem) {
-    const inputState = inputSystem.getInputState();
-    const speed = 0.08;
+  // Sempre renderizar, mas só atualizar gameplay se estiver jogando
+  if (gameStateManager && gameStateManager.isPlaying()) {
+    // Controlar nave do jogador
+    if (playerShip && inputSystem) {
+      const inputState = inputSystem.getInputState();
+      const speed = 0.08;
+      
+      if (inputState.left) {
+        playerShip.position.x -= speed;
+      }
+      if (inputState.right) {
+        playerShip.position.x += speed;
+      }
+      if (inputState.up) {
+        playerShip.position.y += speed;
+      }
+      if (inputState.down) {
+        playerShip.position.y -= speed;
+      }
+    }
     
-    if (inputState.left) {
-      playerShip.position.x -= speed;
-    }
-    if (inputState.right) {
-      playerShip.position.x += speed;
-    }
-    if (inputState.up) {
-      playerShip.position.y += speed;
-    }
-    if (inputState.down) {
-      playerShip.position.y -= speed;
-    }
+    // Update projectiles
+    updateProjectiles();
+    
+    // Update enemies
+    updateEnemies();
+    
+    // Check collisions
+    checkCollisions();
+    
+    // Check enemy-player collisions
+    checkEnemyPlayerCollisions();
+    
+    // Spawn enemies
+    trySpawnEnemy();
   }
   
-  // Update projectiles
-  updateProjectiles();
-  
-  // Update enemies
-  updateEnemies();
-  
-  // Check collisions
-  checkCollisions();
-  
-  // Check enemy-player collisions
-  checkEnemyPlayerCollisions();
-  
-  // Spawn enemies
-  trySpawnEnemy();
+  // Update particle system sempre (para animações de menu também)
+  if (particleSystem) {
+    particleSystem.update(0.016); // ~60fps
+  }
   
   renderingSystem.render();
   uiSystem.render();
@@ -442,10 +593,29 @@ function checkCollisions() {
             enemiesToRemove.push(enemyId);
           }
           
+          // Play explosion sound
+          if (audioSystem) {
+            audioSystem.playSound('explosion', { volume: 0.4 });
+          }
+          
+          // Create explosion particle effect
+          if (particleSystem) {
+            const explosionPos = new THREE.Vector3(
+              enemyData.position.x,
+              enemyData.position.y,
+              0
+            );
+            particleSystem.createExplosion(explosionPos);
+          }
+          
           // Add score based on enemy type
           const scorePoints = getScoreForEnemyType(enemyData.type);
           gameScore += scorePoints;
           uiSystem.updateScore(gameScore);
+          
+          // Track enemy destroyed
+          gameStateManager.incrementStat('enemiesDestroyed');
+          gameStateManager.updateStats({ score: gameScore });
         }
       }
     });
@@ -513,13 +683,28 @@ function checkEnemyPlayerCollisions() {
       playerHealth = Math.max(0, playerHealth - damage);
       uiSystem.updateHealth(playerHealth, playerMaxHealth);
       
+      // Play hit sound
+      if (audioSystem) {
+        audioSystem.playSound('hit', { volume: 0.5 });
+      }
+      
+      // Create hit particle effect
+      if (particleSystem) {
+        const hitPos = new THREE.Vector3(
+          playerShip.position.x,
+          playerShip.position.y,
+          0
+        );
+        particleSystem.createHitEffect(hitPos);
+      }
+      
       // Remover inimigo que colidiu
       enemiesToRemove.push(enemyId);
       
       // Check game over
       if (playerHealth <= 0) {
         console.log('Game Over!');
-        // TODO: Implementar tela de game over
+        gameStateManager.endGame();
       }
     }
   });
