@@ -4,23 +4,24 @@ import { AssetManifest } from './AssetLoader';
 export const GAME_ASSETS: AssetManifest = {
   textures: {
     // Texturas básicas para desenvolvimento
-    'metal': '/assets/textures/metal.jpg',
-    'star': '/assets/textures/star.png',
-    'plasma': '/assets/textures/plasma.png',
-    'explosion': '/assets/textures/explosion.png'
+    // 'metal': '/assets/textures/metal.jpg',
+    // 'star': '/assets/textures/star.png',
+    // 'plasma': '/assets/textures/plasma.png',
+    // 'explosion': '/assets/textures/explosion.png'
   },
   models: {
     // Modelos 3D para o jogo
-    'player_ship': '/assets/models/player_ship.glb',
-    'enemy_ship': '/assets/models/enemy_ship.glb',
-    'asteroid': '/assets/models/asteroid.glb'
+    'ship': '/assets/models/ship.glb',
+    // 'player_ship': '/assets/models/player_ship.glb',
+    // 'enemy_ship': '/assets/models/enemy_ship.glb',
+    // 'asteroid': '/assets/models/asteroid.glb'
   },
   sounds: {
     // Sons do jogo (para futuro uso com AudioSystem)
-    'shoot': '/assets/sounds/shoot.wav',
-    'explosion': '/assets/sounds/explosion.wav',
-    'engine': '/assets/sounds/engine.wav',
-    'music': '/assets/sounds/background_music.mp3'
+    // 'shoot': '/assets/sounds/shoot.wav',
+    // 'explosion': '/assets/sounds/explosion.wav',
+    // 'engine': '/assets/sounds/engine.wav',
+    // 'music': '/assets/sounds/background_music.mp3'
   }
 };
 
