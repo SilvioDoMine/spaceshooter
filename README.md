@@ -14,7 +14,16 @@ Clone o repositório e instale as dependências:
 ```bash
 git clone <url-do-repositorio>
 cd spaceshooter
+yarn setup
+```
+
+**OU** faça o setup manual:
+
+```bash
+git clone <url-do-repositorio>
+cd spaceshooter
 yarn install
+yarn build:shared  # IMPORTANTE: Build do shared primeiro
 ```
 
 ## Executando o projeto
@@ -49,6 +58,14 @@ Para fazer build de todos os pacotes:
 
 ```bash
 yarn build
+```
+
+**Builds individuais** (útil para desenvolvimento):
+
+```bash
+yarn build:shared   # Build apenas do shared (necessário primeiro)
+yarn build:client   # Build apenas do client
+yarn build:server   # Build apenas do server
 ```
 
 ## Estrutura do projeto

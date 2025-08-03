@@ -8,10 +8,14 @@
     "packages/*"
   ],
   "scripts": {
+    "setup": "yarn install && yarn build:shared",
     "dev": "concurrently \"yarn workspace @spaceshooter/client dev\" \"yarn workspace @spaceshooter/server dev\"",
     "dev:client": "yarn workspace @spaceshooter/client dev",
     "dev:server": "yarn workspace @spaceshooter/server dev",
-    "build": "yarn workspaces run build"
+    "build": "yarn workspace @spaceshooter/shared build && yarn workspace @spaceshooter/client build && yarn workspace @spaceshooter/server build",
+    "build:shared": "yarn workspace @spaceshooter/shared build",
+    "build:client": "yarn workspace @spaceshooter/client build",
+    "build:server": "yarn workspace @spaceshooter/server build"
   },
   "author": "",
   "license": "ISC",
