@@ -10,7 +10,8 @@ O cliente do Space Shooter é construído com uma arquitetura modular baseada em
 packages/client/src/systems/
 ├── RenderingSystem.ts    # Renderização 3D com Three.js
 ├── InputSystem.ts        # Captura e processamento de input
-└── (futuros: AudioSystem, UISystem, etc.)
+├── UISystem.ts           # HUD e interface dentro do Three.js
+└── (futuros: AudioSystem, ParticleSystem, etc.)
 
 packages/client/src/assets/
 ├── AssetLoader.ts        # Carregamento e cache de assets
@@ -108,6 +109,196 @@ interface InputState {
 - `isPressed(action)`: Verifica se ação específica está pressionada
 - `addInputCallback(callback)`: Adiciona listener para eventos
 - `removeInputCallback(callback)`: Remove listener
+
+## UISystem
+
+**Responsabilidade**: Criar e gerenciar interface de usuário (HUD) totalmente dentro do Three.js.
+
+### Características Principais
+- **HUD overlay** usando câmera ortográfica independente
+- **Text sprites** com canvas dinâmico para qualidade otimizada
+- **Elementos visuais**: Score, vida (texto + barra), munição
+- **Responsivo** com posicionamento baseado em aspect ratio
+- **Performance otimizada** para 60fps
+- **Zero HTML/CSS** - tudo renderizado em Three.js
+
+### Elementos do HUD
+
+#### Score (top-left)
+- Mostra pontuação atual do jogador
+- Atualizado automaticamente quando inimigos são destruídos
+- Posição: canto superior esquerdo
+
+#### Health (top-center)
+- **Texto**: "Health: 100/100" com código de cores
+- **Barra visual**: Verde/Amarelo/Vermelho baseado em %
+- Atualizado quando jogador toma dano de inimigos
+- Posição: centro superior
+
+#### Ammo (top-right)
+- **Texto**: "Ammo: 30/30" com código de cores
+- Branco (normal), Amarelo (<30%), Vermelho (0)
+- Atualizado a cada disparo
+- Posição: canto superior direito
+
+### Como Usar
+
+```typescript
+// Inicialização (integrado com RenderingSystem)
+const uiSystem = new UISystem(renderingSystem.renderer);
+
+// Atualizar elementos individualmente
+uiSystem.updateScore(1500);
+uiSystem.updateHealth(75, 100);
+uiSystem.updateAmmo(24, 30);
+
+// Métodos de conveniência
+uiSystem.addScore(50);        // Adiciona pontos
+uiSystem.damageHealth(25);    // Remove vida
+uiSystem.useAmmo(1);          // Usa munição
+uiSystem.reloadAmmo();        // Recarrega para máximo
+
+// Render no game loop (APÓS render principal)
+renderingSystem.render();
+uiSystem.render();
+```
+
+### Sistema de Canvas Dinâmico
+
+#### Tecnologia
+- **Canvas individual** para cada elemento de texto
+- **Tamanho baseado no conteúdo** usando `measureText()`
+- **Font 64px Arial Bold** para qualidade
+- **Text shadow** para legibilidade em qualquer background
+- **LinearFilter** para texto nítido
+
+#### Processo de Rendering
+```typescript
+// 1. Medir texto para determinar canvas size
+const metrics = context.measureText(text);
+canvas.width = Math.ceil(textWidth + 40);   // Padding
+canvas.height = Math.ceil(textHeight + 20);
+
+// 2. Configurar font e estilo
+context.font = 'bold 64px Arial, sans-serif';
+context.shadowBlur = 4;
+context.shadowColor = 'rgba(0, 0, 0, 0.9)';
+
+// 3. Renderizar texto centralizado
+context.fillText(text, canvas.width / 2, canvas.height / 2);
+
+// 4. Criar texture Three.js
+const texture = new THREE.CanvasTexture(canvas);
+texture.minFilter = THREE.LinearFilter;
+```
+
+### Integração com Gameplay
+
+#### Sistema de Pontuação
+```typescript
+// Pontos por tipo de inimigo
+basic enemy:  +10 pontos
+fast enemy:   +25 pontos  
+heavy enemy:  +50 pontos
+
+// Integração automática
+if (enemyDestroyed) {
+  const points = getScoreForEnemyType(enemy.type);
+  gameScore += points;
+  uiSystem.updateScore(gameScore);
+}
+```
+
+#### Sistema de Vida
+```typescript
+// Dano por tipo de inimigo
+basic enemy:  -10 HP
+fast enemy:   -15 HP
+heavy enemy:  -25 HP
+
+// Atualização com código de cores
+uiSystem.updateHealth(playerHealth, playerMaxHealth);
+// Verde: >50%, Amarelo: 25-50%, Vermelho: <25%
+```
+
+#### Sistema de Munição
+```typescript
+// Munição limitada
+maxAmmo: 30 balas
+cooldown: 200ms entre disparos
+
+// Integração com sistema de tiro
+if (shoot() && playerAmmo > 0) {
+  playerAmmo--;
+  uiSystem.updateAmmo(playerAmmo, playerMaxAmmo);
+}
+```
+
+### Arquitetura Técnica
+
+#### Câmera Ortográfica
+```typescript
+// Setup independente do jogo principal
+this.camera = new THREE.OrthographicCamera(
+  -aspect, aspect, 1, -1, 0.1, 10
+);
+this.camera.position.z = 1;
+```
+
+#### Renderização Overlay
+```typescript
+// Renderiza APÓS o jogo principal
+public render(): void {
+  this.renderer.autoClear = false;  // Não limpar buffer
+  this.renderer.clearDepth();      // Limpar apenas depth
+  this.renderer.render(this.scene, this.camera);
+}
+```
+
+#### Responsividade
+```typescript
+// Reposicionamento automático no resize
+private onWindowResize(): void {
+  const aspect = window.innerWidth / window.innerHeight;
+  
+  // Atualizar câmera
+  this.camera.left = -aspect;
+  this.camera.right = aspect;
+  
+  // Reposicionar elementos
+  this.scoreText.position.x = -aspect * 0.9;
+  this.ammoText.position.x = aspect * 0.9;
+}
+```
+
+### Performance e Otimizações
+
+#### Atuais
+- **Canvas reutilizados** para updates de texto
+- **Redimensionamento inteligente** apenas quando necessário
+- **Sprites independentes** para isolamento
+- **Update seletivo** apenas quando valores mudam
+
+#### Futuras Melhorias
+- **Troika-three-text**: SDF fonts para qualidade superior
+- **Object pooling**: Reutilização de sprites
+- **Batch updates**: Agrupar múltiplas mudanças
+- **LOD text**: Diferentes qualidades por distância
+
+### Estado Atual vs Futuro
+
+#### ✅ Implementado
+- HUD funcional com score, vida, munição
+- Text rendering de alta qualidade
+- Integração completa com gameplay
+- Responsividade e resize handling
+- Código de cores dinâmico
+
+#### 🔄 Planejado para Refatoração
+- **Migração para troika-three-text** para melhor qualidade
+- **Menu system** integrado
+- **Animações** de transição
+- **Customização** de layout e temas
 
 ## AssetLoader
 
@@ -213,6 +404,7 @@ document.addEventListener('DOMContentLoaded', init);
 ### ✅ Systems Completos
 - **RenderingSystem**: Scene 3D, iluminação, shadows, responsivo
 - **InputSystem**: WASD, espaço, pause, callbacks
+- **UISystem**: HUD totalmente em Three.js com score, vida, munição
 - **AssetLoader**: Cache, GLTF/GLB, texturas, material factory
 
 ### 🎮 Funcionalidades Ativas
@@ -220,8 +412,10 @@ document.addEventListener('DOMContentLoaded', init);
 - Controles WASD para movimento (velocidade aumentada)
 - **Sistema de Tiro com projéteis (Espaço)**
 - **Sistema de Inimigos com 3 tipos diferentes**
-- **Collision Detection funcional**
-- **Gameplay Loop completo**
+- **HUD completo**: Score, vida, munição com barras visuais
+- **Sistema de gameplay**: Vida do jogador, munição limitada, pontuação
+- **Collision Detection funcional** (projéteis vs inimigos, inimigos vs jogador)
+- **Gameplay Loop completo** com consequências
 - Fallback automático (cubo verde se modelo falhar)
 - Mobile-friendly (sem zoom)
 - Hot reload em desenvolvimento
@@ -231,9 +425,9 @@ document.addEventListener('DOMContentLoaded', init);
 Os seguintes sistemas estão planejados para implementação:
 
 - **AudioSystem**: Gerenciamento de sons e música
-- **UISystem**: Interface do usuário e HUD
-- **ParticleSystem**: Efeitos visuais e partículas
-- **PhysicsSystem**: Movimento e colisões (compartilhado)
+- **ParticleSystem**: Efeitos visuais e partículas (explosões, trails)
+- **PhysicsSystem**: Movimento e colisões avançado (compartilhado)
+- **MenuSystem**: Telas de menu, game over, pause
 
 ## Boas Práticas
 

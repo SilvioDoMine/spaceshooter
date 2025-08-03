@@ -2,18 +2,27 @@ import * as THREE from 'three';
 import { DEFAULT_GAME_CONFIG, Projectile, PROJECTILE_CONFIG, Enemy, ENEMY_CONFIG } from '@spaceshooter/shared';
 import { RenderingSystem } from './systems/RenderingSystem';
 import { InputSystem, InputState } from './systems/InputSystem';
+import { UISystem } from './systems/UISystem';
 
 console.log('Cliente iniciado');
 console.log('Config do jogo:', DEFAULT_GAME_CONFIG);
 
 let renderingSystem: RenderingSystem;
 let inputSystem: InputSystem;
+let uiSystem: UISystem;
 let playerShip: THREE.Group;
 let projectiles: Map<string, { object: THREE.Mesh, data: Projectile }> = new Map();
 let enemies: Map<string, { object: THREE.Mesh, data: Enemy }> = new Map();
 let lastShotTime = 0;
 let lastEnemySpawnTime = 0;
-const SHOT_COOLDOWN = 50; // milliseconds
+const SHOT_COOLDOWN = 200; // milliseconds - increased for ammo management
+
+// Game state
+let playerHealth = 100;
+let playerMaxHealth = 100;
+let playerAmmo = 30;
+let playerMaxAmmo = 30;
+let gameScore = 0;
 
 async function init() {
   // Inicializar sistema de renderização
@@ -37,6 +46,12 @@ async function init() {
   // Inicializar sistema de input
   inputSystem = new InputSystem();
   inputSystem.addInputCallback(onInputChange);
+
+  // Inicializar sistema de UI
+  uiSystem = new UISystem(renderingSystem.renderer);
+  uiSystem.updateHealth(playerHealth, playerMaxHealth);
+  uiSystem.updateAmmo(playerAmmo, playerMaxAmmo);
+  uiSystem.updateScore(gameScore);
 
   // Criar nave do jogador
   await createPlayerShip();
@@ -107,7 +122,17 @@ function shoot() {
     return; // Still in cooldown
   }
   
+  // Check ammo
+  if (playerAmmo <= 0) {
+    console.log('No ammo!');
+    return;
+  }
+  
   lastShotTime = currentTime;
+  
+  // Use ammo
+  playerAmmo--;
+  uiSystem.updateAmmo(playerAmmo, playerMaxAmmo);
   
   const projectileId = `projectile_${currentTime}_${Math.random()}`;
   
@@ -253,10 +278,14 @@ function animate() {
   // Check collisions
   checkCollisions();
   
+  // Check enemy-player collisions
+  checkEnemyPlayerCollisions();
+  
   // Spawn enemies
   trySpawnEnemy();
   
   renderingSystem.render();
+  uiSystem.render();
 }
 
 /**
@@ -412,6 +441,11 @@ function checkCollisions() {
           if (!enemiesToRemove.includes(enemyId)) {
             enemiesToRemove.push(enemyId);
           }
+          
+          // Add score based on enemy type
+          const scorePoints = getScoreForEnemyType(enemyData.type);
+          gameScore += scorePoints;
+          uiSystem.updateScore(gameScore);
         }
       }
     });
@@ -434,6 +468,82 @@ function checkCollisions() {
       enemies.delete(id);
     }
   });
+}
+
+/**
+ * Calcula pontuação baseada no tipo de inimigo
+ */
+function getScoreForEnemyType(enemyType: Enemy['type']): number {
+  switch (enemyType) {
+    case 'basic': return 10;
+    case 'fast': return 25;
+    case 'heavy': return 50;
+    default: return 10;
+  }
+}
+
+/**
+ * Verifica colisões entre inimigos e o jogador
+ * Causa dano ao jogador quando há colisão
+ */
+function checkEnemyPlayerCollisions() {
+  if (!playerShip) return;
+  
+  const enemiesToRemove: string[] = [];
+  
+  enemies.forEach((enemy, enemyId) => {
+    const enemyData = enemy.data;
+    
+    // Calcular distância entre inimigo e jogador
+    const dx = enemyData.position.x - playerShip.position.x;
+    const dy = enemyData.position.y - playerShip.position.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    
+    // Verificar colisão (raio do jogador + raio do inimigo)
+    const playerRadius = 0.3; // Baseado na escala da nave
+    const enemyRadius = ENEMY_CONFIG[enemyData.type].size / 2;
+    const collisionDistance = playerRadius + enemyRadius;
+    
+    if (distance < collisionDistance) {
+      // Colisão detectada!
+      console.log(`Player hit by enemy: ${enemyId}`);
+      
+      // Causar dano ao jogador baseado no tipo de inimigo
+      const damage = getDamageForEnemyType(enemyData.type);
+      playerHealth = Math.max(0, playerHealth - damage);
+      uiSystem.updateHealth(playerHealth, playerMaxHealth);
+      
+      // Remover inimigo que colidiu
+      enemiesToRemove.push(enemyId);
+      
+      // Check game over
+      if (playerHealth <= 0) {
+        console.log('Game Over!');
+        // TODO: Implementar tela de game over
+      }
+    }
+  });
+  
+  // Remover inimigos que colidiram com o jogador
+  enemiesToRemove.forEach(id => {
+    const enemy = enemies.get(id);
+    if (enemy) {
+      renderingSystem.removeFromScene(enemy.object);
+      enemies.delete(id);
+    }
+  });
+}
+
+/**
+ * Calcula dano baseado no tipo de inimigo
+ */
+function getDamageForEnemyType(enemyType: Enemy['type']): number {
+  switch (enemyType) {
+    case 'basic': return 10;
+    case 'fast': return 15;
+    case 'heavy': return 25;
+    default: return 10;
+  }
 }
 
 // Inicializar quando DOM estiver pronto

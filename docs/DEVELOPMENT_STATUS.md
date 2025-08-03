@@ -10,23 +10,23 @@ O Space Shooter está em **Fase 1 - Core Game (Single Player)** com os sistemas 
 
 ## 📊 Progress Overview
 
-### Package Client (Frontend) - 95% Completo
+### Package Client (Frontend) - 98% Completo
 ✅ **Sistemas Implementados**:
 - Monorepo com Yarn Workspaces
 - Three.js + Vite configurado
 - RenderingSystem completo (scene, camera, lighting, shadows)
 - InputSystem com WASD/Space/P
+- **UISystem/HUD completo** (score, vida, munição, barras visuais)
 - AssetLoader com cache e GLTF/GLB support
 - Mobile-friendly (no zoom)
 - Nave 3D controlável (escala otimizada)
-- **Sistema de Tiro completo** (projéteis, cooldown, lifecycle)
+- **Sistema de Tiro completo** (projéteis, cooldown, lifecycle, munição limitada)
 - **Sistema de Inimigos completo** (3 tipos, spawn, movimento, colisões)
-- **Collision Detection** (projéteis vs inimigos)
-- **Gameplay Loop básico** (atirar, destruir inimigos)
+- **Collision Detection** (projéteis vs inimigos, inimigos vs jogador)
+- **Gameplay Loop completo** (vida, pontuação, consequências)
 
 🚧 **Pendente**:
 - AudioSystem
-- UISystem/HUD
 - ParticleSystem
 
 ### Package Shared (Core Logic) - 60% Completo
@@ -64,12 +64,15 @@ O Space Shooter está em **Fase 1 - Core Game (Single Player)** com os sistemas 
 1. Execute `yarn dev:client`
 2. Acesse `http://localhost:3000` (ou porta alternativa)
 3. Veja uma nave 3D carregada de arquivo GLB (escala otimizada)
-4. Use WASD para mover a nave (velocidade aumentada)
-5. **Espaço para atirar projéteis** (esferas azuis que se movem para frente)
-6. **Inimigos aparecem automaticamente** descendo do topo da tela
-7. **3 tipos de inimigos**: Basic (vermelho), Fast (laranja), Heavy (roxo)
-8. **Atire nos inimigos para destruí-los** - collision detection funcional
-9. Velocidades balanceadas para gameplay fluído
+4. **HUD completo no topo**: Score, Health (texto + barra), Ammo
+5. Use WASD para mover a nave (velocidade aumentada)
+6. **Espaço para atirar projéteis** (munição limitada: 30 balas)
+7. **Inimigos aparecem automaticamente** descendo do topo da tela
+8. **3 tipos de inimigos**: Basic (vermelho), Fast (laranja), Heavy (roxo)
+9. **Atire nos inimigos para destruí-los** e ganhar pontos (10/25/50)
+10. **Cuidado com colisões** - inimigos causam dano (10/15/25 HP)
+11. **Game Over** quando vida chega a 0
+12. Velocidades balanceadas para gameplay fluído
 
 **Assets ativos**:
 - ✅ `public/assets/models/ship.glb` - Nave do jogador
@@ -115,14 +118,17 @@ packages/
 - [x] Player entity com movimento físico
 - [x] **Sistema de tiro (projectiles)**
 - [x] **Enemy spawning básico** (3 tipos, spawn automático)
-- [x] **Collision detection** (projéteis vs inimigos)
-- [ ] Score system
+- [x] **Collision detection** (projéteis vs inimigos, inimigos vs jogador)
+- [x] **Score system** (pontuação por inimigo destruído)
+- [x] **Health system** (vida do jogador, dano por colisão)
+- [x] **Ammo system** (munição limitada, cooldown de tiro)
 
-### Milestone 2: Polish & UX (Estimativa: 1 semana)
+### Milestone 2: Polish & UX (Estimativa: 1 semana) - 🟡 75% COMPLETO
+- [x] **HUD completo** (vida com barra, pontos, munição)
+- [x] **Game state management** (integração completa)
 - [ ] AudioSystem com efeitos sonoros
-- [ ] HUD (vida, pontos, munição)
 - [ ] Particle effects (explosões)
-- [ ] Menu principal
+- [ ] Menu principal e game over screen
 
 ### Milestone 3: Multiplayer Foundation (Estimativa: 2-3 semanas)
 - [ ] Server implementation

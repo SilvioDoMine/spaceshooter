@@ -65,8 +65,14 @@ export class RenderingSystem {
     // Criar renderer
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.setPixelRatio(window.devicePixelRatio);
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    
+    // Garantir que o canvas ocupe toda a tela
+    this.renderer.domElement.style.width = '100%';
+    this.renderer.domElement.style.height = '100%';
+    this.renderer.domElement.style.display = 'block';
 
     // Configurar iluminação básica
     this.setupLighting();
@@ -105,6 +111,11 @@ export class RenderingSystem {
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.setPixelRatio(window.devicePixelRatio);
+    
+    // Garantir que o canvas ocupe toda a tela após resize
+    this.renderer.domElement.style.width = '100%';
+    this.renderer.domElement.style.height = '100%';
   }
 
   public render(): void {
