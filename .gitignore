@@ -26,6 +26,10 @@ pids
 *.seed
 *.pid.lock
 
+# PM2
+ecosystem.config.js
+ecosystem.config.cjs
+
 # Coverage directory used by tools like istanbul
 coverage/
 .nyc_output
