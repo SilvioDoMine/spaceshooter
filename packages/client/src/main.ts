@@ -447,7 +447,8 @@ function spawnPowerUp() {
   let geometry: THREE.BufferGeometry;
   switch (powerUpType) {
     case 'ammo':
-      geometry = new THREE.BoxGeometry(config.size, config.size, config.size);
+      // Triângulo (usando ConeGeometry com poucos segmentos)
+      geometry = new THREE.ConeGeometry(config.size, config.size * 1.5, 3);
       break;
     case 'health':
       geometry = new THREE.SphereGeometry(config.size, 8, 6);

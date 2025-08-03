@@ -15,8 +15,8 @@ O PowerUp System adiciona elementos de coleta e gerenciamento de recursos ao jog
 
 ## Tipos de Power-ups
 
-### 📦 Ammo (Munição)
-- **Forma**: Cubo verde metálico
+### 🔺 Ammo (Munição)
+- **Forma**: Triângulo (cone) verde metálico
 - **Efeito**: +15 balas (não ultrapassa máximo de 30)
 - **Spawn**: 70% de chance, a cada 5 segundos
 - **Tempo de vida**: 10 segundos
@@ -81,11 +81,11 @@ function spawnPowerUp() {
   let powerUpType: PowerUp['type'];
   
   if (rand < 0.7) {
-    powerUpType = 'ammo';      // 70% chance
+    powerUpType = 'ammo';      // 70% chance - Triângulo verde
   } else if (rand < 0.95) {
-    powerUpType = 'health';    // 25% chance
+    powerUpType = 'health';    // 25% chance - Esfera rosa
   } else {
-    powerUpType = 'shield';    // 5% chance
+    powerUpType = 'shield';    // 5% chance - Octaedro azul
   }
 }
 ```
@@ -93,7 +93,7 @@ function spawnPowerUp() {
 ## Efeitos Visuais
 
 ### Geometrias por Tipo
-- **Ammo**: `THREE.BoxGeometry` (cubo)
+- **Ammo**: `THREE.ConeGeometry` (triângulo/cone)
 - **Health**: `THREE.SphereGeometry` (esfera)
 - **Shield**: `THREE.OctahedronGeometry` (octaedro)
 

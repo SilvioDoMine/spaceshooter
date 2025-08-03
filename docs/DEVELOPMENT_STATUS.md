@@ -76,8 +76,9 @@ O Space Shooter está em **Fase 1 - Core Game (Single Player)** com os sistemas 
    - **🆕 Efeitos sonoros**: tiro, explosão, impacto, coleta de power-up (sons sintéticos)
    - **🆕 Efeitos visuais**: partículas de explosão quando inimigos morrem
    - **3 tipos de inimigos**: Basic (vermelho), Fast (laranja), Heavy (roxo)
-   - **🆕 3 tipos de power-ups**: Ammo (verde, cubo), Health (rosa, esfera), Shield (azul, octaedro)
+   - **🆕 3 tipos de power-ups**: Ammo (verde, triângulo), Health (rosa, esfera), Shield (azul, octaedro)
    - **🆕 Sistema de coleta**: Power-ups recarregam munição (+15) e restauram vida (+25)
+   - **🆕 Penalidade por fuga**: Inimigos que escapam causam dano (-5/-8/-15 HP)
    - Pontuação por inimigo destruído (10/25/50 pontos)
    - Sistema de dano por colisão (10/15/25 HP)
 5. **🆕 Controles de Jogo**:

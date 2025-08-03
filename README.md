@@ -153,7 +153,7 @@ spaceshooter/
 - **🟣 Heavy (Roxo)**: 50 HP, velocidade 0.8, **50 pontos**, dano 25 HP (10% spawn)
 
 ### 🆕 Sistema de Power-ups
-- **📦 Ammo (Verde, Cubo)**: Recarrega +15 balas (70% spawn a cada 5s)
+- **🔺 Ammo (Verde, Triângulo)**: Recarrega +15 balas (70% spawn a cada 5s)
 - **❤️ Health (Rosa, Esfera)**: Restaura +25 HP (25% spawn a cada 20s)
 - **🛡️ Shield (Azul, Octaedro)**: Proteção temporária (5% spawn, futuro)
 
