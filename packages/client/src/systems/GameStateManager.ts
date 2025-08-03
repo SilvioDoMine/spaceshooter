@@ -16,6 +16,7 @@ export interface GameStats {
   enemiesDestroyed: number;
   shotsFired: number;
   accuracy: number;
+  enemiesEscaped: number;
 }
 
 export class GameStateManager {
@@ -25,7 +26,8 @@ export class GameStateManager {
     timeAlive: 0,
     enemiesDestroyed: 0,
     shotsFired: 0,
-    accuracy: 0
+    accuracy: 0,
+    enemiesEscaped: 0
   };
   private gameStartTime: number = 0;
   private stateChangeCallbacks: Map<GameState, (() => void)[]> = new Map();
@@ -173,7 +175,8 @@ export class GameStateManager {
       timeAlive: 0,
       enemiesDestroyed: 0,
       shotsFired: 0,
-      accuracy: 0
+      accuracy: 0,
+      enemiesEscaped: 0
     };
   }
 

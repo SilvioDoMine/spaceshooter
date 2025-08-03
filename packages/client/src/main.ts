@@ -648,8 +648,38 @@ function updateEnemies() {
     object.position.y = data.position.y;
     
     // Remove se saiu da tela (parte inferior)
-    if (data.position.y < -6 ||
+    if (data.position.y < -4 ||
         data.position.x > 10 || data.position.x < -10) {
+      
+      // Penalidade por inimigo que escapou pela parte inferior
+      if (data.position.y < -4) {
+        const escapePenalty = getEscapePenaltyForEnemyType(data.type);
+        playerHealth = Math.max(0, playerHealth - escapePenalty);
+        uiSystem.updateHealth(playerHealth, playerMaxHealth);
+        
+        console.log(`Inimigo ${data.type} escapou! -${escapePenalty} HP (Total: ${playerHealth})`);
+        
+        // Track enemy escaped
+        gameStateManager.incrementStat('enemiesEscaped');
+        
+        // Efeito sonoro de penalidade
+        if (audioSystem) {
+          audioSystem.playSound('hit', { volume: 0.3 });
+        }
+        
+        // Efeito visual de penalidade (flash vermelho na tela)
+        if (particleSystem) {
+          const penaltyPos = new THREE.Vector3(0, -3, 0); // Centro-baixo da tela
+          particleSystem.createHitEffect(penaltyPos);
+        }
+        
+        // Check game over após penalidade
+        if (playerHealth <= 0) {
+          console.log('Game Over por inimigos escapando!');
+          gameStateManager.endGame();
+        }
+      }
+      
       toRemove.push(id);
     }
   });
@@ -904,6 +934,19 @@ function getDamageForEnemyType(enemyType: Enemy['type']): number {
     case 'fast': return 15;
     case 'heavy': return 25;
     default: return 10;
+  }
+}
+
+/**
+ * Calcula penalidade baseada no tipo de inimigo que escapou
+ * Inimigos mais fracos causam menos penalidade, mais fortes causam mais
+ */
+function getEscapePenaltyForEnemyType(enemyType: Enemy['type']): number {
+  switch (enemyType) {
+    case 'basic': return 5;   // Penalidade menor para inimigo básico
+    case 'fast': return 8;    // Penalidade média para inimigo rápido  
+    case 'heavy': return 15;  // Penalidade maior para inimigo pesado
+    default: return 5;
   }
 }
 

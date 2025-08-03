@@ -79,6 +79,10 @@ export class MenuSystem {
               <span class="stat-value">${stats.enemiesDestroyed}</span>
             </div>
             <div class="stat-item">
+              <span class="stat-label">Inimigos Escaparam:</span>
+              <span class="stat-value">${stats.enemiesEscaped}</span>
+            </div>
+            <div class="stat-item">
               <span class="stat-label">Tiros Disparados:</span>
               <span class="stat-value">${stats.shotsFired}</span>
             </div>

@@ -160,11 +160,12 @@ spaceshooter/
 ### Objetivos
 - **Destrua inimigos** atirando neles para ganhar pontos
 - **Evite colisões** - inimigos causam dano baseado no tipo
+- **🆕 Impeça fugas** - inimigos que escapam pela parte inferior causam penalidade (-5/-8/-15 HP)
 - **🆕 Colete power-ups** - recarregue munição e restaure vida
 - **Gerencie recursos** - munição limitada, vida preciosa
 - **Sobreviva o máximo possível** - quando vida chega a 0, é game over
 
 ### 🆕 Game Over
-- **Estatísticas detalhadas**: pontuação final, tempo vivo, inimigos destruídos
+- **Estatísticas detalhadas**: pontuação final, tempo vivo, inimigos destruídos, inimigos escapados
 - **Precisão de tiro**: percentual de acertos
 - **Opções**: Jogar novamente ou voltar ao menu principal
