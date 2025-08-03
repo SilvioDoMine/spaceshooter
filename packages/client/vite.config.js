@@ -9,7 +9,25 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    assetsDir: 'assets'
+    assetsDir: 'assets',
+    chunkSizeWarningLimit: 1000, // Aumentar limite para 1MB
+    minify: 'terser', // Melhor compressão
+    terserOptions: {
+      compress: {
+        drop_console: true, // Remover console.log em produção
+        drop_debugger: true
+      }
+    },
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Separar Three.js em chunk próprio
+          'three': ['three'],
+          // Separar shared em chunk próprio  
+          'shared': ['@spaceshooter/shared']
+        }
+      }
+    }
   },
   resolve: {
     alias: {

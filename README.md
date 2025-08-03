@@ -68,6 +68,14 @@ yarn build:client   # Build apenas do client
 yarn build:server   # Build apenas do server
 ```
 
+**Build otimizado para produção**:
+
+```bash
+yarn workspace @spaceshooter/client build:prod   # Build otimizado com code splitting
+```
+
+> ⚠️ **Nota sobre Bundle Size**: O build de produção pode mostrar warnings sobre chunks grandes devido ao Three.js (~400KB). Isso é normal para jogos 3D. Consulte o [FAQ](docs/FAQ.md#build-e-produção) para detalhes sobre as otimizações implementadas.
+
 ## Estrutura do projeto
 
 ```

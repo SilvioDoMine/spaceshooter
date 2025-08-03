@@ -1,5 +1,57 @@
 # FAQ - Perguntas e Respostas
 
+## Build e Produção
+
+### ❓ Por que aparece warning "Some chunks are larger than 500 KiB" no build de produção?
+
+**Problema**: Durante o build de produção (`yarn workspace @spaceshooter/client build:prod`), pode aparecer um aviso sobre chunks grandes:
+
+```
+(!) Some chunks are larger than 500 KiB after minification...
+```
+
+**Motivo**: 
+- O Three.js é uma biblioteca 3D robusta (~400KB+)
+- O código compartilhado (shared) adiciona mais ao bundle
+- O limite padrão do Vite (500KB) é conservador para jogos 3D
+
+**Solução Implementada**:
+
+1. **Code Splitting** - Three.js e shared em chunks separados:
+```javascript
+// vite.config.js
+rollupOptions: {
+  output: {
+    manualChunks: {
+      'three': ['three'],
+      'shared': ['@spaceshooter/shared']
+    }
+  }
+}
+```
+
+2. **Compressão Otimizada** - Terser com remoção de logs:
+```javascript
+// vite.config.js
+minify: 'terser',
+terserOptions: {
+  compress: {
+    drop_console: true,
+    drop_debugger: true
+  }
+}
+```
+
+3. **Limite Ajustado** - Aumentado para 1MB (apropriado para jogos):
+```javascript
+// vite.config.js
+chunkSizeWarningLimit: 1000
+```
+
+**Resultado**: Build otimizado com chunks separados e sem warnings desnecessários.
+
+---
+
 ## Desenvolvimento e Ferramentas
 
 ### Por que eu precisaria do Vite nesse projeto?
