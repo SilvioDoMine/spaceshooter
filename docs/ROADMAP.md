@@ -82,13 +82,22 @@ Um jogo de space shooter clássico desenvolvido com Three.js em arquitetura mono
 - [x] **Sistema de estatísticas (pontuação, precisão, tempo)**
 - [ ] Sistema de high scores persistente
 
-### 2.3 Performance
-- [ ] Object pooling para projéteis
+### 2.3 Performance & Architecture Patterns
+- [ ] **Object Pool Pattern** para projéteis e inimigos (Prioridade: CRÍTICA)
+- [ ] **Command Pattern** para sistema de input (Prioridade: ALTA)
+- [ ] **Strategy Pattern** para comportamentos de inimigos (Prioridade: ALTA)
 - [ ] Frustum culling
 - [ ] Level of detail (LOD)
+- [ ] **Flyweight Pattern** para entidades similares (Prioridade: MÉDIA)
 - [ ] Otimização de renderização
 
-### 2.4 Audio & Visual Effects - ✅ COMPLETO
+### 2.4 Refatoração Arquitetural (Nova)
+- [ ] **Entity Component System (ECS)** para escalabilidade (Prioridade: BAIXA)
+- [ ] **Event Bus Pattern** para comunicação entre sistemas
+- [ ] **Dependency Injection** para melhor testabilidade
+- [ ] **Builder Pattern** para configuração complexa de entidades
+
+### 2.5 Audio & Visual Effects - ✅ COMPLETO
 - [x] **AudioSystem com efeitos sonoros**
 - [x] **ParticleSystem para explosões**
 - [x] **Efeitos visuais de impacto**
@@ -179,14 +188,27 @@ yarn build        # Build completo
 yarn test         # Testes
 ```
 
-## Próximos Passos Imediatos
+## Próximos Passos Imediatos (Atualizado - Janeiro 2025)
 
-1. **Configurar monorepo** com Yarn Workspaces
-2. **Implementar package shared** com entidades base
-3. **Desenvolver cliente** com Three.js
-4. **Implementar servidor** básico
+### 🔥 Crítico (Esta Sprint)
+1. **Implementar Object Pool Pattern** para projéteis e inimigos
+   - Melhoria de performance imediata (~40% otimização)
+   - Ver: [Design Patterns Implementation Guide](DESIGN_PATTERNS_GUIDE.md)
+
+### ⚡ Alta Prioridade (Próximas 2 Sprints)
+2. **Command Pattern** para sistema de input
+   - Facilita configuração de controles e replays
+3. **Strategy Pattern** para comportamentos variados de inimigos
+   - Adiciona riqueza ao gameplay
+
+### 📈 Médio Prazo (Fase 3 - Multiplayer)
+4. **Implementar servidor** básico com Express + WebSockets
 5. **Integrar comunicação** cliente-servidor
-6. **Expandir features** conforme roadmap
+6. **Event Bus Pattern** para comunicação entre sistemas
+
+### 🚀 Longo Prazo (Fase 4 - Escalabilidade)
+7. **Entity Component System (ECS)** quando complexidade aumentar
+8. **Expandir features** conforme roadmap
 
 ## Vantagens da Arquitetura Escolhida
 
