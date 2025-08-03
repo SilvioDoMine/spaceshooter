@@ -375,4 +375,291 @@ yarn dlx @yarnpkg/sdks vscode
 
 ---
 
+## 🎮 Gameplay e Mecânicas
+
+### Como jogar o jogo atual?
+1. Execute `yarn dev:client`
+2. Acesse `http://localhost:3000`
+3. Use **WASD** para mover a nave
+4. **Espaço** para atirar projéteis
+5. Destrua inimigos que descem do topo da tela
+
+### Quais são os tipos de inimigos e suas características?
+- **🔴 Basic (Vermelho)**: 20 HP, velocidade 1.5 - mais comum (70% spawn)
+- **🟠 Fast (Laranja)**: 10 HP, velocidade 2.5 - rápido (20% spawn)  
+- **🟣 Heavy (Roxo)**: 50 HP, velocidade 0.8 - resistente (10% spawn)
+
+### Como funciona o sistema de dano?
+- Cada projétil causa **10 de dano**
+- **Basic**: 2 hits para destruir (20 HP ÷ 10 damage)
+- **Fast**: 1 hit para destruir (10 HP ÷ 10 damage)
+- **Heavy**: 5 hits para destruir (50 HP ÷ 10 damage)
+
+### Por que alguns inimigos aparecem mais que outros?
+O sistema usa probabilidades baseadas em balanceamento:
+- **70% Basic**: Forma a base do gameplay
+- **20% Fast**: Adiciona desafio de precisão
+- **10% Heavy**: Teste de DPS e paciência
+
+### Com que frequência aparecem inimigos?
+- **Spawn rate**: 1 inimigo a cada 2 segundos
+- **Posição**: Aleatória no eixo X, sempre no topo (Y=6)
+- **Movimento**: Descida vertical em direção ao jogador
+
+### Como ajustar a dificuldade do jogo?
+Edite `packages/shared/src/index.ts`:
+
+**Para tornar mais fácil:**
+```typescript
+// Aumentar dano dos projéteis
+PROJECTILE_CONFIG.damage = 20; // era 10
+
+// Diminuir vida dos inimigos
+ENEMY_CONFIG.basic.health = 10; // era 20
+
+// Menos inimigos
+ENEMY_CONFIG.basic.spawnRate = 4000; // era 2000 (4s em vez de 2s)
+```
+
+**Para tornar mais difícil:**
+```typescript
+// Diminuir dano
+PROJECTILE_CONFIG.damage = 5;
+
+// Aumentar vida
+ENEMY_CONFIG.heavy.health = 100;
+
+// Mais inimigos
+ENEMY_CONFIG.basic.spawnRate = 1000; // 1s entre spawns
+```
+
+### Por que a nave parece pequena/grande demais?
+A escala da nave pode ser ajustada em `main.ts`:
+```typescript
+// Linha ~78
+playerShip.scale.setScalar(0.3); // Diminua para menor, aumente para maior
+```
+
+### Por que os inimigos/projéteis se movem muito rápido/devagar?
+As velocidades são configuráveis:
+
+**Projéteis:**
+```typescript
+// packages/shared/src/index.ts
+PROJECTILE_CONFIG.speed = 15; // Unidades por segundo
+```
+
+**Inimigos:**
+```typescript
+ENEMY_CONFIG.basic.speed = 1.5;  // Ajuste conforme necessário
+ENEMY_CONFIG.fast.speed = 2.5;   
+ENEMY_CONFIG.heavy.speed = 0.8;  
+```
+
+**Nave do jogador:**
+```typescript
+// packages/client/src/main.ts, linha ~231
+const speed = 0.08; // Velocidade de movimento
+```
+
+---
+
+## 🐛 Problemas Técnicos e Troubleshooting
+
+### Não estou vendo a nave na tela
+**Possíveis causas:**
+1. **Modelo não encontrado**: Verifique se existe `public/assets/models/ship.glb`
+2. **Fallback não aparece**: Deveria aparecer um cubo verde
+3. **Erro de carregamento**: Verifique console (F12) para erros
+
+**Soluções:**
+```bash
+# Verificar se asset existe
+ls packages/client/public/assets/models/
+
+# Se não existir, o fallback (cubo verde) deve aparecer
+# Se nem o fallback aparece, verifique console para erros
+```
+
+### Controles não respondem
+1. **Foco da página**: Clique na tela do jogo
+2. **Console errors**: Verifique F12 para erros JavaScript
+3. **Teste teclas alternativas**: Use arrow keys em vez de WASD
+
+### Inimigos/projéteis não aparecem
+**Debug steps:**
+1. Abra console (F12)
+2. Procure por logs:
+   - "Projectile fired!" quando atirar
+   - "Enemy spawned: [tipo]" a cada 2 segundos
+3. Se não vê logs, há erro no código
+
+### Colisões não funcionam
+**Verificações:**
+1. Console deve mostrar "Collision: [projectile] hit [enemy]"
+2. Se não há logs de colisão, verifique se ambos estão sendo renderizados
+3. Teste atirando diretamente em inimigos
+
+### Performance baixa / FPS baixo
+**Soluções imediatas:**
+- Feche outras abas do browser
+- Use browser atualizado (Chrome/Firefox)
+- Verifique se hardware acceleration está habilitado
+
+**Para desenvolvimento:**
+```typescript
+// Limitar número máximo de entidades
+const MAX_PROJECTILES = 20;
+const MAX_ENEMIES = 10;
+
+// No código, adicione verificações antes de criar novos
+if (projectiles.size >= MAX_PROJECTILES) return;
+```
+
+### Erro "Cannot resolve @spaceshooter/shared"
+```bash
+# Build o shared package
+yarn workspace @spaceshooter/shared build
+
+# Regenerar SDKs do Yarn
+yarn dlx @yarnpkg/sdks vscode
+
+# Restart TypeScript server no VS Code
+# Cmd+Shift+P → "TypeScript: Restart TS Server"
+```
+
+### Hot reload não funciona
+```bash
+# Reinicie o servidor
+yarn dev:client
+
+# Se ainda não funcionar, limpe cache
+rm -rf packages/client/node_modules/.vite
+yarn dev:client
+```
+
+---
+
+## 📊 Debug e Monitoramento
+
+### Como ver informações de debug em tempo real?
+Abra o console do browser (F12) para monitorar:
+- **"Projectile fired!"**: Confirma que tiro foi disparado
+- **"Enemy spawned: [tipo]"**: Confirma spawn de inimigos
+- **"Collision detected"**: Confirma detecção de colisões
+- **"Enemy destroyed"**: Confirma destruição de inimigos
+
+### Como verificar quantas entidades estão ativas?
+Adicione no console:
+```javascript
+// Cole no console do browser para debug
+setInterval(() => {
+  console.log(`Projéteis: ${projectiles.size}, Inimigos: ${enemies.size}`);
+}, 2000);
+```
+
+### Como verificar performance?
+**Ferramentas do browser:**
+1. **F12 → Performance tab**: Profile de FPS e render time
+2. **F12 → Memory tab**: Uso de memória e vazamentos
+3. **console.time/timeEnd**: Medir tempo de funções específicas
+
+### Como reportar bugs?
+**Informações necessárias:**
+1. **Comportamento esperado vs atual**
+2. **Passos para reproduzir**
+3. **Console logs** (copie erros em vermelho)
+4. **Screenshots** se problema visual
+5. **Sistema**: SO, browser, versão
+
+**Exemplo de bug report:**
+```
+Título: Inimigos não aparecem após 5 minutos
+
+Esperado: Inimigos devem continuar aparecendo
+Atual: Param de aparecer após ~5 minutos
+
+Passos:
+1. yarn dev:client
+2. Jogue por 5+ minutos
+3. Inimigos param de spawnar
+
+Console errors: 
+[Copie aqui qualquer erro do console]
+
+Sistema: macOS 13, Chrome 118
+```
+
+---
+
+## 🔮 Futuras Features e Extensibilidade
+
+### Que funcionalidades estão planejadas?
+**Próximas implementações:**
+- **Score System**: Pontuação por inimigos destruídos
+- **Audio System**: Sons de tiro, explosão, música de fundo
+- **UI/HUD**: Interface com vida, pontos, munição
+- **Particle Effects**: Explosões e efeitos visuais
+- **Power-ups**: Itens que melhoram a nave
+
+**Médio prazo:**
+- **Multiplayer**: Modo cooperativo e competitivo
+- **Diferentes naves**: Características únicas
+- **Boss battles**: Inimigos grandes com padrões especiais
+- **Wave system**: Ondas progressivas de dificuldade
+
+### Como adicionar novos tipos de inimigos?
+1. **Atualizar interface:**
+```typescript
+// packages/shared/src/index.ts
+type: 'basic' | 'fast' | 'heavy' | 'sniper'; // Adicione novo tipo
+```
+
+2. **Adicionar configuração:**
+```typescript
+ENEMY_CONFIG = {
+  // ... tipos existentes
+  sniper: {
+    health: 15,
+    speed: 1.0,
+    size: 0.25,
+    color: 0x00ff00,  // Verde
+    spawnRate: 6000
+  }
+};
+```
+
+3. **Atualizar lógica de spawn:**
+```typescript
+// Em spawnEnemy(), adicionar nova probabilidade
+if (rand < 0.6) enemyType = 'basic';        // 60%
+else if (rand < 0.8) enemyType = 'fast';    // 20% 
+else if (rand < 0.95) enemyType = 'heavy';  // 15%
+else enemyType = 'sniper';                  // 5%
+```
+
+### Como adicionar diferentes tipos de projéteis?
+Similar aos inimigos, mas para projéteis:
+1. Estender interface `Projectile` com campo `type`
+2. Criar `PROJECTILE_TYPES_CONFIG`
+3. Atualizar lógica de disparo para alternar tipos
+4. Diferentes visuais (cores, formas, tamanhos)
+
+### Como contribuir com o projeto?
+1. **Fork** o repositório no GitHub
+2. **Clone** sua fork localmente
+3. **Branch** para sua feature: `git checkout -b minha-feature`
+4. **Implemente** seguindo padrões existentes
+5. **Teste** thoroughly
+6. **Commit** com mensagens descritivas
+7. **Push** e crie **Pull Request**
+
+**Padrões de código:**
+- Use JSDoc para funções públicas
+- Siga nomenclatura existente (camelCase)
+- Mantenha interfaces no shared package
+- Adicione console.logs para debug quando apropriado
+
+---
+
 <!-- Adicione novas perguntas abaixo desta linha -->

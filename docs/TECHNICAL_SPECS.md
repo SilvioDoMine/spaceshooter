@@ -177,8 +177,14 @@ export default defineConfig({
 - **Tempo de loading**: < 3 segundos
 
 ### Otimizações Implementadas
-- Object pooling para projéteis
-- Frustum culling para entidades fora da tela
+- **Map-based tracking**: O(1) lookup para entidades por ID
+- **Bounds checking**: Remoção automática de entidades fora da tela
+- **Batch cleanup**: Remoção de múltiplas entidades por frame
+- **Memory management**: Cleanup automático de objetos Three.js
+
+### Otimizações Planejadas
+- Object pooling para projéteis e inimigos
+- Frustum culling para entidades fora da câmera
 - Batching de draw calls similares
 - Texture atlasing para sprites
 
@@ -201,74 +207,153 @@ const WORLD_BOUNDS = {
 };
 ```
 
-### Fórmulas Matemáticas Chave
-```javascript
-// Detecção de colisão (sphere)
-function checkCollision(entity1, entity2) {
-  const distance = entity1.position.distanceTo(entity2.position);
-  return distance < (entity1.radius + entity2.radius);
-}
+### Fórmulas Matemáticas Implementadas
 
-// Movimento linear
-function updatePosition(entity, deltaTime) {
-  entity.position.add(
-    entity.velocity.clone().multiplyScalar(deltaTime)
-  );
+**Detecção de Colisão (Distance-based):**
+```typescript
+function checkCollisions() {
+  projectiles.forEach((projectile, projectileId) => {
+    enemies.forEach((enemy, enemyId) => {
+      // Calcular distância euclidiana
+      const dx = projectile.data.position.x - enemy.data.position.x;
+      const dy = projectile.data.position.y - enemy.data.position.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      // Verificar colisão (soma dos raios)
+      const collisionDistance = PROJECTILE_CONFIG.size + (ENEMY_CONFIG[enemy.data.type].size / 2);
+      
+      if (distance < collisionDistance) {
+        // Colisão detectada!
+      }
+    });
+  });
 }
+```
 
-// Interpolação para smooth movement
-function lerp(start, end, factor) {
-  return start + (end - start) * factor;
+**Sistema de Movimento Linear:**
+```typescript
+function updateProjectiles() {
+  projectiles.forEach((projectile) => {
+    // Atualizar posição baseado na velocidade (assumindo 60fps)
+    projectile.data.position.x += projectile.data.velocity.x * 0.016;
+    projectile.data.position.y += projectile.data.velocity.y * 0.016;
+    
+    // Sincronizar objeto visual
+    projectile.object.position.x = projectile.data.position.x;
+    projectile.object.position.y = projectile.data.position.y;
+  });
+}
+```
+
+**Sistema de Spawn Probabilístico:**
+```typescript
+function determineEnemyType(): Enemy['type'] {
+  const rand = Math.random();
+  if (rand < 0.7) return 'basic';        // 70%
+  else if (rand < 0.9) return 'fast';    // 20%
+  else return 'heavy';                   // 10%
+}
+```
+
+**Utilitário Matemático:**
+```typescript
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
 }
 ```
 
 ## Estrutura de Dados das Entidades
 
-### Player
-```javascript
-class Player {
-  constructor() {
-    this.position = new THREE.Vector3(0, -6, 0);
-    this.velocity = new THREE.Vector3();
-    this.health = 100;
-    this.maxHealth = 100;
-    this.speed = 5;
-    this.fireRate = 0.2; // segundos entre tiros
-    this.lastShot = 0;
-    this.mesh = null; // Three.js mesh
-    this.boundingBox = new THREE.Box3();
-  }
+### Interfaces TypeScript (Shared Package)
+
+**Player Interface:**
+```typescript
+interface Player {
+  id: string;
+  position: Vector2D;      // {x: number, y: number}
+  velocity: Vector2D;
+  health: number;
 }
 ```
 
-### Enemy
-```javascript
-class Enemy {
-  constructor(type = 'basic') {
-    this.position = new THREE.Vector3();
-    this.velocity = new THREE.Vector3(0, -2, 0);
-    this.health = this.getHealthByType(type);
-    this.speed = this.getSpeedByType(type);
-    this.scoreValue = this.getScoreByType(type);
-    this.type = type;
-    this.mesh = null;
-  }
+**Enemy Interface:**
+```typescript
+interface Enemy {
+  id: string;              // ID único para tracking
+  position: Vector2D;      // Posição atual no mundo
+  velocity: Vector2D;      // Velocidade de movimento
+  health: number;          // Vida atual
+  maxHealth: number;       // Vida máxima
+  type: 'basic' | 'fast' | 'heavy';  // Tipo determina características
+  createdAt: number;       // Timestamp de criação
 }
 ```
 
-### Projectile
-```javascript
-class Projectile {
-  constructor(owner, direction) {
-    this.position = owner.position.clone();
-    this.velocity = direction.clone().multiplyScalar(10);
-    this.damage = 25;
-    this.lifeTime = 3; // segundos
-    this.owner = owner; // 'player' ou 'enemy'
-    this.active = true;
-    this.mesh = null;
-  }
+**Projectile Interface:**
+```typescript
+interface Projectile {
+  id: string;              // ID único para tracking
+  position: Vector2D;      // Posição atual no mundo
+  velocity: Vector2D;      // Velocidade de movimento (unidades/segundo)
+  damage: number;          // Dano causado ao colidir
+  ownerId: string;         // ID da entidade que disparou
+  createdAt: number;       // Timestamp de criação (para cleanup)
 }
+```
+
+### Configurações de Entidades
+
+**Configurações de Projéteis:**
+```typescript
+const PROJECTILE_CONFIG = {
+  speed: 15,               // Unidades por segundo
+  damage: 10,              // Dano por hit
+  lifetime: 3000,          // 3 segundos em milliseconds
+  size: 0.1                // Raio visual
+};
+```
+
+**Configurações de Inimigos:**
+```typescript
+const ENEMY_CONFIG = {
+  basic: {
+    health: 20,            // 2 hits para destruir
+    speed: 1.5,            // Velocidade moderada
+    size: 0.3,             // Tamanho médio
+    color: 0xff4444,       // Vermelho
+    spawnRate: 2000        // A cada 2 segundos
+  },
+  fast: {
+    health: 10,            // 1 hit para destruir
+    speed: 2.5,            // Mais rápido
+    size: 0.2,             // Menor
+    color: 0xff8800,       // Laranja
+    spawnRate: 3000        // A cada 3 segundos
+  },
+  heavy: {
+    health: 50,            // 5 hits para destruir
+    speed: 0.8,            // Mais lento
+    size: 0.5,             // Maior
+    color: 0x8844ff,       // Roxo
+    spawnRate: 5000        // A cada 5 segundos
+  }
+};
+```
+
+### Sistema de Tracking de Entidades
+
+**Maps para Performance O(1):**
+```typescript
+// Cliente - tracking de entidades ativas
+let projectiles: Map<string, {
+  object: THREE.Mesh,     // Objeto visual Three.js
+  data: Projectile        // Dados da entidade
+}> = new Map();
+
+let enemies: Map<string, {
+  object: THREE.Mesh,     // Objeto visual Three.js
+  data: Enemy             // Dados da entidade
+}> = new Map();
 ```
 
 ## Configurações de Renderização
@@ -415,51 +500,96 @@ const KEYS = {
 };
 ```
 
-### Input State Management
-```javascript
-class InputManager {
-  constructor() {
-    this.keys = new Set();
-    this.actions = new Map();
-  }
-  
-  isKeyPressed(keyCode) {
-    return this.keys.has(keyCode);
-  }
-  
-  isActionActive(action) {
-    return KEYS[action].some(key => this.keys.has(key));
-  }
+### Input System Implementado
+
+**Interface InputState:**
+```typescript
+interface InputState {
+  up: boolean;
+  down: boolean;
+  left: boolean;
+  right: boolean;
+  shoot: boolean;
+  pause: boolean;
 }
 ```
 
-## Performance Monitoring
+**Mapeamento de Teclas:**
+```typescript
+private keyMap: Map<string, keyof InputState> = new Map([
+  ['KeyW', 'up'],         ['ArrowUp', 'up'],
+  ['KeyS', 'down'],       ['ArrowDown', 'down'],
+  ['KeyA', 'left'],       ['ArrowLeft', 'left'],
+  ['KeyD', 'right'],      ['ArrowRight', 'right'],
+  ['Space', 'shoot'],
+  ['KeyP', 'pause'],      ['Escape', 'pause']
+]);
+```
 
-### Métricas a Monitorar
+**Sistema de Callbacks:**
+```typescript
+type InputCallback = (action: keyof InputState, pressed: boolean) => void;
+
+// Uso para eventos discretos (como tiro)
+inputSystem.addInputCallback((action, pressed) => {
+  if (action === 'shoot' && pressed) {
+    shoot();
+  }
+});
+
+// Estado contínuo para movimento
+const inputState = inputSystem.getInputState();
+if (inputState.left) playerShip.position.x -= speed;
+```
+
+## Performance Monitoring e Debug
+
+### Sistema de Logging Implementado
+
+**Console Logging para Debug:**
+```typescript
+// Logs de eventos importantes
+console.log('Projectile fired!', projectileId);
+console.log(`Enemy spawned: ${enemyType}`, enemyId);
+console.log(`Collision: ${projectileId} hit ${enemyId}`);
+console.log(`Enemy destroyed: ${enemyId}`);
+```
+
+**Monitoramento de Entidades em Tempo Real:**
 ```javascript
-class PerformanceMonitor {
-  constructor() {
-    this.frameCount = 0;
-    this.lastTime = performance.now();
-    this.fps = 0;
-    this.entityCount = 0;
-    this.drawCalls = 0;
-  }
-  
-  update() {
-    const currentTime = performance.now();
-    this.frameCount++;
-    
-    if (currentTime - this.lastTime >= 1000) {
-      this.fps = this.frameCount;
-      this.frameCount = 0;
-      this.lastTime = currentTime;
-      
-      // Log performance metrics
-      console.log(`FPS: ${this.fps}, Entities: ${this.entityCount}`);
-    }
-  }
-}
+// Cole no console do browser para debug
+setInterval(() => {
+  console.log(`Projéteis ativos: ${projectiles.size}`);
+  console.log(`Inimigos ativos: ${enemies.size}`);
+}, 2000);
+```
+
+### Métricas de Performance Atuais
+
+**Complexidade Algorítmica:**
+- **Movimento de entidades**: O(n) por frame
+- **Collision detection**: O(n*m) projéteis vs inimigos
+- **Cleanup de entidades**: O(n) por frame
+- **Lookup por ID**: O(1) com Map
+
+**Otimizações Implementadas:**
+- Batch cleanup para múltiplas entidades
+- Bounds checking para remoção automática
+- Map-based tracking para performance O(1)
+- Memory cleanup automático de objetos Three.js
+
+### Ferramentas de Debug Recomendadas
+
+**Browser DevTools:**
+```javascript
+// Performance tab: Profile de FPS e render time
+// Memory tab: Uso de memória e vazamentos
+// Console: Logs de eventos do jogo
+
+// Exemplo de profile personalizado
+console.time('updateProjectiles');
+updateProjectiles();
+console.timeEnd('updateProjectiles');
 ```
 
 ## Build e Deploy

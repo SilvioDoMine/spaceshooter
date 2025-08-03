@@ -1,16 +1,25 @@
 // Shared types and utilities for spaceshooter game
 
+/**
+ * Configuração global do jogo
+ */
 export interface GameConfig {
   width: number;
   height: number;
   playerSpeed: number;
 }
 
+/**
+ * Representação de um ponto ou vetor em 2D
+ */
 export interface Vector2D {
   x: number;
   y: number;
 }
 
+/**
+ * Entidade do jogador
+ */
 export interface Player {
   id: string;
   position: Vector2D;
@@ -18,13 +27,35 @@ export interface Player {
   health: number;
 }
 
+/**
+ * Entidade de projétil
+ * 
+ * Representa projéteis disparados pelo jogador ou inimigos.
+ * Possui ID único, posição, velocidade, dano e informações de lifecycle.
+ */
 export interface Projectile {
-  id: string;
-  position: Vector2D;
-  velocity: Vector2D;
-  damage: number;
-  ownerId: string;
-  createdAt: number;
+  id: string;              // Identificador único
+  position: Vector2D;      // Posição atual no mundo
+  velocity: Vector2D;      // Velocidade de movimento (unidades/segundo)
+  damage: number;          // Dano causado ao colidir
+  ownerId: string;         // ID da entidade que disparou
+  createdAt: number;       // Timestamp de criação (para cleanup)
+}
+
+/**
+ * Entidade de inimigo
+ * 
+ * Representa inimigos que aparecem automaticamente e se movem em direção ao jogador.
+ * Possui diferentes tipos com características únicas (health, velocidade, visual).
+ */
+export interface Enemy {
+  id: string;              // Identificador único
+  position: Vector2D;      // Posição atual no mundo
+  velocity: Vector2D;      // Velocidade de movimento (unidades/segundo)
+  health: number;          // Vida atual
+  maxHealth: number;       // Vida máxima
+  type: 'basic' | 'fast' | 'heavy';  // Tipo determina características
+  createdAt: number;       // Timestamp de criação
 }
 
 export const DEFAULT_GAME_CONFIG: GameConfig = {
@@ -33,13 +64,74 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
   playerSpeed: 5
 };
 
+/**
+ * Configurações dos projéteis
+ * 
+ * Define comportamento padrão dos projéteis do jogador:
+ * - speed: Velocidade de movimento (unidades/segundo)
+ * - damage: Dano causado aos inimigos
+ * - lifetime: Tempo de vida antes de ser removido (ms)
+ * - size: Tamanho visual (raio da esfera)
+ */
 export const PROJECTILE_CONFIG = {
-  speed: 15,
-  damage: 10,
-  lifetime: 3000, // 3 seconds in milliseconds
-  size: 0.1
+  speed: 15,                // Unidades por segundo
+  damage: 10,               // Dano por hit
+  lifetime: 3000,           // 3 segundos em milliseconds
+  size: 0.1                 // Raio visual
 };
 
+/**
+ * Configurações dos tipos de inimigos
+ * 
+ * Define características de cada tipo de inimigo:
+ * - health: Vida total do inimigo
+ * - speed: Velocidade de movimento (unidades/segundo)
+ * - size: Tamanho visual (lado do cubo)
+ * - color: Cor hexadecimal para identificação visual
+ * - spawnRate: Intervalo entre spawns (ms)
+ * 
+ * Tipos disponíveis:
+ * - basic: Inimigo padrão, balanceado
+ * - fast: Rápido mas frágil
+ * - heavy: Lento mas resistente
+ */
+export const ENEMY_CONFIG = {
+  basic: {
+    health: 20,             // 2 hits para destruir
+    speed: 1.5,             // Velocidade moderada
+    size: 0.3,              // Tamanho médio
+    color: 0xff4444,        // Vermelho
+    spawnRate: 2000         // A cada 2 segundos
+  },
+  fast: {
+    health: 10,             // 1 hit para destruir
+    speed: 2.5,             // Mais rápido
+    size: 0.2,              // Menor
+    color: 0xff8800,        // Laranja
+    spawnRate: 3000         // A cada 3 segundos
+  },
+  heavy: {
+    health: 50,             // 5 hits para destruir
+    speed: 0.8,             // Mais lento
+    size: 0.5,              // Maior
+    color: 0x8844ff,        // Roxo
+    spawnRate: 5000         // A cada 5 segundos
+  }
+};
+
+/**
+ * Utilitário matemático para limitar valor entre min e max
+ * 
+ * @param value Valor a ser limitado
+ * @param min Valor mínimo
+ * @param max Valor máximo
+ * @returns Valor limitado entre min e max
+ * 
+ * @example
+ * clamp(15, 0, 10) // retorna 10
+ * clamp(-5, 0, 10) // retorna 0
+ * clamp(7, 0, 10)  // retorna 7
+ */
 export function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }

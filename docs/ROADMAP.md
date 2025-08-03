@@ -20,7 +20,8 @@ Um jogo de space shooter clássico desenvolvido com Three.js em arquitetura mono
 - [x] Implementar interfaces básicas (GameConfig, Vector2D, Player)
 - [x] Utils matemáticos compartilhados (clamp function)
 - [x] **Implementar entidade Projectile com configurações**
-- [ ] Implementar entidades base completas (Enemy, outras entidades)
+- [x] **Implementar entidade Enemy com 3 tipos (basic, fast, heavy)**
+- [x] **Sistema de configurações ENEMY_CONFIG**
 - [ ] Criar sistema de componentes (Transform, Health)
 - [ ] Sistema de eventos
 
@@ -36,6 +37,9 @@ Um jogo de space shooter clássico desenvolvido com Three.js em arquitetura mono
 - [x] Estrutura de assets (public/assets/)
 - [x] Sistema de nave controlável
 - [x] **Sistema de tiro com projéteis (cooldown, movimento, cleanup)**
+- [x] **Sistema de inimigos (spawn, movimento, 3 tipos)**
+- [x] **Collision detection (projéteis vs inimigos)**
+- [x] **Balanceamento de gameplay (velocidades otimizadas)**
 - [ ] Sistema de áudio
 - [ ] Interface do usuário
 
@@ -51,11 +55,12 @@ Um jogo de space shooter clássico desenvolvido com Three.js em arquitetura mono
 
 ### 1.5 Game Logic Integrado
 - [x] **Sistema de projéteis básico**
-- [ ] Sistema de física (compartilhado)
-- [ ] Detecção de colisões
-- [ ] Game loop principal
+- [x] **Sistema de inimigos completo**
+- [x] **Detecção de colisões (projéteis vs inimigos)**
+- [x] **Game loop principal funcional**
+- [x] **Spawn automático de inimigos**
+- [ ] Sistema de física avançado (compartilhado)
 - [ ] Sistema de states
-- [ ] Spawn de inimigos
 - [ ] Sistema de pontuação
 
 ## Fase 2: Melhorias e Polish

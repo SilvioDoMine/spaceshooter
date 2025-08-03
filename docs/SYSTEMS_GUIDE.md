@@ -216,9 +216,12 @@ document.addEventListener('DOMContentLoaded', init);
 - **AssetLoader**: Cache, GLTF/GLB, texturas, material factory
 
 ### 🎮 Funcionalidades Ativas
-- Nave 3D carregada de arquivo GLB
-- Controles WASD para movimento
+- Nave 3D carregada de arquivo GLB (escala otimizada)
+- Controles WASD para movimento (velocidade aumentada)
 - **Sistema de Tiro com projéteis (Espaço)**
+- **Sistema de Inimigos com 3 tipos diferentes**
+- **Collision Detection funcional**
+- **Gameplay Loop completo**
 - Fallback automático (cubo verde se modelo falhar)
 - Mobile-friendly (sem zoom)
 - Hot reload em desenvolvimento
@@ -382,7 +385,161 @@ class ProjectilePool {
 ```
 
 ### Próximas Features
-- **Collision Detection**: Colisão com inimigos
 - **Different Types**: Projéteis com características diferentes
 - **Visual Effects**: Trails, partículas
 - **Audio**: Sons de disparo
+
+## Sistema de Inimigos (Enemy System)
+
+**Responsabilidade**: Gerenciar spawn, movimento, tipos e lifecycle de inimigos.
+
+### Características Principais
+- **3 tipos diferentes**: Basic, Fast, Heavy com stats únicos
+- **Spawn automático**: Controle de timing e frequência
+- **Movimento automático**: Descida vertical em direção ao jogador
+- **Sistema de health**: Múltiplos hits para destruição
+- **Cleanup automático**: Remoção quando saem da tela
+- **Balanceamento**: Probabilidades diferentes para cada tipo
+
+### Tipos de Inimigos
+
+#### Basic (70% spawn rate)
+```typescript
+{
+  health: 20,        // 2 hits para destruir
+  speed: 1.5,        // Velocidade moderada
+  size: 0.3,         // Tamanho médio
+  color: 0xff4444,   // Vermelho
+  spawnRate: 2000    // A cada 2 segundos
+}
+```
+
+#### Fast (20% spawn rate)
+```typescript
+{
+  health: 10,        // 1 hit para destruir
+  speed: 2.5,        // Mais rápido
+  size: 0.2,         // Menor
+  color: 0xff8800,   // Laranja
+  spawnRate: 3000    // A cada 3 segundos
+}
+```
+
+#### Heavy (10% spawn rate)
+```typescript
+{
+  health: 50,        // 5 hits para destruir
+  speed: 0.8,        // Mais lento
+  size: 0.5,         // Maior
+  color: 0x8844ff,   // Roxo
+  spawnRate: 5000    // A cada 5 segundos
+}
+```
+
+### Como Funciona
+
+#### Spawn System
+```typescript
+function spawnEnemy() {
+  // Determinar tipo baseado em probabilidade
+  const rand = Math.random();
+  let enemyType: Enemy['type'];
+  if (rand < 0.7) enemyType = 'basic';
+  else if (rand < 0.9) enemyType = 'fast';
+  else enemyType = 'heavy';
+  
+  // Criar inimigo no topo da tela
+  const enemyData: Enemy = {
+    position: { x: randomX, y: 6 },
+    velocity: { x: 0, y: -config.speed },
+    health: config.health,
+    type: enemyType
+  };
+}
+```
+
+#### Movement System
+```typescript
+function updateEnemies() {
+  enemies.forEach((enemy, id) => {
+    // Movimento automático baseado na velocidade
+    enemy.data.position.y += enemy.data.velocity.y * deltaTime;
+    enemy.object.position.y = enemy.data.position.y;
+    
+    // Cleanup se saiu da tela
+    if (enemy.data.position.y < -6) {
+      removeEnemy(id);
+    }
+  });
+}
+```
+
+#### Health System
+```typescript
+// No sistema de colisões
+if (collision) {
+  enemy.health -= projectile.damage;
+  
+  if (enemy.health <= 0) {
+    // Inimigo destruído
+    removeEnemy(enemyId);
+  }
+}
+```
+
+### Integração com Systems
+
+#### RenderingSystem
+- Cria objetos visuais (BoxGeometry) com cores específicas
+- Adiciona/remove da cena Three.js
+- Aplica shadows e materiais
+
+#### Collision System
+- Detecta colisões com projéteis
+- Aplica dano baseado no damage do projétil
+- Remove inimigos quando health <= 0
+
+#### Shared Package
+- Interface `Enemy` para tipagem
+- `ENEMY_CONFIG` com configurações balanceadas
+- Tipos union para type safety
+
+### Performance e Otimizações
+
+#### Atuais
+- **Map tracking**: O(1) para lookup por ID
+- **Batch cleanup**: Remove múltiplos inimigos por frame
+- **Bounds checking**: Remove inimigos que saíram da tela
+- **Type-based spawning**: Sistema de probabilidades eficiente
+
+#### Spawn Control
+```typescript
+function trySpawnEnemy() {
+  const currentTime = Date.now();
+  
+  // Controle de timing baseado no tipo basic
+  if (currentTime - lastEnemySpawnTime > ENEMY_CONFIG.basic.spawnRate) {
+    spawnEnemy();
+    lastEnemySpawnTime = currentTime;
+  }
+}
+```
+
+### Balanceamento de Gameplay
+
+#### Dificuldade Progressiva
+- **Basic**: Comum, moderado - base do gameplay
+- **Fast**: Raro, rápido - desafio de precisão
+- **Heavy**: Muito raro, tanque - teste de DPS
+
+#### Timing e Ritmo
+- Spawn a cada 2 segundos mantém ritmo constante
+- Velocidades balanceadas para permitir esquiva
+- Health variado cria diferentes objetivos táticos
+
+### Futuras Features
+- **Padrões de movimento**: Movimento diagonal, zigzag
+- **Inimigos atiradores**: Projéteis inimigos
+- **Boss enemies**: Inimigos grandes com fases
+- **Wave system**: Ondas progressivas de dificuldade
+- **Diferentes spawns**: Laterais, múltiplos pontos

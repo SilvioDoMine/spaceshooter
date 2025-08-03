@@ -10,7 +10,7 @@ O Space Shooter está em **Fase 1 - Core Game (Single Player)** com os sistemas 
 
 ## 📊 Progress Overview
 
-### Package Client (Frontend) - 90% Completo
+### Package Client (Frontend) - 95% Completo
 ✅ **Sistemas Implementados**:
 - Monorepo com Yarn Workspaces
 - Three.js + Vite configurado
@@ -18,26 +18,31 @@ O Space Shooter está em **Fase 1 - Core Game (Single Player)** com os sistemas 
 - InputSystem com WASD/Space/P
 - AssetLoader com cache e GLTF/GLB support
 - Mobile-friendly (no zoom)
-- Nave 3D controlável
+- Nave 3D controlável (escala otimizada)
 - **Sistema de Tiro completo** (projéteis, cooldown, lifecycle)
+- **Sistema de Inimigos completo** (3 tipos, spawn, movimento, colisões)
+- **Collision Detection** (projéteis vs inimigos)
+- **Gameplay Loop básico** (atirar, destruir inimigos)
 
 🚧 **Pendente**:
 - AudioSystem
 - UISystem/HUD
 - ParticleSystem
 
-### Package Shared (Core Logic) - 35% Completo
+### Package Shared (Core Logic) - 60% Completo
 ✅ **Implementado**:
 - Estrutura básica
-- Interfaces TypeScript (GameConfig, Vector2D, Player, **Projectile**)
+- Interfaces TypeScript (GameConfig, Vector2D, Player, **Projectile**, **Enemy**)
 - Utils matemáticos
 - **Configurações de projéteis** (PROJECTILE_CONFIG)
+- **Configurações de inimigos** (ENEMY_CONFIG com 3 tipos)
+- **Sistema de tipos de entidades** (basic, fast, heavy)
 
 🚧 **Em Desenvolvimento**:
-- Entidades (Enemy, outras entidades)
 - Sistema de componentes
-- Physics/Collision system
+- Physics/Collision system avançado
 - EventBus
+- Score system
 
 ### Package Server (Backend) - 15% Completo
 ✅ **Implementado**:
@@ -58,10 +63,13 @@ O Space Shooter está em **Fase 1 - Core Game (Single Player)** com os sistemas 
 **O que funciona agora**:
 1. Execute `yarn dev:client`
 2. Acesse `http://localhost:3000` (ou porta alternativa)
-3. Veja uma nave 3D carregada de arquivo GLB
-4. Use WASD para mover a nave
+3. Veja uma nave 3D carregada de arquivo GLB (escala otimizada)
+4. Use WASD para mover a nave (velocidade aumentada)
 5. **Espaço para atirar projéteis** (esferas azuis que se movem para frente)
-6. Projéteis têm cooldown, movimento automático e cleanup
+6. **Inimigos aparecem automaticamente** descendo do topo da tela
+7. **3 tipos de inimigos**: Basic (vermelho), Fast (laranja), Heavy (roxo)
+8. **Atire nos inimigos para destruí-los** - collision detection funcional
+9. Velocidades balanceadas para gameplay fluído
 
 **Assets ativos**:
 - ✅ `public/assets/models/ship.glb` - Nave do jogador
@@ -103,11 +111,11 @@ packages/
 
 ## 🎯 Próximas Milestones
 
-### Milestone 1: Game Logic Core (Estimativa: 1-2 semanas)
+### Milestone 1: Game Logic Core (Estimativa: 1-2 semanas) - ✅ COMPLETO
 - [x] Player entity com movimento físico
 - [x] **Sistema de tiro (projectiles)**
-- [ ] Enemy spawning básico
-- [ ] Collision detection
+- [x] **Enemy spawning básico** (3 tipos, spawn automático)
+- [x] **Collision detection** (projéteis vs inimigos)
 - [ ] Score system
 
 ### Milestone 2: Polish & UX (Estimativa: 1 semana)

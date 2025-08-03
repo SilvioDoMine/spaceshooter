@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { DEFAULT_GAME_CONFIG, Projectile, PROJECTILE_CONFIG } from '@spaceshooter/shared';
+import { DEFAULT_GAME_CONFIG, Projectile, PROJECTILE_CONFIG, Enemy, ENEMY_CONFIG } from '@spaceshooter/shared';
 import { RenderingSystem } from './systems/RenderingSystem';
 import { InputSystem, InputState } from './systems/InputSystem';
 
@@ -10,7 +10,9 @@ let renderingSystem: RenderingSystem;
 let inputSystem: InputSystem;
 let playerShip: THREE.Group;
 let projectiles: Map<string, { object: THREE.Mesh, data: Projectile }> = new Map();
+let enemies: Map<string, { object: THREE.Mesh, data: Enemy }> = new Map();
 let lastShotTime = 0;
+let lastEnemySpawnTime = 0;
 const SHOT_COOLDOWN = 50; // milliseconds
 
 async function init() {
@@ -73,7 +75,7 @@ async function createPlayerShip() {
   
   // Posicionar nave
   playerShip.position.set(0, 0, 0);
-  playerShip.scale.setScalar(0.5); // Reduzir tamanho se necessário
+  playerShip.scale.setScalar(0.3); // Reduzir tamanho para melhor gameplay
 
   // Rotaciona a nave para frente
   playerShip.rotation.x = -Math.PI / 2; // Rotaciona para que
@@ -148,13 +150,85 @@ function shoot() {
   console.log('Projectile fired!', projectileId);
 }
 
+/**
+ * Sistema de Spawn de Inimigos
+ * 
+ * Gera inimigos automaticamente em intervalos regulares na parte superior da tela.
+ * Inimigos são criados com tipos diferentes (basic, fast, heavy) e começam a se
+ * mover automaticamente em direção ao jogador.
+ * 
+ * Características:
+ * - Spawn no topo da tela em posições aleatórias no eixo X
+ * - Diferentes tipos com health, velocidade e visual únicos
+ * - Sistema de timing para controlar frequência de spawn
+ * - Visual: cubos coloridos baseados no tipo
+ */
+function spawnEnemy() {
+  const currentTime = Date.now();
+  
+  // Determinar tipo de inimigo (70% basic, 20% fast, 10% heavy)
+  const rand = Math.random();
+  let enemyType: Enemy['type'];
+  if (rand < 0.7) {
+    enemyType = 'basic';
+  } else if (rand < 0.9) {
+    enemyType = 'fast';
+  } else {
+    enemyType = 'heavy';
+  }
+  
+  const config = ENEMY_CONFIG[enemyType];
+  const enemyId = `enemy_${currentTime}_${Math.random()}`;
+  
+  // Criar dados do inimigo
+  const enemyData: Enemy = {
+    id: enemyId,
+    position: {
+      x: (Math.random() - 0.5) * 8, // Random X entre -4 e 4
+      y: 6 // Spawn no topo
+    },
+    velocity: {
+      x: 0,
+      y: -config.speed // Move para baixo
+    },
+    health: config.health,
+    maxHealth: config.health,
+    type: enemyType,
+    createdAt: currentTime
+  };
+  
+  // Criar objeto visual
+  const geometry = new THREE.BoxGeometry(config.size, config.size, config.size);
+  const material = renderingSystem.createTexturedMaterial({
+    color: config.color
+  });
+  
+  const enemyMesh = new THREE.Mesh(geometry, material);
+  enemyMesh.position.set(
+    enemyData.position.x,
+    enemyData.position.y,
+    0
+  );
+  enemyMesh.castShadow = true;
+  enemyMesh.receiveShadow = true;
+  
+  // Adicionar à cena e tracking
+  renderingSystem.addToScene(enemyMesh);
+  enemies.set(enemyId, {
+    object: enemyMesh,
+    data: enemyData
+  });
+  
+  console.log(`Enemy spawned: ${enemyType}`, enemyId);
+}
+
 function animate() {
   requestAnimationFrame(animate);
   
   // Controlar nave do jogador
   if (playerShip && inputSystem) {
     const inputState = inputSystem.getInputState();
-    const speed = 0.05;
+    const speed = 0.08;
     
     if (inputState.left) {
       playerShip.position.x -= speed;
@@ -172,6 +246,15 @@ function animate() {
   
   // Update projectiles
   updateProjectiles();
+  
+  // Update enemies
+  updateEnemies();
+  
+  // Check collisions
+  checkCollisions();
+  
+  // Spawn enemies
+  trySpawnEnemy();
   
   renderingSystem.render();
 }
@@ -220,6 +303,135 @@ function updateProjectiles() {
     if (projectile) {
       renderingSystem.removeFromScene(projectile.object);
       projectiles.delete(id);
+    }
+  });
+}
+
+/**
+ * Controla o spawn automático de inimigos
+ * 
+ * Verifica se é hora de spawnar um novo inimigo baseado no tempo decorrido
+ * desde o último spawn. Usa rate diferentes para cada tipo de inimigo.
+ */
+function trySpawnEnemy() {
+  const currentTime = Date.now();
+  
+  // Spawn básico a cada 2 segundos
+  if (currentTime - lastEnemySpawnTime > ENEMY_CONFIG.basic.spawnRate) {
+    spawnEnemy();
+    lastEnemySpawnTime = currentTime;
+  }
+}
+
+/**
+ * Atualiza todos os inimigos ativos
+ * 
+ * Esta função é chamada a cada frame e:
+ * - Atualiza posições dos inimigos baseado na velocidade
+ * - Remove inimigos que saíram da tela (parte inferior)
+ * - Limpa objetos da memória e da cena Three.js
+ * 
+ * Performance: O(n) onde n = número de inimigos ativos
+ */
+function updateEnemies() {
+  const toRemove: string[] = [];
+  
+  enemies.forEach((enemy, id) => {
+    const { object, data } = enemy;
+    
+    // Atualizar posição
+    data.position.x += data.velocity.x * 0.016; // ~60fps
+    data.position.y += data.velocity.y * 0.016;
+    
+    object.position.x = data.position.x;
+    object.position.y = data.position.y;
+    
+    // Remove se saiu da tela (parte inferior)
+    if (data.position.y < -6 ||
+        data.position.x > 10 || data.position.x < -10) {
+      toRemove.push(id);
+    }
+  });
+  
+  // Remove inimigos que saíram da tela
+  toRemove.forEach(id => {
+    const enemy = enemies.get(id);
+    if (enemy) {
+      renderingSystem.removeFromScene(enemy.object);
+      enemies.delete(id);
+    }
+  });
+}
+
+/**
+ * Sistema de Detecção de Colisões
+ * 
+ * Verifica colisões entre projéteis e inimigos usando detecção por distância.
+ * Quando uma colisão é detectada:
+ * - O projétil é removido
+ * - O inimigo perde vida
+ * - Se o inimigo morre, é removido da cena
+ * 
+ * Performance: O(n*m) onde n = projéteis, m = inimigos
+ */
+function checkCollisions() {
+  const projectilesToRemove: string[] = [];
+  const enemiesToRemove: string[] = [];
+  
+  projectiles.forEach((projectile, projectileId) => {
+    const projData = projectile.data;
+    
+    enemies.forEach((enemy, enemyId) => {
+      const enemyData = enemy.data;
+      
+      // Calcular distância entre projétil e inimigo
+      const dx = projData.position.x - enemyData.position.x;
+      const dy = projData.position.y - enemyData.position.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      // Verificar colisão (soma dos raios)
+      const projRadius = PROJECTILE_CONFIG.size;
+      const enemyRadius = ENEMY_CONFIG[enemyData.type].size / 2;
+      const collisionDistance = projRadius + enemyRadius;
+      
+      if (distance < collisionDistance) {
+        // Colisão detectada!
+        console.log(`Collision: ${projectileId} hit ${enemyId}`);
+        
+        // Marcar projétil para remoção
+        if (!projectilesToRemove.includes(projectileId)) {
+          projectilesToRemove.push(projectileId);
+        }
+        
+        // Reduzir vida do inimigo
+        enemyData.health -= projData.damage;
+        
+        // Se inimigo morreu, marcar para remoção
+        if (enemyData.health <= 0) {
+          console.log(`Enemy destroyed: ${enemyId}`);
+          if (!enemiesToRemove.includes(enemyId)) {
+            enemiesToRemove.push(enemyId);
+          }
+        }
+      }
+    });
+  });
+  
+  // Remover projéteis que colidiram
+  projectilesToRemove.forEach(id => {
+    const projectile = projectiles.get(id);
+    if (projectile) {
+      renderingSystem.removeFromScene(projectile.object);
+      projectiles.delete(id);
+    }
+  });
+  
+  // Remover inimigos destruídos
+  enemiesToRemove.forEach(id => {
+    const enemy = enemies.get(id);
+    if (enemy) {
+      renderingSystem.removeFromScene(enemy.object);
+      enemies.delete(id);
     }
   });
 }
