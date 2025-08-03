@@ -10,7 +10,7 @@ O Space Shooter está em **Fase 1 - Core Game (Single Player)** com os sistemas 
 
 ## 📊 Progress Overview
 
-### Package Client (Frontend) - 85% Completo
+### Package Client (Frontend) - 90% Completo
 ✅ **Sistemas Implementados**:
 - Monorepo com Yarn Workspaces
 - Three.js + Vite configurado
@@ -19,20 +19,22 @@ O Space Shooter está em **Fase 1 - Core Game (Single Player)** com os sistemas 
 - AssetLoader com cache e GLTF/GLB support
 - Mobile-friendly (no zoom)
 - Nave 3D controlável
+- **Sistema de Tiro completo** (projéteis, cooldown, lifecycle)
 
 🚧 **Pendente**:
 - AudioSystem
 - UISystem/HUD
 - ParticleSystem
 
-### Package Shared (Core Logic) - 20% Completo
+### Package Shared (Core Logic) - 35% Completo
 ✅ **Implementado**:
 - Estrutura básica
-- Interfaces TypeScript (GameConfig, Vector2D)
+- Interfaces TypeScript (GameConfig, Vector2D, Player, **Projectile**)
 - Utils matemáticos
+- **Configurações de projéteis** (PROJECTILE_CONFIG)
 
 🚧 **Em Desenvolvimento**:
-- Entidades (Player, Enemy, Projectile)
+- Entidades (Enemy, outras entidades)
 - Sistema de componentes
 - Physics/Collision system
 - EventBus
@@ -55,10 +57,11 @@ O Space Shooter está em **Fase 1 - Core Game (Single Player)** com os sistemas 
 
 **O que funciona agora**:
 1. Execute `yarn dev:client`
-2. Acesse `http://localhost:3000`
+2. Acesse `http://localhost:3000` (ou porta alternativa)
 3. Veja uma nave 3D carregada de arquivo GLB
 4. Use WASD para mover a nave
-5. Espaço gira a nave (teste)
+5. **Espaço para atirar projéteis** (esferas azuis que se movem para frente)
+6. Projéteis têm cooldown, movimento automático e cleanup
 
 **Assets ativos**:
 - ✅ `public/assets/models/ship.glb` - Nave do jogador
@@ -101,8 +104,8 @@ packages/
 ## 🎯 Próximas Milestones
 
 ### Milestone 1: Game Logic Core (Estimativa: 1-2 semanas)
-- [ ] Player entity com movimento físico
-- [ ] Sistema de tiro (projectiles)
+- [x] Player entity com movimento físico
+- [x] **Sistema de tiro (projectiles)**
 - [ ] Enemy spawning básico
 - [ ] Collision detection
 - [ ] Score system

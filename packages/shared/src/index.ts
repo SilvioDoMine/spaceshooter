@@ -18,10 +18,26 @@ export interface Player {
   health: number;
 }
 
+export interface Projectile {
+  id: string;
+  position: Vector2D;
+  velocity: Vector2D;
+  damage: number;
+  ownerId: string;
+  createdAt: number;
+}
+
 export const DEFAULT_GAME_CONFIG: GameConfig = {
   width: 800,
   height: 600,
   playerSpeed: 5
+};
+
+export const PROJECTILE_CONFIG = {
+  speed: 15,
+  damage: 10,
+  lifetime: 3000, // 3 seconds in milliseconds
+  size: 0.1
 };
 
 export function clamp(value: number, min: number, max: number): number {

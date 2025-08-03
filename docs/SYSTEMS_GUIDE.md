@@ -218,6 +218,7 @@ document.addEventListener('DOMContentLoaded', init);
 ### 🎮 Funcionalidades Ativas
 - Nave 3D carregada de arquivo GLB
 - Controles WASD para movimento
+- **Sistema de Tiro com projéteis (Espaço)**
 - Fallback automático (cubo verde se modelo falhar)
 - Mobile-friendly (sem zoom)
 - Hot reload em desenvolvimento
@@ -250,3 +251,138 @@ inputSystem.dispose();
 - Mantenha assets organizados no manifest (`gameAssets.ts`)
 - Use nomes descritivos para assets
 - Configure callbacks de progresso para UX melhor
+
+## Sistema de Tiro (Shooting System)
+
+**Responsabilidade**: Gerenciar criação, movimento e lifecycle de projéteis.
+
+### Características Principais
+- **Cooldown**: 50ms entre disparos para evitar spam
+- **Projéteis visuais**: Esferas azuis (SphereGeometry)
+- **Movimento automático**: 15 unidades/segundo para frente
+- **Cleanup automático**: 3 segundos de lifetime + bounds checking
+- **Tracking único**: Cada projétil tem ID único para gerenciamento
+
+### Como Funciona
+
+#### Disparo
+```typescript
+// Disparar ao pressionar espaço (via InputSystem callback)
+inputSystem.addInputCallback((action, pressed) => {
+  if (action === 'shoot' && pressed) {
+    shoot(); // Cria novo projétil se não estiver em cooldown
+  }
+});
+```
+
+#### Estrutura do Projétil
+```typescript
+// Interface compartilhada (packages/shared)
+interface Projectile {
+  id: string;              // ID único
+  position: Vector2D;      // Posição atual
+  velocity: Vector2D;      // Velocidade (x, y)
+  damage: number;          // Dano do projétil
+  ownerId: string;         // ID do jogador que atirou
+  createdAt: number;       // Timestamp de criação
+}
+
+// Configurações (packages/shared)
+const PROJECTILE_CONFIG = {
+  speed: 15,               // Velocidade (unidades/segundo)
+  damage: 10,              // Dano causado
+  lifetime: 3000,          // Tempo de vida (ms)
+  size: 0.1                // Tamanho visual
+};
+```
+
+#### Sistema de Tracking
+```typescript
+// Map para tracking de projéteis ativos
+let projectiles: Map<string, { 
+  object: THREE.Mesh,      // Objeto visual Three.js
+  data: Projectile         // Dados do projétil
+}> = new Map();
+```
+
+#### Loop de Atualização
+```typescript
+function updateProjectiles() {
+  const currentTime = Date.now();
+  const toRemove: string[] = [];
+  
+  projectiles.forEach((projectile, id) => {
+    const { object, data } = projectile;
+    
+    // Verificar expiração
+    if (currentTime - data.createdAt > PROJECTILE_CONFIG.lifetime) {
+      toRemove.push(id);
+      return;
+    }
+    
+    // Atualizar posição (60fps assumed)
+    data.position.x += data.velocity.x * 0.016;
+    data.position.y += data.velocity.y * 0.016;
+    
+    object.position.x = data.position.x;
+    object.position.y = data.position.y;
+    
+    // Verificar bounds (limites da tela)
+    if (data.position.y > 10 || data.position.y < -10 ||
+        data.position.x > 10 || data.position.x < -10) {
+      toRemove.push(id);
+    }
+  });
+  
+  // Cleanup
+  toRemove.forEach(id => {
+    const projectile = projectiles.get(id);
+    if (projectile) {
+      renderingSystem.removeFromScene(projectile.object);
+      projectiles.delete(id);
+    }
+  });
+}
+```
+
+### Integração com Systems
+
+#### RenderingSystem
+- Adiciona/remove objetos visuais da cena
+- Cria material cyan para projéteis
+- Usa SphereGeometry com tamanho configurável
+
+#### InputSystem
+- Disparo via callback do evento 'shoot'
+- Cooldown implementado para evitar spam
+
+#### Shared Package
+- Interface `Projectile` para tipagem
+- `PROJECTILE_CONFIG` para configurações
+- Reutilizável para multiplayer futuro
+
+### Performance e Otimizações
+
+#### Atuais
+- **Map tracking**: O(1) para lookup por ID
+- **Batch cleanup**: Remove múltiplos projéteis por frame
+- **Bounds checking**: Remove projéteis fora da tela
+- **Lifetime limit**: Evita acúmulo infinito
+
+#### Futuras (Object Pooling)
+```typescript
+// Pool de objetos reutilizáveis (planejado)
+class ProjectilePool {
+  private available: THREE.Mesh[] = [];
+  private active: Set<THREE.Mesh> = new Set();
+  
+  acquire(): THREE.Mesh { /* ... */ }
+  release(mesh: THREE.Mesh): void { /* ... */ }
+}
+```
+
+### Próximas Features
+- **Collision Detection**: Colisão com inimigos
+- **Different Types**: Projéteis com características diferentes
+- **Visual Effects**: Trails, partículas
+- **Audio**: Sons de disparo
