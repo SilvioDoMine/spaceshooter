@@ -1,5 +1,31 @@
 # Arquitetura do Space Shooter
 
+## 🏗️ Visão Geral da Arquitetura
+
+O Space Shooter utiliza uma **arquitetura clean modular** baseada no padrão **Manager/System**, organizada em um monorepo com Yarn Workspaces. A arquitetura foi **completamente refatorada** em Janeiro 2025 para eliminar anti-patterns e melhorar manutenibilidade.
+
+## 🎯 Nova Arquitetura (Pós-Refatoração)
+
+### **Client Architecture**
+```
+client/src/
+├── main.ts (198 linhas - BOOTSTRAP APENAS)
+├── core/ (NOVA ARQUITETURA)
+│   ├── GameManager.ts      # Orquestrador principal
+│   ├── EntityManager.ts    # Gerenciamento de entidades
+│   ├── CollisionSystem.ts  # Sistema de colisões
+│   ├── SpawnSystem.ts      # Sistema de spawn
+│   └── GameLoop.ts         # Loop principal isolado
+└── systems/ (SISTEMAS EXISTENTES)
+    ├── RenderingSystem.ts  # Three.js + assets
+    ├── InputSystem.ts      # Eventos de teclado
+    ├── UISystem.ts         # HUD e interface
+    ├── AudioSystem.ts      # Sons e efeitos
+    ├── ParticleSystem.ts   # Efeitos visuais
+    ├── GameStateManager.ts # Estados do jogo
+    └── MenuSystem.ts       # Sistema de menus
+```
+
 ## Estrutura do Monorepo (Yarn Workspaces)
 
 ```
@@ -30,7 +56,13 @@ spaceshooter/
 │   │   ├── index.html          # HTML principal
 │   │   ├── node_modules/       # Dependências locais do Vite
 │   │   └── src/
-│   │       ├── main.ts         # Entry point do cliente
+│   │       ├── main.ts         # Entry point (APENAS BOOTSTRAP - 198 linhas)
+│   │       ├── core/           # 🆕 NOVA ARQUITETURA MODULAR
+│   │       │   ├── GameManager.ts    # Orquestrador principal
+│   │       │   ├── EntityManager.ts  # Gerenciamento de entidades
+│   │       │   ├── CollisionSystem.ts # Sistema de colisões
+│   │       │   ├── SpawnSystem.ts    # Sistema de spawn
+│   │       │   └── GameLoop.ts       # Loop principal isolado
 │   │       ├── systems/        # RenderingSystem, InputSystem, AudioSystem
 │   │       ├── ui/             # Interface do usuário
 │   │       └── assets/         # Modelos, texturas, sons
@@ -45,6 +77,74 @@ spaceshooter/
 ├── docs/                       # Documentação do projeto
 ├── .gitignore
 └── README.md
+```
+
+## 🔄 **Refatoração Arquitetural Completa**
+
+### **❌ Problema Anterior (Anti-Pattern)**
+- **main.ts**: 1048 linhas com 22 funções misturadas
+- **God Object**: Toda lógica em um arquivo
+- **Responsabilidades misturadas**: rendering, colisão, spawn, input
+- **Estado global**: 17 variáveis globais espalhadas
+- **Impossível de testar** ou manter
+
+### **✅ Solução Implementada (Clean Architecture)**
+- **main.ts**: 198 linhas - APENAS bootstrap
+- **5 Managers especializados** com responsabilidades únicas
+- **Separação clara** de lógica de negócio
+- **Estado centralizado** no GameManager
+- **100% testável** com dependency injection
+
+## 🎯 **Componentes da Nova Arquitetura**
+
+### **1. GameManager** (Orquestrador Principal)
+```typescript
+class GameManager {
+  // Coordena todos os sistemas
+  // Gerencia estado global
+  // Ponto único de inicialização
+  // Interface para debugging
+}
+```
+
+### **2. EntityManager** (Gerenciamento de Entidades)
+```typescript
+class EntityManager {
+  // CRUD de projéteis, inimigos, power-ups
+  // Tracking com Maps para performance
+  // Visual + data synchronization
+  // Lifecycle management
+}
+```
+
+### **3. CollisionSystem** (Sistema de Colisões)
+```typescript
+class CollisionSystem {
+  // Detecção otimizada de colisões
+  // Efeitos visuais/sonoros integrados
+  // Resultados estruturados
+  // Debug tools inclusos
+}
+```
+
+### **4. SpawnSystem** (Sistema de Spawn)
+```typescript
+class SpawnSystem {
+  // Spawn baseado em timers
+  // Probabilidades configuráveis
+  // Sistema de dificuldade
+  // Debug e force spawn
+}
+```
+
+### **5. GameLoop** (Loop Principal)
+```typescript
+class GameLoop {
+  // Loop isolado e testável
+  // Delta time consistente
+  // Performance monitoring
+  // Pause/resume support
+}
 ```
 
 ## Separação de Responsabilidades

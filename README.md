@@ -96,7 +96,17 @@ spaceshooter/
 
 ## Estado Atual
 
-### ✅ **JOGO COMPLETO** - Single Player
+### ✅ **JOGO COMPLETO** - Single Player + **Arquitetura Refatorada (Janeiro 2025)**
+
+#### **🏗️ Nova Arquitetura Clean**
+- **🆕 GameManager** - Orquestrador principal (substitui main.ts monolítico)
+- **🆕 EntityManager** - Gerenciamento centralizado de entidades
+- **🆕 CollisionSystem** - Sistema de colisões isolado e otimizado
+- **🆕 SpawnSystem** - Sistema de spawn configurável
+- **🆕 GameLoop** - Loop principal isolado com performance monitoring
+- **main.ts refatorado** - 198 linhas (era 1048) - APENAS bootstrap
+
+#### **🎮 Sistemas de Jogo (Mantidos)**
 - **Monorepo** com Yarn Workspaces
 - **RenderingSystem** com Three.js (scene, camera, renderer, iluminação)
 - **InputSystem** com mapeamento WASD/Espaço/P/Escape
@@ -106,14 +116,22 @@ spaceshooter/
 - **Sistema de Inimigos** com 3 tipos (Basic, Fast, Heavy)
 - **Collision Detection** entre projéteis e inimigos
 - **Gameplay Loop** funcional (atirar, destruir inimigos, vida, dano)
-- **🆕 AudioSystem** com efeitos sonoros (sons sintéticos)
-- **🆕 ParticleSystem** com efeitos visuais de explosão
-- **🆕 GameStateManager** com estados (Menu/Playing/Paused/GameOver)
-- **🆕 MenuSystem** com telas completas
-- **🆕 UISystem/HUD** com vida, munição e pontuação
-- **🆕 Sistema de Estatísticas** (precisão, tempo vivo, kills)
-- **🆕 PowerUp System** com coleta de recursos (munição, vida)
+- **AudioSystem** com efeitos sonoros (sons sintéticos)
+- **ParticleSystem** com efeitos visuais de explosão
+- **GameStateManager** com estados (Menu/Playing/Paused/GameOver)
+- **MenuSystem** com telas completas
+- **UISystem/HUD** com vida, munição e pontuação
+- **Sistema de Estatísticas** (precisão, tempo vivo, kills)
+- **PowerUp System** com coleta de recursos (munição, vida)
 - **Mobile-friendly** sem zoom
+
+#### **🔧 Melhorias Técnicas**
+- **81% redução** de linhas no main.ts (1048 → 198)
+- **100% testável** - Dependency injection em todos os sistemas
+- **Debug tools** integrados no console do browser
+- **Error handling** robusto com fallbacks
+- **Performance monitoring** built-in
+- **Auto-pause** quando tab é ocultada
 
 ### 🚧 Em Desenvolvimento
 - Sistema de física avançado
@@ -177,3 +195,30 @@ spaceshooter/
 - **Estatísticas detalhadas**: pontuação final, tempo vivo, inimigos destruídos, inimigos escapados
 - **Precisão de tiro**: percentual de acertos
 - **Opções**: Jogar novamente ou voltar ao menu principal
+
+### 🔧 Debug Tools (Nova Arquitetura)
+
+No console do browser (F12), você pode usar:
+
+```javascript
+// Informações gerais
+gameDebug.getInfo()                    // Estado completo do jogo
+gameDebug.getStats()                   // Performance e estatísticas
+gameManager.getSystems()               // Acesso aos sistemas
+gameManager.getManagers()              // Acesso aos managers
+
+// Debug mode
+gameDebug.enableDebug()                // Ativar modo debug
+gameDebug.disableDebug()               // Desativar modo debug
+
+// Force spawn para testes
+gameDebug.forceSpawn('enemy-basic')    // Spawnar inimigo básico
+gameDebug.forceSpawn('enemy-heavy')    // Spawnar inimigo pesado
+gameDebug.forceSpawn('powerup-ammo')   // Spawnar munição
+gameDebug.forceSpawn('powerup-health') // Spawnar vida
+
+// Performance monitoring
+gameManager.getManagers().gameLoop.getPerformanceStats()
+gameManager.getManagers().entity.getEntityCounts()
+gameManager.getManagers().spawn.getStats()
+```

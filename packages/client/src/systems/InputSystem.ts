@@ -103,6 +103,8 @@ export class InputSystem {
       
       // Notificar callbacks
       this.callbacks.forEach(callback => callback(action, true));
+
+      console.log(`Key pressed: ${event.code} -> Action: ${action}`);
       
       event.preventDefault();
     }
@@ -117,6 +119,8 @@ export class InputSystem {
       
       // Notificar callbacks
       this.callbacks.forEach(callback => callback(action, false));
+
+      console.log(`Key released: ${event.code} -> Action: ${action}`);
       
       event.preventDefault();
     }

@@ -1,22 +1,186 @@
 # Space Shooter - Systems Guide
 
-Este documento descreve os sistemas implementados no cliente do Space Shooter, como usá-los e suas principais funcionalidades.
+Este documento descreve **todos os sistemas implementados** no cliente do Space Shooter após a **refatoração arquitetural completa** de Janeiro 2025.
 
-## Visão Geral dos Systems
+## 🏗️ Visão Geral da Nova Arquitetura
 
-O cliente do Space Shooter é construído com uma arquitetura modular baseada em sistemas especializados:
+O Space Shooter agora utiliza uma **arquitetura Manager/System** modular e escalável:
 
 ```
-packages/client/src/systems/
-├── RenderingSystem.ts    # Renderização 3D com Three.js
-├── InputSystem.ts        # Captura e processamento de input
-├── UISystem.ts           # HUD e interface dentro do Three.js
-└── (futuros: AudioSystem, ParticleSystem, etc.)
-
-packages/client/src/assets/
-├── AssetLoader.ts        # Carregamento e cache de assets
-└── gameAssets.ts         # Manifesto de assets do jogo
+packages/client/src/
+├── main.ts (BOOTSTRAP - 198 linhas)
+├── core/ (🆕 NOVA ARQUITETURA)
+│   ├── GameManager.ts      # Orquestrador principal
+│   ├── EntityManager.ts    # Gerenciamento de entidades
+│   ├── CollisionSystem.ts  # Sistema de colisões
+│   ├── SpawnSystem.ts      # Sistema de spawn
+│   └── GameLoop.ts         # Loop principal isolado
+├── systems/ (SISTEMAS EXISTENTES)
+│   ├── RenderingSystem.ts  # Renderização 3D com Three.js
+│   ├── InputSystem.ts      # Captura e processamento de input
+│   ├── UISystem.ts         # HUD e interface
+│   ├── AudioSystem.ts      # Sons e efeitos
+│   ├── ParticleSystem.ts   # Efeitos visuais
+│   ├── GameStateManager.ts # Estados do jogo
+│   └── MenuSystem.ts       # Sistema de menus
+└── assets/
+    ├── AssetLoader.ts      # Carregamento e cache de assets
+    └── gameAssets.ts       # Manifesto de assets do jogo
 ```
+
+## 🎯 Core Managers (Nova Arquitetura)
+
+### GameManager (Orquestrador Principal)
+
+**Responsabilidade**: Coordena todos os sistemas e managers, ponto único de inicialização.
+
+#### Funcionalidades
+- Inicialização completa do jogo
+- Coordenação entre sistemas
+- Gerenciamento de estado global
+- Debug tools integrados
+- Error handling robusto
+
+#### Como Usar
+```typescript
+// Inicialização completa
+const gameManager = new GameManager();
+await gameManager.initialize();
+
+// No loop principal
+function animate() {
+  requestAnimationFrame(animate);
+  gameManager.update(); // Coordena tudo
+}
+
+// Debug (console do browser)
+gameDebug.getInfo()     // Estado geral
+gameDebug.getStats()    // Performance stats
+gameManager.getSystems() // Acesso aos sistemas
+```
+
+### EntityManager (Gerenciamento de Entidades)
+
+**Responsabilidade**: CRUD completo de todas as entidades do jogo.
+
+#### Funcionalidades
+- Criação/remoção de projéteis, inimigos, power-ups
+- Tracking centralizado com Maps
+- Atualização de posições e estados
+- Sincronização visual + data
+- Cleanup automático
+
+#### Como Usar
+```typescript
+// Criar entidades
+const projectile = entityManager.createProjectile({
+  position: { x: 0, y: 0, z: 0 },
+  velocity: { x: 0, y: 5 },
+  damage: 10
+});
+
+const enemy = entityManager.createEnemy('basic');
+const powerUp = entityManager.createPowerUp('ammo');
+
+// Atualizar (no game loop)
+entityManager.updateProjectiles(deltaTime);
+const result = entityManager.updateEnemies(deltaTime);
+entityManager.updatePowerUps(deltaTime);
+
+// Informações
+const counts = entityManager.getEntityCounts();
+console.log(`Entidades ativas: ${counts.total}`);
+```
+
+### CollisionSystem (Sistema de Colisões)
+
+**Responsabilidade**: Detecção e resolução de todas as colisões do jogo.
+
+#### Funcionalidades
+- Colisões projétil vs inimigo
+- Colisões jogador vs inimigo
+- Colisões jogador vs power-up
+- Efeitos visuais e sonoros automáticos
+- Configuração de raios de colisão
+
+#### Como Usar
+```typescript
+// Verificar colisões (no game loop)
+const playerPos = { x: player.x, y: player.y };
+const result = collisionSystem.checkAllCollisions(playerPos);
+
+// Processar resultados
+result.projectileHits.forEach(hit => {
+  if (hit.destroyed) {
+    score += hit.points;
+    console.log(`Enemy destroyed! +${hit.points} points`);
+  }
+});
+
+result.powerUpCollections.forEach(collection => {
+  applyPowerUpEffect(collection.powerUp.data.type, collection.effect);
+});
+```
+
+### SpawnSystem (Sistema de Spawn)
+
+**Responsabilidade**: Geração controlada e configurável de entidades.
+
+#### Funcionalidades
+- Spawn baseado em timers independentes
+- Probabilidades configuráveis por tipo
+- Sistema de dificuldade dinâmico
+- Force spawn para debugging
+- Estatísticas de spawn
+
+#### Como Usar
+```typescript
+// Atualização (no game loop)
+spawnSystem.update();
+
+// Configuração de dificuldade
+spawnSystem.setDifficulty('hard');
+spawnSystem.setEnemySpawnRate(1000); // 1s entre spawns
+
+// Debug
+spawnSystem.forceSpawnEnemy('heavy');
+spawnSystem.forceSpawnPowerUp('health');
+
+// Estatísticas
+const stats = spawnSystem.getStats();
+console.log('Spawn stats:', stats);
+```
+
+### GameLoop (Loop Principal)
+
+**Responsabilidade**: Coordenação do loop principal do jogo.
+
+#### Funcionalidades
+- Loop isolado e testável
+- Delta time consistente
+- FPS monitoring
+- Pause/resume suporte
+- Input handling centralizado
+
+#### Como Usar
+```typescript
+// Controle do loop
+gameLoop.start();
+gameLoop.pause();
+gameLoop.resume();
+gameLoop.stop();
+
+// Input handling
+gameLoop.handleInput('space', true, gameState, playerShip);
+
+// Performance
+const stats = gameLoop.getPerformanceStats();
+console.log(`FPS: ${stats.fps}, Entities: ${stats.entityCounts.total}`);
+```
+
+---
+
+## 🎮 Sistemas Existentes (Mantidos)
 
 ## RenderingSystem
 
