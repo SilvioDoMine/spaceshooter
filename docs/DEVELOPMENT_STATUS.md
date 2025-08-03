@@ -10,12 +10,12 @@ O Space Shooter está em **Fase 1 - Core Game (Single Player)** com os sistemas 
 
 ## 📊 Progress Overview
 
-### Package Client (Frontend) - 98% Completo
+### Package Client (Frontend) - 100% Completo ✅
 ✅ **Sistemas Implementados**:
 - Monorepo com Yarn Workspaces
 - Three.js + Vite configurado
 - RenderingSystem completo (scene, camera, lighting, shadows)
-- InputSystem com WASD/Space/P
+- InputSystem com WASD/Space/P/Escape
 - **UISystem/HUD completo** (score, vida, munição, barras visuais)
 - AssetLoader com cache e GLTF/GLB support
 - Mobile-friendly (no zoom)
@@ -24,10 +24,12 @@ O Space Shooter está em **Fase 1 - Core Game (Single Player)** com os sistemas 
 - **Sistema de Inimigos completo** (3 tipos, spawn, movimento, colisões)
 - **Collision Detection** (projéteis vs inimigos, inimigos vs jogador)
 - **Gameplay Loop completo** (vida, pontuação, consequências)
+- **🆕 AudioSystem completo** (sons sintéticos, efeitos de tiro/explosão/hit)
+- **🆕 ParticleSystem completo** (explosões, efeitos visuais)
+- **🆕 GameStateManager** (states: Menu/Playing/Paused/GameOver)
+- **🆕 MenuSystem** (menu principal, pause, game over com estatísticas)
 
-🚧 **Pendente**:
-- AudioSystem
-- ParticleSystem
+✅ **Milestone 2 - Polish & UX COMPLETO**
 
 ### Package Shared (Core Logic) - 60% Completo
 ✅ **Implementado**:
@@ -60,19 +62,26 @@ O Space Shooter está em **Fase 1 - Core Game (Single Player)** com os sistemas 
 
 ## 🎮 Estado Atual do Jogo
 
-**O que funciona agora**:
+**Experiência Completa de Jogo**:
 1. Execute `yarn dev:client`
 2. Acesse `http://localhost:3000` (ou porta alternativa)
-3. Veja uma nave 3D carregada de arquivo GLB (escala otimizada)
-4. **HUD completo no topo**: Score, Health (texto + barra), Ammo
-5. Use WASD para mover a nave (velocidade aumentada)
-6. **Espaço para atirar projéteis** (munição limitada: 30 balas)
-7. **Inimigos aparecem automaticamente** descendo do topo da tela
-8. **3 tipos de inimigos**: Basic (vermelho), Fast (laranja), Heavy (roxo)
-9. **Atire nos inimigos para destruí-los** e ganhar pontos (10/25/50)
-10. **Cuidado com colisões** - inimigos causam dano (10/15/25 HP)
-11. **Game Over** quando vida chega a 0
-12. Velocidades balanceadas para gameplay fluído
+3. **🆕 Menu Principal** com botão "Iniciar Jogo" e informações de controles
+4. **Gameplay Completo**:
+   - Nave 3D carregada de arquivo GLB (escala otimizada)
+   - **HUD completo**: Score, Health (barra visual), Ammo
+   - **WASD** para movimento da nave
+   - **Espaço** para atirar projéteis (munição limitada: 30 balas)
+   - **🆕 Efeitos sonoros**: tiro, explosão, impacto (sons sintéticos)
+   - **🆕 Efeitos visuais**: partículas de explosão quando inimigos morrem
+   - **3 tipos de inimigos**: Basic (vermelho), Fast (laranja), Heavy (roxo)
+   - Pontuação por inimigo destruído (10/25/50 pontos)
+   - Sistema de dano por colisão (10/15/25 HP)
+5. **🆕 Controles de Jogo**:
+   - **P** para pausar/despausar
+   - **Tela de Pause** com opções de continuar ou voltar ao menu
+6. **🆕 Game Over** com estatísticas detalhadas:
+   - Pontuação final, tempo vivo, inimigos destruídos
+   - Precisão de tiro, opções de restart ou menu principal
 
 **Assets ativos**:
 - ✅ `public/assets/models/ship.glb` - Nave do jogador
@@ -85,9 +94,14 @@ O Space Shooter está em **Fase 1 - Core Game (Single Player)** com os sistemas 
 ### Systems Pattern
 ```typescript
 // Cada system é independente e especializado
-RenderingSystem  // Three.js + AssetLoader
-InputSystem      // Keyboard events + state management  
-AssetLoader      // Cache + GLTF loading + material factory
+RenderingSystem    // Three.js + AssetLoader
+InputSystem        // Keyboard events + state management  
+UISystem          // HUD, health bars, score display
+AudioSystem       // Sound loading, playback, synthetic fallbacks
+ParticleSystem    // Visual effects, explosions, hit effects
+GameStateManager  // Game states (Menu/Playing/Paused/GameOver)
+MenuSystem        // UI screens (main menu, pause, game over)
+AssetLoader       // Cache + GLTF loading + material factory
 ```
 
 ### Asset Pipeline
@@ -123,12 +137,12 @@ packages/
 - [x] **Health system** (vida do jogador, dano por colisão)
 - [x] **Ammo system** (munição limitada, cooldown de tiro)
 
-### Milestone 2: Polish & UX (Estimativa: 1 semana) - 🟡 75% COMPLETO
+### Milestone 2: Polish & UX (Estimativa: 1 semana) - ✅ 100% COMPLETO
 - [x] **HUD completo** (vida com barra, pontos, munição)
 - [x] **Game state management** (integração completa)
-- [ ] AudioSystem com efeitos sonoros
-- [ ] Particle effects (explosões)
-- [ ] Menu principal e game over screen
+- [x] **AudioSystem com efeitos sonoros** (tiro, explosão, hit com fallback sintético)
+- [x] **Particle effects** (explosões quando inimigos morrem, hit effects)
+- [x] **Menu principal e game over screen** (com estatísticas detalhadas)
 
 ### Milestone 3: Multiplayer Foundation (Estimativa: 2-3 semanas)
 - [ ] Server implementation
@@ -189,4 +203,4 @@ yarn dev:client  # http://localhost:3000
 ---
 
 **Última atualização**: Janeiro 2025  
-**Próxima revisão**: Após implementação do Milestone 1
+**Próxima revisão**: Após implementação do Milestone 3 (Multiplayer Foundation)

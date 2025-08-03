@@ -71,27 +71,33 @@ spaceshooter/
 
 ## Estado Atual
 
-### ✅ Implementado
+### ✅ **JOGO COMPLETO** - Single Player
 - **Monorepo** com Yarn Workspaces
 - **RenderingSystem** com Three.js (scene, camera, renderer, iluminação)
-- **InputSystem** com mapeamento WASD/Espaço/P
+- **InputSystem** com mapeamento WASD/Espaço/P/Escape
 - **AssetLoader** com cache e carregamento de modelos 3D
 - **Nave controlável** carregada de arquivo GLB (escala otimizada)
 - **Sistema de Tiro** com projéteis, cooldown e cleanup automático
 - **Sistema de Inimigos** com 3 tipos (Basic, Fast, Heavy)
 - **Collision Detection** entre projéteis e inimigos
-- **Gameplay Loop** funcional (atirar, destruir inimigos)
+- **Gameplay Loop** funcional (atirar, destruir inimigos, vida, dano)
+- **🆕 AudioSystem** com efeitos sonoros (sons sintéticos)
+- **🆕 ParticleSystem** com efeitos visuais de explosão
+- **🆕 GameStateManager** com estados (Menu/Playing/Paused/GameOver)
+- **🆕 MenuSystem** com telas completas
+- **🆕 UISystem/HUD** com vida, munição e pontuação
+- **🆕 Sistema de Estatísticas** (precisão, tempo vivo, kills)
 - **Mobile-friendly** sem zoom
 
 ### 🚧 Em Desenvolvimento
-- Sistema de pontuação
 - Sistema de física avançado
-- Audio system
+- Power-ups e upgrades
+- Fases/waves progressivas
 
 ### 📋 Próximos Passos
-- Sistema de áudio
-- Interface do usuário (HUD)
-- Multiplayer networking
+- **Multiplayer networking** (Fase 3)
+- **Performance optimizations**
+- **Advanced gameplay features**
 
 ## Tecnologias
 
@@ -100,30 +106,40 @@ spaceshooter/
 - **Three.js** - Engine 3D para renderização
 - **Yarn Workspaces** - Gerenciamento do monorepo
 
-## Como Jogar (Estado Atual)
+## 🎮 Como Jogar
 
+### Início
 1. Execute `yarn dev:client`
 2. Acesse `http://localhost:3000`
-3. Use **WASD** para mover a nave
-4. **Espaço** para atirar projéteis (esferas azuis)
-5. **Destrua os inimigos** que descem do topo da tela
-6. **Sobreviva o máximo possível**
+3. **🆕 Menu Principal** aparece com opções
+4. Clique **"Iniciar Jogo"** para começar
+
+### Gameplay Completo
+- **Movimento**: Use **WASD** para mover a nave 3D
+- **Ataque**: **Espaço** para atirar projéteis (munição limitada: 30 balas)
+- **🆕 Audio**: Ouça efeitos sonoros de tiro, explosão e impacto
+- **🆕 Efeitos Visuais**: Veja partículas de explosão quando inimigos morrem
+- **🆕 HUD**: Monitore vida (barra visual), munição e pontuação
+- **🆕 Pause**: Pressione **P** para pausar/despausar
 
 ### Controles
-- **W/↑**: Mover para cima
-- **A/←**: Mover para esquerda  
-- **S/↓**: Mover para baixo
-- **D/→**: Mover para direita
-- **Espaço**: Atirar (cooldown de 50ms)
-- **P/Esc**: Pause
+- **W/A/S/D**: Movimento da nave
+- **Espaço**: Atirar (cooldown de 200ms)
+- **P**: Pausar/Despausar
+- **Escape**: Pause alternativo
 
-### Inimigos
-- **🔴 Basic (Vermelho)**: 20 HP, velocidade 1.5, mais comum (70%)
-- **🟠 Fast (Laranja)**: 10 HP, velocidade 2.5, rápido (20%)
-- **🟣 Heavy (Roxo)**: 50 HP, velocidade 0.8, resistente (10%)
+### Sistema de Combate
+- **🔴 Basic (Vermelho)**: 20 HP, velocidade 1.5, **10 pontos**, dano 10 HP (70% spawn)
+- **🟠 Fast (Laranja)**: 10 HP, velocidade 2.5, **25 pontos**, dano 15 HP (20% spawn)
+- **🟣 Heavy (Roxo)**: 50 HP, velocidade 0.8, **50 pontos**, dano 25 HP (10% spawn)
 
-### Gameplay
-- Inimigos aparecem automaticamente a cada 2 segundos
-- Cada projétil causa 10 de dano
-- Destrua inimigos atirando neles
-- Evite que inimigos cheguem até você
+### Objetivos
+- **Destrua inimigos** atirando neles para ganhar pontos
+- **Evite colisões** - inimigos causam dano baseado no tipo
+- **Gerencie munição** - você tem apenas 30 tiros
+- **Sobreviva o máximo possível** - quando vida chega a 0, é game over
+
+### 🆕 Game Over
+- **Estatísticas detalhadas**: pontuação final, tempo vivo, inimigos destruídos
+- **Precisão de tiro**: percentual de acertos
+- **Opções**: Jogar novamente ou voltar ao menu principal

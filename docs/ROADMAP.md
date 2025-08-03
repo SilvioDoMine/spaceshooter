@@ -40,8 +40,10 @@ Um jogo de space shooter clássico desenvolvido com Three.js em arquitetura mono
 - [x] **Sistema de inimigos (spawn, movimento, 3 tipos)**
 - [x] **Collision detection (projéteis vs inimigos)**
 - [x] **Balanceamento de gameplay (velocidades otimizadas)**
-- [ ] Sistema de áudio
-- [ ] Interface do usuário
+- [x] **Sistema de áudio (AudioSystem com sons sintéticos)**
+- [x] **Interface do usuário (HUD, Menu, Game Over)**
+- [x] **Sistema de partículas (ParticleSystem)**
+- [x] **Gerenciamento de estados (GameStateManager)**
 
 ### 1.4 Package Server (Backend)
 - [x] Configurar TypeScript e tsx para desenvolvimento
@@ -63,25 +65,32 @@ Um jogo de space shooter clássico desenvolvido com Three.js em arquitetura mono
 - [ ] Sistema de states
 - [ ] Sistema de pontuação
 
-## Fase 2: Melhorias e Polish
+## Fase 2: Melhorias e Polish - ✅ COMPLETO
 
 ### 2.1 Gameplay Avançado
-- [ ] Diferentes tipos de inimigos
+- [x] **Diferentes tipos de inimigos (3 tipos implementados)**
 - [ ] Power-ups e upgrades
 - [ ] Fases/waves progressivas
 - [ ] Boss battles
 
-### 2.2 UI/UX
-- [ ] Menu principal
-- [ ] HUD durante o jogo
-- [ ] Tela de game over
-- [ ] Sistema de high scores
+### 2.2 UI/UX - ✅ COMPLETO
+- [x] **Menu principal**
+- [x] **HUD durante o jogo**
+- [x] **Tela de game over**
+- [x] **Tela de pause**
+- [x] **Sistema de estatísticas (pontuação, precisão, tempo)**
+- [ ] Sistema de high scores persistente
 
 ### 2.3 Performance
 - [ ] Object pooling para projéteis
 - [ ] Frustum culling
 - [ ] Level of detail (LOD)
 - [ ] Otimização de renderização
+
+### 2.4 Audio & Visual Effects - ✅ COMPLETO
+- [x] **AudioSystem com efeitos sonoros**
+- [x] **ParticleSystem para explosões**
+- [x] **Efeitos visuais de impacto**
 
 ## Fase 3: Multiplayer Básico
 
