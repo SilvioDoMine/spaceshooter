@@ -58,6 +58,20 @@ export interface Enemy {
   createdAt: number;       // Timestamp de criação
 }
 
+/**
+ * Entidade de power-up
+ * 
+ * Representa power-ups que aparecem no jogo e podem ser coletados pelo jogador.
+ * Diferentes tipos oferecem diferentes benefícios.
+ */
+export interface PowerUp {
+  id: string;              // Identificador único
+  position: Vector2D;      // Posição atual no mundo
+  velocity: Vector2D;      // Velocidade de movimento (unidades/segundo)
+  type: 'ammo' | 'health' | 'shield';  // Tipo determina o efeito
+  createdAt: number;       // Timestamp de criação
+}
+
 export const DEFAULT_GAME_CONFIG: GameConfig = {
   width: 800,
   height: 600,
@@ -116,6 +130,49 @@ export const ENEMY_CONFIG = {
     size: 0.5,              // Maior
     color: 0x8844ff,        // Roxo
     spawnRate: 5000         // A cada 5 segundos
+  }
+};
+
+/**
+ * Configurações dos power-ups
+ * 
+ * Define características de cada tipo de power-up:
+ * - effect: Quantidade do efeito aplicado
+ * - speed: Velocidade de movimento (unidades/segundo)
+ * - size: Tamanho visual
+ * - color: Cor hexadecimal para identificação visual
+ * - spawnRate: Intervalo entre spawns (ms)
+ * - lifetime: Tempo de vida antes de desaparecer (ms)
+ * 
+ * Tipos disponíveis:
+ * - ammo: Recarrega munição do jogador
+ * - health: Restaura vida do jogador
+ * - shield: Proteção temporária (futuro)
+ */
+export const POWERUP_CONFIG = {
+  ammo: {
+    effect: 15,             // +15 balas
+    speed: 1.0,             // Velocidade lenta
+    size: 0.2,              // Tamanho pequeno
+    color: 0x00ff00,        // Verde
+    spawnRate: 5000,       // A cada 15 segundos
+    lifetime: 10000         // 10 segundos para coletar
+  },
+  health: {
+    effect: 25,             // +25 HP
+    speed: 1.0,             // Velocidade lenta
+    size: 0.2,              // Tamanho pequeno
+    color: 0xff0088,        // Rosa/Magenta
+    spawnRate: 20000,       // A cada 20 segundos
+    lifetime: 12000         // 12 segundos para coletar
+  },
+  shield: {
+    effect: 5000,           // 5 segundos de proteção
+    speed: 1.0,             // Velocidade lenta
+    size: 0.25,             // Tamanho médio
+    color: 0x0088ff,        // Azul
+    spawnRate: 30000,       // A cada 30 segundos
+    lifetime: 8000          // 8 segundos para coletar
   }
 };
 

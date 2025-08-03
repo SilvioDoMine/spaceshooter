@@ -58,18 +58,19 @@ Um jogo de space shooter clássico desenvolvido com Three.js em arquitetura mono
 ### 1.5 Game Logic Integrado
 - [x] **Sistema de projéteis básico**
 - [x] **Sistema de inimigos completo**
-- [x] **Detecção de colisões (projéteis vs inimigos)**
+- [x] **Sistema de power-ups completo**
+- [x] **Detecção de colisões (projéteis vs inimigos, power-ups vs jogador)**
 - [x] **Game loop principal funcional**
-- [x] **Spawn automático de inimigos**
+- [x] **Spawn automático de inimigos e power-ups**
+- [x] **Sistema de pontuação e estatísticas**
 - [ ] Sistema de física avançado (compartilhado)
 - [ ] Sistema de states
-- [ ] Sistema de pontuação
 
 ## Fase 2: Melhorias e Polish - ✅ COMPLETO
 
 ### 2.1 Gameplay Avançado
 - [x] **Diferentes tipos de inimigos (3 tipos implementados)**
-- [ ] Power-ups e upgrades
+- [x] **Power-ups e upgrades básicos** (munição, vida, escudo)
 - [ ] Fases/waves progressivas
 - [ ] Boss battles
 

@@ -92,6 +92,10 @@ export class AudioSystem {
           duration = 0.2; // 200ms
           frequency = 400;
           break;
+        case 'powerup':
+          duration = 0.4; // 400ms
+          frequency = 600;
+          break;
         default:
           duration = 0.1;
           frequency = 500;
@@ -109,6 +113,10 @@ export class AudioSystem {
         if (name === 'explosion') {
           // Ruído para explosão
           channelData[i] = (Math.random() * 2 - 1) * envelope * 0.3;
+        } else if (name === 'powerup') {
+          // Tom crescente para power-up (efeito positivo)
+          const pitchMod = 1 + (t / duration) * 0.5; // Pitch sobe 50%
+          channelData[i] = Math.sin(2 * Math.PI * frequency * pitchMod * t) * envelope * 0.25;
         } else {
           // Tom puro para tiro e hit
           channelData[i] = Math.sin(2 * Math.PI * frequency * t) * envelope * 0.2;

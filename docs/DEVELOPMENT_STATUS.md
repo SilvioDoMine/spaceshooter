@@ -24,10 +24,11 @@ O Space Shooter está em **Fase 1 - Core Game (Single Player)** com os sistemas 
 - **Sistema de Inimigos completo** (3 tipos, spawn, movimento, colisões)
 - **Collision Detection** (projéteis vs inimigos, inimigos vs jogador)
 - **Gameplay Loop completo** (vida, pontuação, consequências)
-- **🆕 AudioSystem completo** (sons sintéticos, efeitos de tiro/explosão/hit)
+- **🆕 AudioSystem completo** (sons sintéticos, efeitos de tiro/explosão/hit/powerup)
 - **🆕 ParticleSystem completo** (explosões, efeitos visuais)
 - **🆕 GameStateManager** (states: Menu/Playing/Paused/GameOver)
 - **🆕 MenuSystem** (menu principal, pause, game over com estatísticas)
+- **🆕 PowerUp System** (munição, vida, coleta com efeitos visuais/sonoros)
 
 ✅ **Milestone 2 - Polish & UX COMPLETO**
 
@@ -38,7 +39,8 @@ O Space Shooter está em **Fase 1 - Core Game (Single Player)** com os sistemas 
 - Utils matemáticos
 - **Configurações de projéteis** (PROJECTILE_CONFIG)
 - **Configurações de inimigos** (ENEMY_CONFIG com 3 tipos)
-- **Sistema de tipos de entidades** (basic, fast, heavy)
+- **🆕 Configurações de power-ups** (POWERUP_CONFIG com 3 tipos)
+- **Sistema de tipos de entidades** (basic, fast, heavy + ammo, health, shield)
 
 🚧 **Em Desenvolvimento**:
 - Sistema de componentes
@@ -71,9 +73,11 @@ O Space Shooter está em **Fase 1 - Core Game (Single Player)** com os sistemas 
    - **HUD completo**: Score, Health (barra visual), Ammo
    - **WASD** para movimento da nave
    - **Espaço** para atirar projéteis (munição limitada: 30 balas)
-   - **🆕 Efeitos sonoros**: tiro, explosão, impacto (sons sintéticos)
+   - **🆕 Efeitos sonoros**: tiro, explosão, impacto, coleta de power-up (sons sintéticos)
    - **🆕 Efeitos visuais**: partículas de explosão quando inimigos morrem
    - **3 tipos de inimigos**: Basic (vermelho), Fast (laranja), Heavy (roxo)
+   - **🆕 3 tipos de power-ups**: Ammo (verde, cubo), Health (rosa, esfera), Shield (azul, octaedro)
+   - **🆕 Sistema de coleta**: Power-ups recarregam munição (+15) e restauram vida (+25)
    - Pontuação por inimigo destruído (10/25/50 pontos)
    - Sistema de dano por colisão (10/15/25 HP)
 5. **🆕 Controles de Jogo**:
@@ -101,6 +105,7 @@ AudioSystem       // Sound loading, playback, synthetic fallbacks
 ParticleSystem    // Visual effects, explosions, hit effects
 GameStateManager  // Game states (Menu/Playing/Paused/GameOver)
 MenuSystem        // UI screens (main menu, pause, game over)
+PowerUpSystem     // Power-up spawning, collision, effects
 AssetLoader       // Cache + GLTF loading + material factory
 ```
 

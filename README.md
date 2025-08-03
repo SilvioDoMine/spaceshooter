@@ -87,12 +87,13 @@ spaceshooter/
 - **🆕 MenuSystem** com telas completas
 - **🆕 UISystem/HUD** com vida, munição e pontuação
 - **🆕 Sistema de Estatísticas** (precisão, tempo vivo, kills)
+- **🆕 PowerUp System** com coleta de recursos (munição, vida)
 - **Mobile-friendly** sem zoom
 
 ### 🚧 Em Desenvolvimento
 - Sistema de física avançado
-- Power-ups e upgrades
 - Fases/waves progressivas
+- Boss battles
 
 ### 📋 Próximos Passos
 - **Multiplayer networking** (Fase 3)
@@ -117,9 +118,10 @@ spaceshooter/
 ### Gameplay Completo
 - **Movimento**: Use **WASD** para mover a nave 3D
 - **Ataque**: **Espaço** para atirar projéteis (munição limitada: 30 balas)
-- **🆕 Audio**: Ouça efeitos sonoros de tiro, explosão e impacto
+- **🆕 Audio**: Ouça efeitos sonoros de tiro, explosão, impacto e coleta
 - **🆕 Efeitos Visuais**: Veja partículas de explosão quando inimigos morrem
 - **🆕 HUD**: Monitore vida (barra visual), munição e pontuação
+- **🆕 Power-ups**: Colete recursos que aparecem na tela
 - **🆕 Pause**: Pressione **P** para pausar/despausar
 
 ### Controles
@@ -133,10 +135,16 @@ spaceshooter/
 - **🟠 Fast (Laranja)**: 10 HP, velocidade 2.5, **25 pontos**, dano 15 HP (20% spawn)
 - **🟣 Heavy (Roxo)**: 50 HP, velocidade 0.8, **50 pontos**, dano 25 HP (10% spawn)
 
+### 🆕 Sistema de Power-ups
+- **📦 Ammo (Verde, Cubo)**: Recarrega +15 balas (70% spawn a cada 5s)
+- **❤️ Health (Rosa, Esfera)**: Restaura +25 HP (25% spawn a cada 20s)
+- **🛡️ Shield (Azul, Octaedro)**: Proteção temporária (5% spawn, futuro)
+
 ### Objetivos
 - **Destrua inimigos** atirando neles para ganhar pontos
 - **Evite colisões** - inimigos causam dano baseado no tipo
-- **Gerencie munição** - você tem apenas 30 tiros
+- **🆕 Colete power-ups** - recarregue munição e restaure vida
+- **Gerencie recursos** - munição limitada, vida preciosa
 - **Sobreviva o máximo possível** - quando vida chega a 0, é game over
 
 ### 🆕 Game Over

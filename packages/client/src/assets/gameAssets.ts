@@ -20,7 +20,8 @@ export const GAME_ASSETS: AssetManifest = {
     // Sons básicos do jogo
     'shoot': '/assets/sounds/shoot.wav',
     'explosion': '/assets/sounds/explosion.wav',
-    'hit': '/assets/sounds/hit.wav'
+    'hit': '/assets/sounds/hit.wav',
+    'powerup': '/assets/sounds/powerup.wav'
   }
 };
 

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { DEFAULT_GAME_CONFIG, Projectile, PROJECTILE_CONFIG, Enemy, ENEMY_CONFIG } from '@spaceshooter/shared';
+import { DEFAULT_GAME_CONFIG, Projectile, PROJECTILE_CONFIG, Enemy, ENEMY_CONFIG, PowerUp, POWERUP_CONFIG } from '@spaceshooter/shared';
 import { RenderingSystem } from './systems/RenderingSystem';
 import { InputSystem, InputState } from './systems/InputSystem';
 import { UISystem } from './systems/UISystem';
@@ -21,8 +21,10 @@ let menuSystem: MenuSystem;
 let playerShip: THREE.Group;
 let projectiles: Map<string, { object: THREE.Mesh, data: Projectile }> = new Map();
 let enemies: Map<string, { object: THREE.Mesh, data: Enemy }> = new Map();
+let powerUps: Map<string, { object: THREE.Mesh, data: PowerUp }> = new Map();
 let lastShotTime = 0;
 let lastEnemySpawnTime = 0;
+let lastPowerUpSpawnTime = 0;
 const SHOT_COOLDOWN = 200; // milliseconds - increased for ammo management
 
 // Game state
@@ -220,6 +222,12 @@ function resetGame() {
   });
   enemies.clear();
   
+  // Clear all power-ups
+  powerUps.forEach(powerUp => {
+    renderingSystem.removeFromScene(powerUp.object);
+  });
+  powerUps.clear();
+  
   // Clear particles
   if (particleSystem) {
     particleSystem.clear();
@@ -228,6 +236,7 @@ function resetGame() {
   // Reset timers
   lastShotTime = 0;
   lastEnemySpawnTime = 0;
+  lastPowerUpSpawnTime = 0;
   
   // Reset player position
   if (playerShip) {
@@ -390,6 +399,93 @@ function spawnEnemy() {
   console.log(`Enemy spawned: ${enemyType}`, enemyId);
 }
 
+/**
+ * Sistema de Spawn de Power-ups
+ * 
+ * Gera power-ups ocasionalmente na parte superior da tela.
+ * Power-ups se movem lentamente para baixo e podem ser coletados pelo jogador.
+ * 
+ * Características:
+ * - Spawn no topo da tela em posições aleatórias no eixo X
+ * - Diferentes tipos com efeitos únicos (ammo, health, shield)
+ * - Sistema de timing para controlar frequência de spawn
+ * - Visual: formas geométricas coloridas baseadas no tipo
+ */
+function spawnPowerUp() {
+  const currentTime = Date.now();
+  
+  // Determinar tipo de power-up (70% ammo, 25% health, 5% shield)
+  const rand = Math.random();
+  let powerUpType: PowerUp['type'];
+  if (rand < 0.7) {
+    powerUpType = 'ammo';
+  } else if (rand < 0.95) {
+    powerUpType = 'health';
+  } else {
+    powerUpType = 'shield';
+  }
+  
+  const config = POWERUP_CONFIG[powerUpType];
+  const powerUpId = `powerup_${currentTime}_${Math.random()}`;
+  
+  // Criar dados do power-up
+  const powerUpData: PowerUp = {
+    id: powerUpId,
+    position: {
+      x: (Math.random() - 0.5) * 8, // Random X entre -4 e 4
+      y: 6 // Spawn no topo
+    },
+    velocity: {
+      x: 0,
+      y: -config.speed // Move para baixo
+    },
+    type: powerUpType,
+    createdAt: currentTime
+  };
+  
+  // Criar objeto visual (diferente por tipo)
+  let geometry: THREE.BufferGeometry;
+  switch (powerUpType) {
+    case 'ammo':
+      geometry = new THREE.BoxGeometry(config.size, config.size, config.size);
+      break;
+    case 'health':
+      geometry = new THREE.SphereGeometry(config.size, 8, 6);
+      break;
+    case 'shield':
+      geometry = new THREE.OctahedronGeometry(config.size);
+      break;
+  }
+  
+  const material = renderingSystem.createTexturedMaterial({
+    color: config.color,
+    roughness: 0.1,
+    metalness: 0.8 // Brilho metálico para destacar
+  });
+  
+  const powerUpMesh = new THREE.Mesh(geometry, material);
+  powerUpMesh.position.set(
+    powerUpData.position.x,
+    powerUpData.position.y,
+    0
+  );
+  powerUpMesh.castShadow = true;
+  powerUpMesh.receiveShadow = true;
+  
+  // Adicionar rotação para efeito visual
+  powerUpMesh.rotation.x = Math.random() * Math.PI;
+  powerUpMesh.rotation.y = Math.random() * Math.PI;
+  
+  // Adicionar à cena e tracking
+  renderingSystem.addToScene(powerUpMesh);
+  powerUps.set(powerUpId, {
+    object: powerUpMesh,
+    data: powerUpData
+  });
+  
+  console.log(`PowerUp spawned: ${powerUpType}`, powerUpId);
+}
+
 function animate() {
   requestAnimationFrame(animate);
   
@@ -420,14 +516,23 @@ function animate() {
     // Update enemies
     updateEnemies();
     
+    // Update power-ups
+    updatePowerUps();
+    
     // Check collisions
     checkCollisions();
     
     // Check enemy-player collisions
     checkEnemyPlayerCollisions();
     
+    // Check power-up-player collisions
+    checkPowerUpPlayerCollisions();
+    
     // Spawn enemies
     trySpawnEnemy();
+    
+    // Spawn power-ups
+    trySpawnPowerUp();
   }
   
   // Update particle system sempre (para animações de menu também)
@@ -504,6 +609,22 @@ function trySpawnEnemy() {
 }
 
 /**
+ * Controla o spawn automático de power-ups
+ * 
+ * Verifica se é hora de spawnar um novo power-up baseado no tempo decorrido.
+ * Power-ups aparecem com menos frequência que inimigos.
+ */
+function trySpawnPowerUp() {
+  const currentTime = Date.now();
+  
+  // Spawn de power-up a cada 15 segundos (poder de munição)
+  if (currentTime - lastPowerUpSpawnTime > POWERUP_CONFIG.ammo.spawnRate) {
+    spawnPowerUp();
+    lastPowerUpSpawnTime = currentTime;
+  }
+}
+
+/**
  * Atualiza todos os inimigos ativos
  * 
  * Esta função é chamada a cada frame e:
@@ -539,6 +660,61 @@ function updateEnemies() {
     if (enemy) {
       renderingSystem.removeFromScene(enemy.object);
       enemies.delete(id);
+    }
+  });
+}
+
+/**
+ * Atualiza todos os power-ups ativos
+ * 
+ * Esta função é chamada a cada frame e:
+ * - Atualiza posições dos power-ups baseado na velocidade
+ * - Adiciona rotação para efeito visual
+ * - Remove power-ups que saíram da tela ou expiraram
+ * - Limpa objetos da memória e da cena Three.js
+ */
+function updatePowerUps() {
+  const currentTime = Date.now();
+  const toRemove: string[] = [];
+  
+  powerUps.forEach((powerUp, id) => {
+    const { object, data } = powerUp;
+    const config = POWERUP_CONFIG[data.type];
+    
+    // Verificar se power-up expirou
+    if (currentTime - data.createdAt > config.lifetime) {
+      toRemove.push(id);
+      return;
+    }
+    
+    // Atualizar posição
+    data.position.x += data.velocity.x * 0.016; // ~60fps
+    data.position.y += data.velocity.y * 0.016;
+    
+    object.position.x = data.position.x;
+    object.position.y = data.position.y;
+    
+    // Adicionar rotação para efeito visual
+    object.rotation.x += 0.02;
+    object.rotation.y += 0.03;
+    
+    // Efeito de pulsação (scale)
+    const pulseScale = 1 + Math.sin(currentTime * 0.005) * 0.1;
+    object.scale.setScalar(pulseScale);
+    
+    // Remove se saiu da tela (parte inferior)
+    if (data.position.y < -6 ||
+        data.position.x > 10 || data.position.x < -10) {
+      toRemove.push(id);
+    }
+  });
+  
+  // Remove power-ups que saíram da tela ou expiraram
+  toRemove.forEach(id => {
+    const powerUp = powerUps.get(id);
+    if (powerUp) {
+      renderingSystem.removeFromScene(powerUp.object);
+      powerUps.delete(id);
     }
   });
 }
@@ -728,6 +904,97 @@ function getDamageForEnemyType(enemyType: Enemy['type']): number {
     case 'fast': return 15;
     case 'heavy': return 25;
     default: return 10;
+  }
+}
+
+/**
+ * Verifica colisões entre power-ups e o jogador
+ * Aplica efeitos dos power-ups quando coletados
+ */
+function checkPowerUpPlayerCollisions() {
+  if (!playerShip) return;
+  
+  const powerUpsToRemove: string[] = [];
+  
+  powerUps.forEach((powerUp, powerUpId) => {
+    const powerUpData = powerUp.data;
+    
+    // Calcular distância entre power-up e jogador
+    const dx = powerUpData.position.x - playerShip.position.x;
+    const dy = powerUpData.position.y - playerShip.position.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    
+    // Verificar colisão (raio do jogador + raio do power-up)
+    const playerRadius = 0.3; // Baseado na escala da nave
+    const powerUpRadius = POWERUP_CONFIG[powerUpData.type].size;
+    const collisionDistance = playerRadius + powerUpRadius;
+    
+    if (distance < collisionDistance) {
+      // Colisão detectada!
+      console.log(`PowerUp collected: ${powerUpData.type}`, powerUpId);
+      
+      // Aplicar efeito do power-up
+      applyPowerUpEffect(powerUpData.type);
+      
+      // Efeito visual de coleta
+      if (particleSystem) {
+        const collectPos = new THREE.Vector3(
+          powerUpData.position.x,
+          powerUpData.position.y,
+          0
+        );
+        // Usar efeito de hit com cores customizadas
+        particleSystem.createHitEffect(collectPos);
+      }
+      
+      // Efeito sonoro de coleta
+      if (audioSystem) {
+        audioSystem.playSound('powerup', { volume: 0.4 });
+      }
+      
+      // Remover power-up coletado
+      powerUpsToRemove.push(powerUpId);
+    }
+  });
+  
+  // Remover power-ups coletados
+  powerUpsToRemove.forEach(id => {
+    const powerUp = powerUps.get(id);
+    if (powerUp) {
+      renderingSystem.removeFromScene(powerUp.object);
+      powerUps.delete(id);
+    }
+  });
+}
+
+/**
+ * Aplica o efeito de um power-up coletado
+ */
+function applyPowerUpEffect(powerUpType: PowerUp['type']) {
+  const config = POWERUP_CONFIG[powerUpType];
+  
+  switch (powerUpType) {
+    case 'ammo':
+      // Recarregar munição (não ultrapassar máximo)
+      playerAmmo = Math.min(playerMaxAmmo, playerAmmo + config.effect);
+      uiSystem.updateAmmo(playerAmmo, playerMaxAmmo);
+      console.log(`Munição recarregada! +${config.effect} balas (Total: ${playerAmmo})`);
+      break;
+      
+    case 'health':
+      // Restaurar vida (não ultrapassar máximo)
+      playerHealth = Math.min(playerMaxHealth, playerHealth + config.effect);
+      uiSystem.updateHealth(playerHealth, playerMaxHealth);
+      console.log(`Vida restaurada! +${config.effect} HP (Total: ${playerHealth})`);
+      break;
+      
+    case 'shield':
+      // TODO: Implementar sistema de escudo temporário
+      console.log(`Escudo ativado por ${config.effect}ms (não implementado ainda)`);
+      break;
+      
+    default:
+      console.warn(`Tipo de power-up desconhecido: ${powerUpType}`);
   }
 }
 
