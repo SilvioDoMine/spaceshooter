@@ -25,7 +25,7 @@ yarn install
 yarn dev:client
 ```
 
-O cliente será executado em `http://localhost:5173` (Vite dev server).
+O cliente será executado em `http://localhost:3000` (Vite dev server).
 
 ### Servidor apenas (backend)
 
@@ -56,15 +56,50 @@ yarn build
 ```
 spaceshooter/
 ├── packages/
-│   ├── client/     # Frontend (Vite + Three.js)
-│   ├── server/     # Backend (Node.js + TypeScript)
-│   └── shared/     # Código compartilhado
-└── package.json    # Configuração do monorepo
+│   ├── client/           # Frontend (Vite + Three.js)
+│   │   ├── public/
+│   │   │   └── assets/   # Assets estáticos (modelos, texturas, sons)
+│   │   └── src/
+│   │       ├── systems/  # RenderingSystem, InputSystem
+│   │       ├── assets/   # AssetLoader, manifesto
+│   │       └── main.ts   # Entry point
+│   ├── server/           # Backend (Node.js + TypeScript)
+│   └── shared/           # Código compartilhado (entidades, física)
+├── docs/                 # Documentação
+└── package.json          # Configuração do monorepo
 ```
+
+## Estado Atual
+
+### ✅ Implementado
+- **Monorepo** com Yarn Workspaces
+- **RenderingSystem** com Three.js (scene, camera, renderer, iluminação)
+- **InputSystem** com mapeamento WASD/Espaço/P
+- **AssetLoader** com cache e carregamento de modelos 3D
+- **Nave controlável** carregada de arquivo GLB
+- **Mobile-friendly** sem zoom
+
+### 🚧 Em Desenvolvimento
+- Sistema de entidades (Player, Enemy, Projectile)
+- Sistema de física e colisões
+- Game loop básico
+
+### 📋 Próximos Passos
+- Sistema de áudio
+- Interface do usuário (HUD)
+- Multiplayer networking
 
 ## Tecnologias
 
 - **TypeScript** - Linguagem principal
 - **Vite** - Build tool do cliente
-- **Three.js** - Engine 3D
+- **Three.js** - Engine 3D para renderização
 - **Yarn Workspaces** - Gerenciamento do monorepo
+
+## Como Jogar (Estado Atual)
+
+1. Execute `yarn dev:client`
+2. Acesse `http://localhost:3000`
+3. Use **WASD** para mover a nave
+4. **Espaço** para rotacionar (teste)
+5. **P/Esc** para pause (preparado)

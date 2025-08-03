@@ -31,7 +31,9 @@ Um jogo de space shooter clássico desenvolvido com Three.js em arquitetura mono
 - [x] Sistema de renderização (RenderingSystem)
 - [x] Configuração mobile-friendly (sem zoom)
 - [x] Sistema de input (InputSystem com WASD/Espaço/P)
-- [ ] Loading de assets (modelos, texturas)
+- [x] Loading de assets (AssetLoader completo + modelos 3D)
+- [x] Estrutura de assets (public/assets/)
+- [x] Sistema de nave controlável
 - [ ] Sistema de áudio
 - [ ] Interface do usuário
 

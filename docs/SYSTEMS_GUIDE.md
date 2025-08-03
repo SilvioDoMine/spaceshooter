@@ -208,6 +208,20 @@ function gameLoop() {
 document.addEventListener('DOMContentLoaded', init);
 ```
 
+## Estado Atual de Implementação
+
+### ✅ Systems Completos
+- **RenderingSystem**: Scene 3D, iluminação, shadows, responsivo
+- **InputSystem**: WASD, espaço, pause, callbacks
+- **AssetLoader**: Cache, GLTF/GLB, texturas, material factory
+
+### 🎮 Funcionalidades Ativas
+- Nave 3D carregada de arquivo GLB
+- Controles WASD para movimento
+- Fallback automático (cubo verde se modelo falhar)
+- Mobile-friendly (sem zoom)
+- Hot reload em desenvolvimento
+
 ## Próximos Systems
 
 Os seguintes sistemas estão planejados para implementação:
