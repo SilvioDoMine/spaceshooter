@@ -5,7 +5,7 @@ import { InputSystem, InputState } from './systems/InputSystem';
 import { UISystem } from './systems/UISystem';
 import { AudioSystem } from './systems/AudioSystem';
 import { ParticleSystem } from './systems/ParticleSystem';
-import { GameStateManager, GameState } from './systems/GameStateManager';
+import { GameStateManager, GameStateEnum } from './systems/GameStateManager';
 import { MenuSystem } from './systems/MenuSystem';
 
 console.log('Cliente iniciado');
@@ -33,6 +33,8 @@ let playerMaxHealth = 100;
 let playerAmmo = 30;
 let playerMaxAmmo = 30;
 let gameScore = 0;
+
+// let gameState = new 
 
 async function init() {
   // Inicializar sistema de renderização
@@ -90,7 +92,7 @@ async function init() {
   await createPlayerShip();
 
   // Começar no menu principal
-  gameStateManager.setState(GameState.MENU);
+  gameStateManager.setState(GameStateEnum.MENU);
 }
 
 function onInputChange(action: keyof InputState, pressed: boolean) {
@@ -178,19 +180,19 @@ function setupMenuCallbacks() {
  * Configura callbacks de mudança de estado do jogo
  */
 function setupGameStateCallbacks() {
-  gameStateManager.onStateChange(GameState.MENU, () => {
+  gameStateManager.onStateChange(GameStateEnum.MENU, () => {
     menuSystem.showMainMenu();
   });
   
-  gameStateManager.onStateChange(GameState.PLAYING, () => {
+  gameStateManager.onStateChange(GameStateEnum.PLAYING, () => {
     menuSystem.hideAllMenus();
   });
-  
-  gameStateManager.onStateChange(GameState.PAUSED, () => {
+
+  gameStateManager.onStateChange(GameStateEnum.PAUSED, () => {
     menuSystem.showPauseScreen();
   });
   
-  gameStateManager.onStateChange(GameState.GAME_OVER, () => {
+  gameStateManager.onStateChange(GameStateEnum.GAME_OVER, () => {
     const stats = gameStateManager.getStats();
     menuSystem.showGameOverScreen(stats);
   });

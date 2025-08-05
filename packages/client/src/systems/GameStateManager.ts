@@ -3,7 +3,7 @@
  * (Menu, Playing, Paused, GameOver)
  */
 
-export enum GameState {
+export enum GameStateEnum {
   MENU = 'menu',
   PLAYING = 'playing',
   PAUSED = 'paused',
@@ -20,7 +20,7 @@ export interface GameStats {
 }
 
 export class GameStateManager {
-  private currentState: GameState = GameState.MENU;
+  private currentState: GameStateEnum = GameStateEnum.MENU;
   private gameStats: GameStats = {
     score: 0,
     timeAlive: 0,
@@ -30,19 +30,19 @@ export class GameStateManager {
     enemiesEscaped: 0
   };
   private gameStartTime: number = 0;
-  private stateChangeCallbacks: Map<GameState, (() => void)[]> = new Map();
+  private stateChangeCallbacks: Map<GameStateEnum, (() => void)[]> = new Map();
 
   constructor() {
     // Inicializar callbacks vazios para cada estado
-    Object.values(GameState).forEach(state => {
-      this.stateChangeCallbacks.set(state as GameState, []);
+    Object.values(GameStateEnum).forEach(state => {
+      this.stateChangeCallbacks.set(state as GameStateEnum, []);
     });
   }
 
   /**
    * Muda o estado do jogo
    */
-  setState(newState: GameState): void {
+  setState(newState: GameStateEnum): void {
     const oldState = this.currentState;
     this.currentState = newState;
     
@@ -59,14 +59,14 @@ export class GameStateManager {
   /**
    * Retorna o estado atual
    */
-  getState(): GameState {
+  getState(): GameStateEnum {
     return this.currentState;
   }
 
   /**
    * Adiciona callback para mudança de estado
    */
-  onStateChange(state: GameState, callback: () => void): void {
+  onStateChange(state: GameStateEnum, callback: () => void): void {
     const callbacks = this.stateChangeCallbacks.get(state) || [];
     callbacks.push(callback);
     this.stateChangeCallbacks.set(state, callbacks);
@@ -78,7 +78,7 @@ export class GameStateManager {
   startNewGame(): void {
     this.resetGameStats();
     this.gameStartTime = Date.now();
-    this.setState(GameState.PLAYING);
+    this.setState(GameStateEnum.PLAYING);
   }
 
   /**
@@ -87,15 +87,15 @@ export class GameStateManager {
   endGame(): void {
     this.updateTimeAlive();
     this.calculateAccuracy();
-    this.setState(GameState.GAME_OVER);
+    this.setState(GameStateEnum.GAME_OVER);
   }
 
   /**
    * Pausa o jogo
    */
   pauseGame(): void {
-    if (this.currentState === GameState.PLAYING) {
-      this.setState(GameState.PAUSED);
+    if (this.currentState === GameStateEnum.PLAYING) {
+      this.setState(GameStateEnum.PAUSED);
     }
   }
 
@@ -103,8 +103,8 @@ export class GameStateManager {
    * Resume o jogo
    */
   resumeGame(): void {
-    if (this.currentState === GameState.PAUSED) {
-      this.setState(GameState.PLAYING);
+    if (this.currentState === GameStateEnum.PAUSED) {
+      this.setState(GameStateEnum.PLAYING);
     }
   }
 
@@ -112,7 +112,7 @@ export class GameStateManager {
    * Volta ao menu principal
    */
   returnToMenu(): void {
-    this.setState(GameState.MENU);
+    this.setState(GameStateEnum.MENU);
   }
 
   /**
@@ -142,28 +142,28 @@ export class GameStateManager {
    * Verifica se o jogo está em execução
    */
   isPlaying(): boolean {
-    return this.currentState === GameState.PLAYING;
+    return this.currentState === GameStateEnum.PLAYING;
   }
 
   /**
    * Verifica se o jogo está pausado
    */
   isPaused(): boolean {
-    return this.currentState === GameState.PAUSED;
+    return this.currentState === GameStateEnum.PAUSED;
   }
 
   /**
    * Verifica se está no menu
    */
   isInMenu(): boolean {
-    return this.currentState === GameState.MENU;
+    return this.currentState === GameStateEnum.MENU;
   }
 
   /**
    * Verifica se o jogo terminou
    */
   isGameOver(): boolean {
-    return this.currentState === GameState.GAME_OVER;
+    return this.currentState === GameStateEnum.GAME_OVER;
   }
 
   /**
@@ -203,26 +203,26 @@ export class GameStateManager {
   /**
    * Manipula mudanças de estado específicas
    */
-  private handleStateChange(newState: GameState, oldState: GameState): void {
+  private handleStateChange(newState: GameStateEnum, oldState: GameStateEnum): void {
     switch (newState) {
-      case GameState.MENU:
+      case GameStateEnum.MENU:
         // Limpar dados do jogo anterior se necessário
         break;
       
-      case GameState.PLAYING:
+      case GameStateEnum.PLAYING:
         // Ações específicas para quando o jogo inicia
-        if (oldState === GameState.MENU) {
+        if (oldState === GameStateEnum.MENU) {
           console.log('Game started!');
-        } else if (oldState === GameState.PAUSED) {
+        } else if (oldState === GameStateEnum.PAUSED) {
           console.log('Game resumed!');
         }
         break;
       
-      case GameState.PAUSED:
+      case GameStateEnum.PAUSED:
         console.log('Game paused');
         break;
       
-      case GameState.GAME_OVER:
+      case GameStateEnum.GAME_OVER:
         console.log('Game over! Final stats:', this.gameStats);
         break;
     }
