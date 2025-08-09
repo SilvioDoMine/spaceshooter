@@ -18,7 +18,6 @@ let uiSystem: UISystem;
 let audioSystem: AudioSystem;
 let particleSystem: ParticleSystem;
 let gameStateManager: GameStateManager;
-let menuSystem: MenuSystem;
 let playerShip: THREE.Group;
 let projectiles: Map<string, { object: THREE.Mesh, data: Projectile }> = new Map();
 let enemies: Map<string, { object: THREE.Mesh, data: Enemy }> = new Map();
@@ -60,7 +59,7 @@ async function init() {
   particleSystem = new ParticleSystem(eventBus, renderingSystem.scene);
   
   // Inicializar sistema de menus
-  menuSystem = new MenuSystem(eventBus);
+  new MenuSystem(eventBus);
   // setupMenuCallbacks();
 
   // Inicializar gerenciador de estado do jogo
