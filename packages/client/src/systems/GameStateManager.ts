@@ -2,6 +2,7 @@
  * GameStateManager - Gerencia os diferentes estados do jogo
  * (Menu, Playing, Paused, GameOver)
  */
+import { Observer, Subject } from "@spaceshooter/shared";
 
 export enum GameStateEnum {
   MENU = 'menu',
@@ -19,7 +20,7 @@ export interface GameStats {
   enemiesEscaped: number;
 }
 
-export class GameStateManager {
+export class GameStateManager implements Subject {
   private currentState: GameStateEnum = GameStateEnum.MENU;
 
   private gameStats: GameStats = {
@@ -32,6 +33,11 @@ export class GameStateManager {
   };
 
   private gameStartTime: number = 0;
+
+  /**
+   * Lista de pessoas que estão ouvindo cada tipo de emissão de evento
+   */
+  private observers: Observer[] = [];
 
   /**
    * Map de callbacks para cada estado do jogo
@@ -53,7 +59,7 @@ export class GameStateManager {
   /**
    * Muda o estado do jogo
    */
-  setState(newState: GameStateEnum): void {
+  public setState(newState: GameStateEnum): void {
     const oldState = this.currentState;
     this.currentState = newState;
     
@@ -62,7 +68,10 @@ export class GameStateManager {
     // Executar callbacks específicos do novo estado
     const callbacks = this.stateChangeCallbacks.get(newState) || [];
     callbacks.forEach(callback => callback());
-    
+
+    // Notificar observadores sobre a mudança de estado
+    this.notify();
+
     // Ações específicas por estado
     this.handleStateChange(newState, oldState);
   }
@@ -70,14 +79,14 @@ export class GameStateManager {
   /**
    * Retorna o estado atual
    */
-  getState(): GameStateEnum {
+  public getState(): GameStateEnum {
     return this.currentState;
   }
 
   /**
    * Adiciona callback para mudança de estado
    */
-  onStateChange(state: GameStateEnum, callback: () => void): void {
+  public onStateChange(state: GameStateEnum, callback: () => void): void {
     const callbacks = this.stateChangeCallbacks.get(state) || [];
     callbacks.push(callback);
     this.stateChangeCallbacks.set(state, callbacks);
@@ -86,7 +95,7 @@ export class GameStateManager {
   /**
    * Inicia um novo jogo
    */
-  startNewGame(): void {
+  public startNewGame(): void {
     this.resetGameStats();
     this.gameStartTime = Date.now();
     this.setState(GameStateEnum.PLAYING);
@@ -95,7 +104,7 @@ export class GameStateManager {
   /**
    * Termina o jogo atual
    */
-  endGame(): void {
+  public endGame(): void {
     this.updateTimeAlive();
     this.calculateAccuracy();
     this.setState(GameStateEnum.GAME_OVER);
@@ -104,7 +113,7 @@ export class GameStateManager {
   /**
    * Pausa o jogo
    */
-  pauseGame(): void {
+  public pauseGame(): void {
     if (this.currentState === GameStateEnum.PLAYING) {
       this.setState(GameStateEnum.PAUSED);
     }
@@ -113,7 +122,7 @@ export class GameStateManager {
   /**
    * Resume o jogo
    */
-  resumeGame(): void {
+  public resumeGame(): void {
     if (this.currentState === GameStateEnum.PAUSED) {
       this.setState(GameStateEnum.PLAYING);
     }
@@ -122,21 +131,21 @@ export class GameStateManager {
   /**
    * Volta ao menu principal
    */
-  returnToMenu(): void {
+  public returnToMenu(): void {
     this.setState(GameStateEnum.MENU);
   }
 
   /**
    * Atualiza estatísticas do jogo
    */
-  updateStats(updates: Partial<GameStats>): void {
+  public updateStats(updates: Partial<GameStats>): void {
     Object.assign(this.gameStats, updates);
   }
 
   /**
    * Incrementa estatísticas específicas
    */
-  incrementStat(stat: keyof GameStats, amount: number = 1): void {
+  public incrementStat(stat: keyof GameStats, amount: number = 1): void {
     if (typeof this.gameStats[stat] === 'number') {
       (this.gameStats[stat] as number) += amount;
     }
@@ -145,35 +154,35 @@ export class GameStateManager {
   /**
    * Retorna as estatísticas atuais
    */
-  getStats(): Readonly<GameStats> {
+  public getStats(): Readonly<GameStats> {
     return { ...this.gameStats };
   }
 
   /**
    * Verifica se o jogo está em execução
    */
-  isPlaying(): boolean {
+  public isPlaying(): boolean {
     return this.currentState === GameStateEnum.PLAYING;
   }
 
   /**
    * Verifica se o jogo está pausado
    */
-  isPaused(): boolean {
+  public isPaused(): boolean {
     return this.currentState === GameStateEnum.PAUSED;
   }
 
   /**
    * Verifica se está no menu
    */
-  isInMenu(): boolean {
+  public isInMenu(): boolean {
     return this.currentState === GameStateEnum.MENU;
   }
 
   /**
    * Verifica se o jogo terminou
    */
-  isGameOver(): boolean {
+  public isGameOver(): boolean {
     return this.currentState === GameStateEnum.GAME_OVER;
   }
 
@@ -248,5 +257,32 @@ export class GameStateManager {
     const remainingSeconds = seconds % 60;
     
     return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+  }
+
+  public attach(observer: Observer): void {
+    const alreadyExists = this.observers.includes(observer);
+
+    if (alreadyExists) {
+      return console.warn('Observer already attached:', observer);
+    }
+
+    console.log('Attaching observer:', observer);
+    this.observers.push(observer);
+  }
+
+  public detach(observer: Observer): void {
+    const index = this.observers.indexOf(observer);
+
+    if (index === -1) {
+      return console.warn('Observer not found:', observer);
+    }
+
+    console.log('Detaching observer:', observer);
+    this.observers.splice(index, 1);
+  }
+
+  public notify(): void {
+    console.log('Notifying observers on GameStateManager:', this.observers);
+    this.observers.forEach(observer => observer.update(this));
   }
 }

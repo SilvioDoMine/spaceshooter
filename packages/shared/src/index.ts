@@ -192,3 +192,13 @@ export const POWERUP_CONFIG = {
 export function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
+
+export interface Subject {
+  attach(observer: Observer): void;
+  detach(observer: Observer): void;
+  notify(): void;
+}
+
+export interface Observer {
+  update(subject: Subject): void;
+}
