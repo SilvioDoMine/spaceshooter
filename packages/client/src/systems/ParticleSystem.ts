@@ -4,6 +4,7 @@
  */
 
 import * as THREE from 'three';
+import { EventBus } from '../core/EventBus';
 
 export interface ParticleConfig {
   count: number;
@@ -49,10 +50,26 @@ export class ParticleSystem {
     }
   };
 
-  constructor(scene: THREE.Scene) {
+  private eventBus: EventBus;
+
+  constructor(eventBus: EventBus, scene: THREE.Scene) {
+    this.eventBus = eventBus;
+    this.setupEventListeners();
     this.scene = scene;
     // Geometria reutilizada para todas as partículas
     this.particleGeometry = new THREE.SphereGeometry(1, 8, 6);
+  }
+
+  private setupEventListeners(): void {
+    // this.eventBus.on('particle:createExplosion', (data) => {
+    //   this.createExplosion(data.position);
+    // });
+    // this.eventBus.on('particle:createHitEffect', (data) => {
+    //   this.createHitEffect(data.position);
+    // });
+    this.eventBus.on('renderer:ready', () => {
+      this.eventBus.emit('particles:ready', {});
+    });
   }
 
   /**

@@ -115,21 +115,21 @@ export const ENEMY_CONFIG = {
     speed: 1.5,             // Velocidade moderada
     size: 0.3,              // Tamanho médio
     color: 0xff4444,        // Vermelho
-    spawnRate: 2000         // A cada 2 segundos
+    spawnRate: 500         // A cada 2 segundos
   },
   fast: {
     health: 10,             // 1 hit para destruir
     speed: 2.5,             // Mais rápido
     size: 0.2,              // Menor
     color: 0xff8800,        // Laranja
-    spawnRate: 3000         // A cada 3 segundos
+    spawnRate: 500         // A cada 3 segundos
   },
   heavy: {
     health: 50,             // 5 hits para destruir
     speed: 0.8,             // Mais lento
     size: 0.5,              // Maior
     color: 0x8844ff,        // Roxo
-    spawnRate: 5000         // A cada 5 segundos
+    spawnRate: 500         // A cada 5 segundos
   }
 };
 

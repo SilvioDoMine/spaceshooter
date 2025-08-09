@@ -3,8 +3,12 @@
  * (Menu, Playing, Paused, GameOver)
  */
 import { Observer, Subject } from "@spaceshooter/shared";
+import { EventBus } from "../core/EventBus";
 
 export enum GameStateEnum {
+  INIT = 'init',
+  LOADING_ASSETS = 'loading_assets',
+  READY = 'ready',
   MENU = 'menu',
   PLAYING = 'playing',
   PAUSED = 'paused',
@@ -21,7 +25,7 @@ export interface GameStats {
 }
 
 export class GameStateManager implements Subject {
-  private currentState: GameStateEnum = GameStateEnum.MENU;
+  private currentState: GameStateEnum = GameStateEnum.INIT;
 
   private gameStats: GameStats = {
     score: 0,
@@ -45,15 +49,79 @@ export class GameStateManager implements Subject {
    */
   private stateChangeCallbacks: Map<GameStateEnum, (() => void)[]> = new Map();
 
-  constructor() {
+  /**
+   * EventBus para comunicação entre sistemas
+   * Pode ser usado para emitir eventos de estado do jogo
+   */
+  private eventBus: EventBus;
+
+  private initializedSystems: Set<string> = new Set();
+
+  constructor(eventBus: EventBus) {
     // Inicializar callbacks vazios para cada estado
     Object.values(GameStateEnum)
       .forEach(state => {
         this.stateChangeCallbacks.set(state as GameStateEnum, []);
       });
+    
+    this.eventBus = eventBus;
 
-    console.log('GameStateManager initialized with state:', this.currentState);
-    console.log(this.stateChangeCallbacks);
+    this.setupEventListeners();
+  }
+
+  private setupEventListeners(): void {
+    // Escutando os eventos dos sistemas necessários para iniciar o jogo:
+    this.eventBus.on('renderer:ready', () => this.systemInitialized('renderer'));
+    this.eventBus.on('assets:ready', () => this.systemInitialized('assets'));
+    this.eventBus.on('input:ready', () => this.systemInitialized('input'));
+    this.eventBus.on('audio:ready', () => this.systemInitialized('audio'));
+    this.eventBus.on('particles:ready', () => this.systemInitialized('particles'));
+    this.eventBus.on('menu:ready', () => this.systemInitialized('menu'));
+    this.eventBus.on('ui:ready', () => this.systemInitialized('ui'));
+
+    this.eventBus.on('menu:click', (data) => this.handleMenuAction(data));
+  
+    this.eventBus.on('menu:opened', (data) => {
+      console.log(`Menu opened: ${data.type}`);
+    });
+
+    // Eventos de controle do jogo
+    this.eventBus.on('input:action', (data) => this.handleInputAction(data));
+
+    this.eventBus.on('game:started', () => this.startNewGame());
+    this.eventBus.on('game:paused', () => this.pauseGame());
+    this.eventBus.on('game:resumed', () => this.resumeGame());
+    // this.eventBus.on('game:over', () => this.endGame());
+    this.eventBus.on('game:exit', () => {
+      this.resetGameStats();
+      this.returnToMenu();
+    });
+  }
+
+  private systemInitialized(system: string): void {
+    // Verifica se o sistema já foi inicializado
+    if (this.initializedSystems.has(system)) {
+      console.error(`System ${system} already initialized.`);
+      return;
+    }
+
+    // Marca o sistema como inicializado
+    this.initializedSystems.add(system);
+    console.log(`System initialized: ${system}`);
+
+    // Verifica se todos os sistemas necessários foram inicializados
+    const requiredSystems = ['renderer', 'input', 'audio', 'particles', 'menu', 'ui', 'assets'];
+    const allInitialized = requiredSystems.every(sys => this.initializedSystems.has(sys));
+
+    if (! allInitialized) {
+      return;
+    }
+
+    this.eventBus.emit('gameState:ready', {});
+
+    this.setState(GameStateEnum.MENU);
+
+    console.log('All systems initialized. Game is ready.');
   }
 
   /**
@@ -66,11 +134,11 @@ export class GameStateManager implements Subject {
     console.log(`Game state changed: ${oldState} -> ${newState}`);
     
     // Executar callbacks específicos do novo estado
-    const callbacks = this.stateChangeCallbacks.get(newState) || [];
-    callbacks.forEach(callback => callback());
+    // const callbacks = this.stateChangeCallbacks.get(newState) || [];
+    // callbacks.forEach(callback => callback());
 
     // Notificar observadores sobre a mudança de estado
-    this.notify();
+    // this.notify();
 
     // Ações específicas por estado
     this.handleStateChange(newState, oldState);
@@ -227,22 +295,32 @@ export class GameStateManager implements Subject {
     switch (newState) {
       case GameStateEnum.MENU:
         // Limpar dados do jogo anterior se necessário
+        this.resetGameStats();
+
+        this.eventBus.emit('game:main', {});
         break;
-      
+
       case GameStateEnum.PLAYING:
         // Ações específicas para quando o jogo inicia
         if (oldState === GameStateEnum.MENU) {
           console.log('Game started!');
         } else if (oldState === GameStateEnum.PAUSED) {
+          
+          // if (this.currentState !== GameStateEnum.PLAYING) {
+            this.eventBus.emit('game:resumed', {});
+          // }
+
           console.log('Game resumed!');
         }
         break;
       
       case GameStateEnum.PAUSED:
         console.log('Game paused');
+        this.eventBus.emit('game:paused', {});
         break;
       
       case GameStateEnum.GAME_OVER:
+        this.eventBus.emit('game:over', { finalScore: 99, stats: this.gameStats });
         console.log('Game over! Final stats:', this.gameStats);
         break;
     }
@@ -284,5 +362,63 @@ export class GameStateManager implements Subject {
   public notify(): void {
     console.log('Notifying observers on GameStateManager:', this.observers);
     this.observers.forEach(observer => observer.update(this));
+  }
+
+  private handleInputAction(data: { action: string; pressed: boolean }): void {
+    switch (data.action) {
+      case 'shoot':
+        if (data.pressed && this.isPlaying()) {
+          this.eventBus.emit('player:shot', {});
+        }
+        break;
+      case 'pause':
+        if (data.pressed) {
+          if (this.isPlaying()) {
+            this.pauseGame();
+          } else if (this.isPaused()) {
+            this.resumeGame();
+          }
+        }
+        break;
+      default:
+        console.warn(`Unknown input action: ${data.action}`);
+        return;
+      }
+  }
+
+  private handleMenuAction(data: { type: string; action?: string }): void {
+    switch (data.type) {
+      case 'main':
+        if (data.action === 'start') {
+          this.eventBus.emit('game:started', { difficulty: 'normal' });
+        } else if (data.action === 'exit') {
+          this.returnToMenu();
+        }
+        break;
+      case 'pause':
+        if (data.action === 'resume') {
+          // this.resumeGame();
+          this.eventBus.emit('game:resumed', {});
+        } else if (data.action === 'exit') {
+          this.eventBus.emit('game:exit', {});
+          // this.returnToMenu();
+        }
+        break;
+      case 'gameOver':
+        switch (data.action) {
+          case 'restart':
+            this.eventBus.emit('game:started', { difficulty: 'normal' });
+            break;
+          case 'exit':
+            this.eventBus.emit('game:main', {});
+            break;
+          default:
+            console.warn('Unknown game over action:', data.action);
+        }
+        break;
+      default:
+        console.warn('Unknown menu type:', data.type);
+        return;
+    }
   }
 }

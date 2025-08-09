@@ -3,30 +3,45 @@
  * Gerencia telas de menu principal, game over e pause
  */
 
+import { EventBus } from '../core/EventBus';
 import { GameStats } from './GameStateManager';
-
-export interface MenuCallbacks {
-  onStartGame?: () => void;
-  onResumeGame?: () => void;
-  onReturnToMenu?: () => void;
-  onRestartGame?: () => void;
-}
 
 export class MenuSystem {
   private container: HTMLElement;
-  private callbacks: MenuCallbacks = {};
+  private eventBus: EventBus;
 
-  constructor() {
+  constructor(eventBus: EventBus) {
+    this.eventBus = eventBus;
+    this.setupEventListeners();
     this.container = this.createContainer();
     document.body.appendChild(this.container);
     this.setupStyles();
   }
 
-  /**
-   * Define callbacks para ações do menu
-   */
-  setCallbacks(callbacks: MenuCallbacks): void {
-    this.callbacks = { ...this.callbacks, ...callbacks };
+  private setupEventListeners(): void {
+    this.eventBus.on('renderer:ready', () => {
+      this.eventBus.emit('menu:ready', {});
+    });
+
+    this.eventBus.on('game:main', () => {
+      this.showMainMenu();
+    });
+
+    this.eventBus.on('game:over', (data) => {
+      this.showGameOverScreen(data.stats);
+    });
+
+    this.eventBus.on('game:paused', () => {
+      this.showPauseScreen();
+    });
+
+    this.eventBus.on('game:started', () => {
+      this.hideAllMenus();
+    });
+
+    this.eventBus.on('game:resumed', () => {
+      this.hideAllMenus();
+    });
   }
 
   /**
@@ -50,6 +65,10 @@ export class MenuSystem {
         </div>
       </div>
     `;
+
+    // this.eventBus.emit('menu:opened', {
+    //   type: 'main'
+    // });
 
     this.container.style.display = 'flex';
     this.setupMainMenuEvents();
@@ -99,6 +118,10 @@ export class MenuSystem {
       </div>
     `;
 
+    // this.eventBus.emit('menu:opened', {
+    //   type: 'gameOver'
+    // });
+
     this.container.style.display = 'flex';
     this.setupGameOverEvents();
   }
@@ -118,6 +141,10 @@ export class MenuSystem {
         </div>
       </div>
     `;
+
+    // this.eventBus.emit('menu:opened', {
+    //   type: 'pause'
+    // });
 
     this.container.style.display = 'flex';
     this.setupPauseEvents();
@@ -306,7 +333,10 @@ export class MenuSystem {
     if (startButton) {
       startButton.addEventListener('click', () => {
         this.hideAllMenus();
-        this.callbacks.onStartGame?.();
+        this.eventBus.emit('menu:click', {
+          type: 'main',
+          action: 'start'
+        });
       });
     }
 
@@ -315,6 +345,11 @@ export class MenuSystem {
         const isVisible = controlsInfo.style.display !== 'none';
         controlsInfo.style.display = isVisible ? 'none' : 'block';
         controlsButton.textContent = isVisible ? 'Controles' : 'Ocultar';
+
+        this.eventBus.emit('menu:click', {
+          type: 'main',
+          action: 'toggleControls'
+        });
       });
     }
   }
@@ -328,14 +363,23 @@ export class MenuSystem {
 
     if (restartButton) {
       restartButton.addEventListener('click', () => {
-        this.hideAllMenus();
-        this.callbacks.onRestartGame?.();
+        // this.hideAllMenus();
+        // this.callbacks.onRestartGame?.();
+
+        this.eventBus.emit('menu:click', {
+          type: 'gameOver',
+          action: 'restart'
+        });
       });
     }
 
     if (menuButton) {
       menuButton.addEventListener('click', () => {
-        this.callbacks.onReturnToMenu?.();
+        // this.callbacks.onReturnToMenu?.();
+        this.eventBus.emit('menu:click', {
+          type: 'gameOver',
+          action: 'exit'
+        });
       });
     }
   }
@@ -350,13 +394,21 @@ export class MenuSystem {
     if (resumeButton) {
       resumeButton.addEventListener('click', () => {
         this.hideAllMenus();
-        this.callbacks.onResumeGame?.();
+        // this.callbacks.onResumeGame?.();
+        this.eventBus.emit('menu:click', {
+          type: 'pause',
+          action: 'resume',
+        });
       });
     }
 
     if (menuButton) {
       menuButton.addEventListener('click', () => {
-        this.callbacks.onReturnToMenu?.();
+        // this.callbacks.onReturnToMenu?.();
+        this.eventBus.emit('menu:click', {
+          type: 'pause',
+          action: 'exit',
+        });
       });
     }
   }

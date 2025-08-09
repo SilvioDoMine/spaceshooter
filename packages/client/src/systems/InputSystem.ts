@@ -1,3 +1,5 @@
+import { EventBus } from "../core/EventBus";
+
 export interface InputState {
   up: boolean;
   down: boolean;
@@ -74,8 +76,18 @@ export class InputSystem {
 
   private callbacks: InputCallback[] = [];
 
-  constructor() {
+  private eventBus: EventBus;
+
+  constructor(eventBus: EventBus) {
+    this.eventBus = eventBus;
+    this.setupEventListeners();
     this.init();
+  }
+
+  private setupEventListeners(): void {
+    this.eventBus.on('renderer:ready', () => {
+      this.eventBus.emit('input:ready', {});
+    });
   }
 
   private init(): void {
@@ -102,6 +114,7 @@ export class InputSystem {
       this.inputState[action] = true;
       
       // Notificar callbacks
+      this.eventBus.emit('input:action', { action, pressed: true });
       this.callbacks.forEach(callback => callback(action, true));
       
       event.preventDefault();
@@ -116,7 +129,8 @@ export class InputSystem {
       this.inputState[action] = false;
       
       // Notificar callbacks
-      this.callbacks.forEach(callback => callback(action, false));
+      this.eventBus.emit('input:action', { action, pressed: false });
+      // this.callbacks.forEach(callback => callback(action, false));
       
       event.preventDefault();
     }

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { EventBus } from '../core/EventBus';
 
 /**
  * Sistema de UI/HUD totalmente em Three.js
@@ -42,8 +43,13 @@ export class UISystem {
   private maxHealth: number = 100;
   private currentAmmo: number = 30;
   private maxAmmo: number = 30;
-  
-  constructor(renderer: THREE.WebGLRenderer) {
+
+  private eventBus: EventBus;
+
+  constructor(eventBus: EventBus, renderer: THREE.WebGLRenderer) {
+    this.eventBus = eventBus;
+    this.setupEventListeners();
+
     this.renderer = renderer;
     this.scene = new THREE.Scene();
     
@@ -65,7 +71,17 @@ export class UISystem {
     // Handler para resize
     window.addEventListener('resize', this.onWindowResize.bind(this));
   }
-  
+
+  private setupEventListeners(): void {
+    // Exemplo de uso do EventBus para mostrar mensagens na UI
+    // this.eventBus.on('ui:show_message', (data) => {
+    //   this.showMessage(data.text, data.type);
+    // });
+    this.eventBus.on('renderer:ready', () => {
+      this.eventBus.emit('ui:ready', {});
+    });
+  }
+
   private createUIElements(): void {
     const aspect = window.innerWidth / window.innerHeight;
     const baseScale = 0.15; // Fixed base scale instead of responsive

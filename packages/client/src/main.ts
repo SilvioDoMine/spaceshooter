@@ -7,6 +7,7 @@ import { AudioSystem } from './systems/AudioSystem';
 import { ParticleSystem } from './systems/ParticleSystem';
 import { GameStateManager, GameStateEnum } from './systems/GameStateManager';
 import { MenuSystem } from './systems/MenuSystem';
+import { EventBus } from './core/EventBus';
 
 console.log('Cliente iniciado');
 console.log('Config do jogo:', DEFAULT_GAME_CONFIG);
@@ -36,90 +37,39 @@ let gameScore = 0;
 
 // let gameState = new 
 
+const eventBus = new EventBus();
+
 async function init() {
   // Inicializar sistema de renderização
-  renderingSystem = new RenderingSystem();
-  renderingSystem.attachToDOM('game-container');
-
-  // Carregar assets básicos e do jogo
-  console.log('Carregando assets...');
-  await renderingSystem.loadAssets((progress) => {
-    console.log(`Loading progress: ${progress.toFixed(1)}%`);
-  });
-  
-  // Carregar assets do jogo (incluindo nave)
-  const { GAME_ASSETS } = await import('./assets/gameAssets');
-
-  await renderingSystem.assetLoader.loadAssetManifest(GAME_ASSETS)
-    .catch((error) => {
-      console.warn('Alguns assets do jogo não puderam ser carregados:', error.message);
-    });
-  
-  console.log('Assets carregados!');
+  renderingSystem = new RenderingSystem(eventBus);
 
   // Inicializar sistema de input
-  inputSystem = new InputSystem();
-  inputSystem.addInputCallback(onInputChange);
+  inputSystem = new InputSystem(eventBus);
+  // inputSystem.addInputCallback(onInputChange);
 
   // Inicializar sistema de UI
-  uiSystem = new UISystem(renderingSystem.renderer);
+  uiSystem = new UISystem(eventBus, renderingSystem.renderer);
   uiSystem.updateHealth(playerHealth, playerMaxHealth);
   uiSystem.updateAmmo(playerAmmo, playerMaxAmmo);
   uiSystem.updateScore(gameScore);
 
   // Inicializar sistema de áudio
-  audioSystem = new AudioSystem();
-  
-  // Carregar sons do jogo (sem bloqueio)
-  if (GAME_ASSETS.sounds) {
-    audioSystem.loadSounds(GAME_ASSETS.sounds)
-      .catch(error => {
-        console.warn('Alguns sons não puderam ser carregados:', error);
-      });
-  }
+  audioSystem = new AudioSystem(eventBus);
 
   // Inicializar sistema de partículas
-  particleSystem = new ParticleSystem(renderingSystem.scene);
-
-  // Inicializar gerenciador de estado do jogo
-  gameStateManager = new GameStateManager();
+  particleSystem = new ParticleSystem(eventBus, renderingSystem.scene);
   
   // Inicializar sistema de menus
-  menuSystem = new MenuSystem();
-  setupMenuCallbacks();
+  menuSystem = new MenuSystem(eventBus);
+  // setupMenuCallbacks();
 
-  // Configurar callbacks de mudança de estado
-  setupGameStateCallbacks();
+  // Inicializar gerenciador de estado do jogo
+  gameStateManager = new GameStateManager(eventBus);
 
   // Criar nave do jogador
   await createPlayerShip();
 
-  // Começar no menu principal
-  gameStateManager.setState(GameStateEnum.MENU);
-}
-
-function onInputChange(action: keyof InputState, pressed: boolean) {
-  console.log(`${action}: ${pressed ? 'pressed' : 'released'}`);
-  
-  // Inicializar áudio na primeira interação do usuário
-  if (audioSystem && !audioSystem.isInitialized()) {
-    audioSystem.initialize().catch(error => {
-      console.warn('Erro ao inicializar áudio:', error);
-    });
-  }
-  
-  if (action === 'shoot' && pressed && gameStateManager.isPlaying()) {
-    shoot();
-  }
-  
-  // Pause/unpause com P
-  if (action === 'pause' && pressed) {
-    if (gameStateManager.isPlaying()) {
-      gameStateManager.pauseGame();
-    } else if (gameStateManager.isPaused()) {
-      gameStateManager.resumeGame();
-    }
-  }
+  eventBus.emit('kernel:init', {});
 }
 
 async function createPlayerShip() {
@@ -157,49 +107,9 @@ async function createPlayerShip() {
   renderingSystem.addToScene(playerShip);
 }
 
-/**
- * Configura callbacks do sistema de menus
- */
-function setupMenuCallbacks() {
-  menuSystem.setCallbacks({
-    onStartGame: () => {
-      gameStateManager.startNewGame();
-    },
-    onResumeGame: () => {
-      gameStateManager.resumeGame();
-    },
-    onReturnToMenu: () => {
-      resetGame();
-      gameStateManager.returnToMenu();
-    },
-    onRestartGame: () => {
-      resetGame();
-      gameStateManager.startNewGame();
-    }
-  });
-}
-
-/**
- * Configura callbacks de mudança de estado do jogo
- */
-function setupGameStateCallbacks() {
-  gameStateManager.onStateChange(GameStateEnum.MENU, () => {
-    menuSystem.showMainMenu();
-  });
-  
-  gameStateManager.onStateChange(GameStateEnum.PLAYING, () => {
-    menuSystem.hideAllMenus();
-  });
-
-  gameStateManager.onStateChange(GameStateEnum.PAUSED, () => {
-    menuSystem.showPauseScreen();
-  });
-  
-  gameStateManager.onStateChange(GameStateEnum.GAME_OVER, () => {
-    const stats = gameStateManager.getStats();
-    menuSystem.showGameOverScreen(stats);
-  });
-}
+eventBus.on('game:started', () => {
+  resetGame();
+});
 
 /**
  * Reseta o estado do jogo para começar uma nova partida
@@ -331,6 +241,10 @@ function shoot() {
   
   console.log('Projectile fired!', projectileId);
 }
+
+eventBus.on('player:shot', () => {
+  shoot();
+});
 
 /**
  * Sistema de Spawn de Inimigos

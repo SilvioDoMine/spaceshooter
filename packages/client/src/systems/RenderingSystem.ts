@@ -1,5 +1,8 @@
 import * as THREE from 'three';
 import { AssetLoader } from '../assets/AssetLoader';
+import { Observer, Subject } from '@spaceshooter/shared';
+import { GameStateEnum, GameStateManager } from './GameStateManager';
+import { EventBus } from '../core/EventBus';
 
 /**
  * Sistema de Renderização do Space Shooter
@@ -37,15 +40,25 @@ import { AssetLoader } from '../assets/AssetLoader';
  * - Responsivo (redimensionamento automático)
  * - Factory de materiais texturizados
  */
-export class RenderingSystem {
+export class RenderingSystem implements Observer {
   public assetLoader: AssetLoader;
   public scene!: THREE.Scene;
   public camera!: THREE.PerspectiveCamera;
   public renderer!: THREE.WebGLRenderer;
-  
-  constructor() {
+  private onAssetsLoaded?: () => void;
+  private eventBus: EventBus;
+
+  constructor(eventBus: EventBus) {
+    this.eventBus = eventBus;
+    this.setupEventListeners();
+
     this.assetLoader = new AssetLoader();
     this.init();
+  }
+
+  private setupEventListeners(): void {
+    this.eventBus.on('kernel:init', () => this.attachToDOM('game-container'));
+    this.eventBus.on('renderer:ready', () => this.loadAssets());
   }
 
   private init(): void {
@@ -102,8 +115,10 @@ export class RenderingSystem {
 
   public attachToDOM(containerId: string): void {
     const gameContainer = document.getElementById(containerId);
+
     if (gameContainer) {
       gameContainer.appendChild(this.renderer.domElement);
+      this.eventBus.emit('renderer:ready', {});
     }
   }
 
@@ -138,6 +153,8 @@ export class RenderingSystem {
     // Carregar assets básicos primeiro
     const { CORE_ASSETS } = await import('../assets/gameAssets');
     await this.assetLoader.loadAssetManifest(CORE_ASSETS);
+
+    this.eventBus.emit('assets:ready', {});
   }
 
   public createTexturedMaterial(options: {
@@ -154,5 +171,47 @@ export class RenderingSystem {
     window.removeEventListener('resize', this.onWindowResize.bind(this));
     this.assetLoader.dispose();
     this.renderer.dispose();
+  }
+
+  public update(subject: Subject): void {
+    console.log('RenderingSystem update called with subject:', subject);
+    if (!(subject instanceof GameStateManager)) {
+      console.warn('RenderingSystem only updates with GameStateManager');
+      return;
+    }
+
+    const gameStateManager = subject as GameStateManager;
+
+    switch (gameStateManager.getState()) {
+      case GameStateEnum.INIT:
+        this.attachToDOM('game-container');
+        break;
+      case GameStateEnum.LOADING_ASSETS:
+        this.loadAssets((progress) => {
+          console.log(`Loading progress: ${progress.toFixed(1)}%`);
+        }).then(async () => {
+          // Carregar assets do jogo
+          const { GAME_ASSETS } = await import('../assets/gameAssets');
+          await this.assetLoader.loadAssetManifest(GAME_ASSETS)
+            .catch((error) => {
+              console.warn('Alguns assets do jogo não puderam ser carregados:', error.message);
+            });
+          
+          console.log('Assets carregados!');
+          if (this.onAssetsLoaded) {
+            this.onAssetsLoaded();
+          }
+        }).catch(error => {
+          console.error('Error loading assets:', error);
+        });
+        break;
+      default:
+        console.log(`Game state changed to: ${gameStateManager.getState()}`);
+        break;
+    }
+  }
+
+  public setOnAssetsLoadedCallback(callback: () => void): void {
+    this.onAssetsLoaded = callback;
   }
 }

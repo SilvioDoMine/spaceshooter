@@ -3,6 +3,8 @@
  * Gerencia carregamento, cache e reprodução de efeitos sonoros
  */
 
+import { EventBus } from "../core/EventBus";
+
 export interface AudioConfig {
   volume: number;
   enabled: boolean;
@@ -24,8 +26,22 @@ export class AudioSystem {
   };
   private initialized: boolean = false;
 
-  constructor() {
+  private eventBus: EventBus;
+
+  constructor(eventBus: EventBus) {
+    this.eventBus = eventBus;
+    this.setupEventListeners();
+
     this.context = new (window.AudioContext || (window as any).webkitAudioContext)();
+  }
+
+  private setupEventListeners(): void {
+    // this.eventBus.on('audio:play', (data) => {
+    //   this.playSound(data.soundId, data.options);
+    // });
+    this.eventBus.on('renderer:ready', () => {
+      this.eventBus.emit('audio:ready', {});
+    });
   }
 
   /**
