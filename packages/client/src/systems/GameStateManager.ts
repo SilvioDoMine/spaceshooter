@@ -21,6 +21,7 @@ export interface GameStats {
 
 export class GameStateManager {
   private currentState: GameStateEnum = GameStateEnum.MENU;
+
   private gameStats: GameStats = {
     score: 0,
     timeAlive: 0,
@@ -29,14 +30,24 @@ export class GameStateManager {
     accuracy: 0,
     enemiesEscaped: 0
   };
+
   private gameStartTime: number = 0;
+
+  /**
+   * Map de callbacks para cada estado do jogo
+   * Permite registrar funções que serão chamadas quando o estado mudar
+   */
   private stateChangeCallbacks: Map<GameStateEnum, (() => void)[]> = new Map();
 
   constructor() {
     // Inicializar callbacks vazios para cada estado
-    Object.values(GameStateEnum).forEach(state => {
-      this.stateChangeCallbacks.set(state as GameStateEnum, []);
-    });
+    Object.values(GameStateEnum)
+      .forEach(state => {
+        this.stateChangeCallbacks.set(state as GameStateEnum, []);
+      });
+
+    console.log('GameStateManager initialized with state:', this.currentState);
+    console.log(this.stateChangeCallbacks);
   }
 
   /**

@@ -49,9 +49,11 @@ async function init() {
   
   // Carregar assets do jogo (incluindo nave)
   const { GAME_ASSETS } = await import('./assets/gameAssets');
-  await renderingSystem.assetLoader.loadAssetManifest(GAME_ASSETS).catch((error) => {
-    console.warn('Alguns assets do jogo não puderam ser carregados:', error.message);
-  });
+
+  await renderingSystem.assetLoader.loadAssetManifest(GAME_ASSETS)
+    .catch((error) => {
+      console.warn('Alguns assets do jogo não puderam ser carregados:', error.message);
+    });
   
   console.log('Assets carregados!');
 
@@ -70,9 +72,10 @@ async function init() {
   
   // Carregar sons do jogo (sem bloqueio)
   if (GAME_ASSETS.sounds) {
-    audioSystem.loadSounds(GAME_ASSETS.sounds).catch(error => {
-      console.warn('Alguns sons não puderam ser carregados:', error);
-    });
+    audioSystem.loadSounds(GAME_ASSETS.sounds)
+      .catch(error => {
+        console.warn('Alguns sons não puderam ser carregados:', error);
+      });
   }
 
   // Inicializar sistema de partículas
