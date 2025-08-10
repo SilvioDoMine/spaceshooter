@@ -4,7 +4,6 @@ import { RenderingSystem } from './systems/RenderingSystem';
 import { InputSystem, InputState } from './systems/InputSystem';
 import { AudioSystem } from './systems/AudioSystem';
 import { UISystem } from './systems/UISystem';
-import { ParticleSystem } from './systems/ParticleSystem';
 import { GameStateManager, GameStateEnum } from './systems/GameStateManager';
 import { MenuSystem } from './systems/MenuSystem';
 import { EventBus } from './core/EventBus';
@@ -14,7 +13,6 @@ console.log('Config do jogo:', DEFAULT_GAME_CONFIG);
 
 let renderingSystem: RenderingSystem;
 let inputSystem: InputSystem;
-let particleSystem: ParticleSystem;
 let gameStateManager: GameStateManager;
 let playerShip: THREE.Group;
 let projectiles: Map<string, { object: THREE.Mesh, data: Projectile }> = new Map();
@@ -45,13 +43,14 @@ async function init() {
   // inputSystem.addInputCallback(onInputChange);
 
   // Inicializar sistema de UI
-  new UISystem(eventBus, renderingSystem.renderer);
+  new UISystem(eventBus);
 
   // Inicializar sistema de áudio
   new AudioSystem(eventBus);
 
   // Inicializar sistema de partículas
-  particleSystem = new ParticleSystem(eventBus, renderingSystem.scene);
+  const { ParticleSystem } = await import('./systems/ParticleSystem');
+  new ParticleSystem(eventBus);
   
   // Inicializar sistema de menus
   new MenuSystem(eventBus);
@@ -144,9 +143,7 @@ function resetGame() {
   powerUps.clear();
   
   // Clear particles
-  if (particleSystem) {
-    particleSystem.clear();
-  }
+  eventBus.emit('particles:clear', {});
   
   // Reset timers
   lastShotTime = 0;
@@ -453,9 +450,7 @@ function animate() {
   }
   
   // Update particle system sempre (para animações de menu também)
-  if (particleSystem) {
-    particleSystem.update(0.016); // ~60fps
-  }
+  eventBus.emit('particles:update', { deltaTime: 0.016 }); // ~60fps
   
   renderingSystem.render();
   eventBus.emit('ui:render', {});
@@ -583,10 +578,9 @@ function updateEnemies() {
         eventBus.emit('audio:play', { soundId: 'hit', options: { volume: 0.3 } });
         
         // Efeito visual de penalidade (flash vermelho na tela)
-        if (particleSystem) {
-          const penaltyPos = new THREE.Vector3(0, -3, 0); // Centro-baixo da tela
-          particleSystem.createHitEffect(penaltyPos);
-        }
+        eventBus.emit('particles:hit', {
+          position: { x: 0, y: -3, z: 0 } // Centro-baixo da tela
+        });
         
         // Check game over após penalidade
         if (playerHealth <= 0) {
@@ -718,14 +712,13 @@ function checkCollisions() {
           eventBus.emit('audio:play', { soundId: 'explosion', options: { volume: 0.4 } });
 
           // Create explosion particle effect
-          if (particleSystem) {
-            const explosionPos = new THREE.Vector3(
-              enemyData.position.x,
-              enemyData.position.y,
-              0
-            );
-            particleSystem.createExplosion(explosionPos);
-          }
+          eventBus.emit('particles:explosion', {
+            position: {
+              x: enemyData.position.x,
+              y: enemyData.position.y,
+              z: 0
+            }
+          });
           
           // Add score based on enemy type
           const scorePoints = getScoreForEnemyType(enemyData.type);
@@ -805,14 +798,13 @@ function checkEnemyPlayerCollisions() {
       eventBus.emit('audio:play', { soundId: 'hit', options: { volume: 0.5 } });
 
       // Create hit particle effect
-      if (particleSystem) {
-        const hitPos = new THREE.Vector3(
-          playerShip.position.x,
-          playerShip.position.y,
-          0
-        );
-        particleSystem.createHitEffect(hitPos);
-      }
+      eventBus.emit('particles:hit', {
+        position: {
+          x: playerShip.position.x,
+          y: playerShip.position.y,
+          z: 0
+        }
+      });
       
       // Remover inimigo que colidiu
       enemiesToRemove.push(enemyId);
@@ -890,15 +882,13 @@ function checkPowerUpPlayerCollisions() {
       applyPowerUpEffect(powerUpData.type);
       
       // Efeito visual de coleta
-      if (particleSystem) {
-        const collectPos = new THREE.Vector3(
-          powerUpData.position.x,
-          powerUpData.position.y,
-          0
-        );
-        // Usar efeito de hit com cores customizadas
-        particleSystem.createHitEffect(collectPos);
-      }
+      eventBus.emit('particles:hit', {
+        position: {
+          x: powerUpData.position.x,
+          y: powerUpData.position.y,
+          z: 0
+        }
+      });
       
       // Efeito sonoro de coleta
       eventBus.emit('audio:play', { soundId: 'powerup', options: { volume: 0.4 } });

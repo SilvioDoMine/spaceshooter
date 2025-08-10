@@ -118,7 +118,10 @@ export class RenderingSystem implements Observer {
 
     if (gameContainer) {
       gameContainer.appendChild(this.renderer.domElement);
-      this.eventBus.emit('renderer:ready', {});
+      this.eventBus.emit('renderer:ready', { 
+        scene: this.scene, 
+        renderer: this.renderer 
+      });
     }
   }
 

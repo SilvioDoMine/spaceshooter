@@ -52,23 +52,41 @@ export class ParticleSystem {
 
   private eventBus: EventBus;
 
-  constructor(eventBus: EventBus, scene: THREE.Scene) {
+  constructor(eventBus: EventBus) {
     this.eventBus = eventBus;
     this.setupEventListeners();
+  }
+  
+  private initialize(scene: THREE.Scene): void {
     this.scene = scene;
     // Geometria reutilizada para todas as partículas
     this.particleGeometry = new THREE.SphereGeometry(1, 8, 6);
+    
+    // Notificar que ParticleSystem está pronto
+    this.eventBus.emit('particles:ready', {});
   }
 
   private setupEventListeners(): void {
-    // this.eventBus.on('particle:createExplosion', (data) => {
-    //   this.createExplosion(data.position);
-    // });
-    // this.eventBus.on('particle:createHitEffect', (data) => {
-    //   this.createHitEffect(data.position);
-    // });
-    this.eventBus.on('renderer:ready', () => {
-      this.eventBus.emit('particles:ready', {});
+    this.eventBus.on('renderer:ready', (data) => {
+      this.initialize(data.scene);
+    });
+    
+    this.eventBus.on('particles:explosion', (data) => {
+      const position = new THREE.Vector3(data.position.x, data.position.y, data.position.z);
+      this.createExplosion(position);
+    });
+    
+    this.eventBus.on('particles:hit', (data) => {
+      const position = new THREE.Vector3(data.position.x, data.position.y, data.position.z);
+      this.createHitEffect(position);
+    });
+    
+    this.eventBus.on('particles:update', (data) => {
+      this.update(data.deltaTime);
+    });
+    
+    this.eventBus.on('particles:clear', () => {
+      this.clear();
     });
   }
 

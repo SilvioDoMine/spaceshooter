@@ -5,7 +5,7 @@ export type GameEventMap = {
   // Startup Events
   'kernel:init': {};
   'renderer:init': {};
-  'renderer:ready': {};
+  'renderer:ready': { scene: any; renderer: any }; // THREE.Scene & THREE.WebGLRenderer
   'assets:ready': {};
   'input:ready': {};
   'ui:ready': {};
@@ -61,6 +61,12 @@ export type GameEventMap = {
   
   // Audio Events
   'audio:play': { soundId: string; options?: { volume?: number; loop?: boolean } };
+  
+  // Particle Events
+  'particles:explosion': { position: { x: number; y: number; z: number } };
+  'particles:hit': { position: { x: number; y: number; z: number } };
+  'particles:update': { deltaTime: number };
+  'particles:clear': {};
   
 //   // Particle Events
 //   'particles:explosion': { position: Vector3; intensity?: number };

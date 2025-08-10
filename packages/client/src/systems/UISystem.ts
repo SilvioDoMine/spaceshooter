@@ -46,10 +46,12 @@ export class UISystem {
 
   private eventBus: EventBus;
 
-  constructor(eventBus: EventBus, renderer: THREE.WebGLRenderer) {
+  constructor(eventBus: EventBus) {
     this.eventBus = eventBus;
     this.setupEventListeners();
-
+  }
+  
+  private initialize(renderer: THREE.WebGLRenderer): void {
     this.renderer = renderer;
     this.scene = new THREE.Scene();
     
@@ -70,6 +72,9 @@ export class UISystem {
     
     // Handler para resize
     window.addEventListener('resize', this.onWindowResize.bind(this));
+    
+    // Notificar que UI está pronta
+    this.eventBus.emit('ui:ready', {});
   }
 
   private setupEventListeners(): void {
@@ -77,8 +82,8 @@ export class UISystem {
     // this.eventBus.on('ui:show_message', (data) => {
     //   this.showMessage(data.text, data.type);
     // });
-    this.eventBus.on('renderer:ready', () => {
-      this.eventBus.emit('ui:ready', {});
+    this.eventBus.on('renderer:ready', (data) => {
+      this.initialize(data.renderer);
     });
 
     this.eventBus.on('ui:update-health', (data: { current: number; max?: number }) => {
