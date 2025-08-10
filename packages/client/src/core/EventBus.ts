@@ -67,6 +67,7 @@ export type GameEventMap = {
   'particles:hit': { position: { x: number; y: number; z: number } };
   'particles:update': { deltaTime: number };
   'particles:clear': {};
+  'particles:debug-stats': {};
   
 //   // Particle Events
 //   'particles:explosion': { position: Vector3; intensity?: number };
@@ -76,6 +77,24 @@ export type GameEventMap = {
 export class EventBus {
   private listeners: Map<keyof GameEventMap, Set<Function>> = new Map();
   private onceListeners: Map<keyof GameEventMap, Set<Function>> = new Map();
+
+  private silencedEvents: Set<keyof GameEventMap> = new Set([
+    'kernel:init',
+    'renderer:init',
+    'renderer:ready',
+    'assets:ready',
+    'input:ready',
+    'ui:ready',
+    'menu:ready',
+    'audio:ready',
+    'particles:ready',
+    'gameState:ready',
+    'audio:play',
+    'particles:explosion',
+    'particles:hit',
+    'particles:update',
+    'input:action',
+  ]);
 
   /**
    * Adiciona um listener para um evento
@@ -125,7 +144,9 @@ export class EventBus {
    * Emite um evento para todos os listeners
    */
   emit<K extends keyof GameEventMap>(event: K, data: GameEventMap[K]): void {
-    console.log(`🚌 Event emitted: ${String(event)}`, data);
+    if (! this.silencedEvents.has(event)) {
+      console.log(`🚌 Event emitted: ${String(event)}`, data);
+    }
     
     // Executar listeners normais
     const eventListeners = this.listeners.get(event);

@@ -447,12 +447,20 @@ function animate() {
     
     // Spawn power-ups
     trySpawnPowerUp();
+    
+    // Update particle system só quando jogando
+    eventBus.emit('particles:update', { deltaTime: 0.016 });
   }
   
-  // Update particle system sempre (para animações de menu também)
-  eventBus.emit('particles:update', { deltaTime: 0.016 }); // ~60fps
-  
   renderingSystem.render();
+  
+  // Debug stats (optional)
+  if (process.env.NODE_ENV === 'development') {
+    // Log particle stats every 5 seconds
+    if (Date.now() % 5000 < 16) { // ~60fps = 16ms per frame
+      eventBus.emit('particles:debug-stats', {});
+    }
+  }
 }
 
 /**
