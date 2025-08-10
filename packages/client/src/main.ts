@@ -75,9 +75,42 @@ async function init() {
 }
 
 function createPlayerShip() {
-  // Get player ship from AssetManager (handles fallback internally)
-  playerShip = assetManager.getPlayerShip();
-  console.log('Nave criada via AssetManager!');
+  let shipModel: THREE.Group | null = null;
+  let shipUsed = 'fallback';
+
+  const SHIP_CONFIG = 'auto' as 'auto' | 'fallback' | string;
+
+  // Try to get ship based on configuration
+  if (SHIP_CONFIG === 'auto') {
+    // Auto mode: try in order of preference
+    shipModel = assetManager.getPlayerShip();
+    shipUsed = 'auto-selected';
+  } else if (SHIP_CONFIG === 'fallback') {
+    // Force fallback cube
+    shipModel = null;
+  } else {
+    // Try specific ship
+    shipModel = assetManager.getShipModel(SHIP_CONFIG);
+    if (shipModel) {
+      shipUsed = SHIP_CONFIG;
+    }
+  }
+
+  // Fallback if no model loaded
+  if (!shipModel) {
+    shipModel = assetManager.getPlayerShip(); // This handles fallback internally
+    shipUsed = 'fallback-cube';
+  }
+
+  playerShip = shipModel;
+  console.log(`🚀 Nave criada via AssetManager! (usando: ${shipUsed})`);
+  
+  // Lista naves disponíveis para debug
+  const availableShips = assetManager.getAvailableShips();
+  if (availableShips.length > 0) {
+    console.log(`🛸 Naves disponíveis: ${availableShips.join(', ')}`);
+    console.log(`💡 Para trocar, mude SHIP_CONFIG.preferredShip para: ${availableShips.map(s => `'${s}'`).join(' | ')}`);
+  }
   
   // Posicionar nave
   playerShip.position.set(0, 0, 0);

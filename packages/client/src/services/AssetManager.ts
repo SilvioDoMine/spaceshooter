@@ -81,17 +81,61 @@ export class AssetManager {
   }
   
   /**
+   * Test if asset URLs are accessible
+   */
+  private async testAssetUrls(shipModels: any[]): Promise<void> {
+    console.log('🔍 AssetManager: Testing asset URL accessibility...');
+    
+    for (const ship of shipModels) {
+      try {
+        const response = await fetch(ship.path, { method: 'HEAD' });
+        console.log(`${response.ok ? '✅' : '❌'} ${ship.name}: ${ship.path} (${response.status})`);
+        if (!response.ok) {
+          console.error(`   Response: ${response.status} ${response.statusText}`);
+        }
+      } catch (error) {
+        console.error(`❌ ${ship.name}: ${ship.path} - Network error:`, error);
+      }
+    }
+  }
+
+  /**
    * Pre-load all models used in the game
    */
   private async preloadModels(): Promise<void> {
-    // Try to load player ship model
-    try {
-      const playerShip = await this.assetLoader.loadModel('ship', '/assets/models/ship.glb');
-      this.models.set('player_ship', playerShip);
-      console.log('🚀 AssetManager: Player ship model loaded');
-    } catch (error) {
-      console.warn('⚠️ AssetManager: Failed to load player ship model, will use fallback', error);
-      // Fallback will be created on-demand in getPlayerShip()
+    // Try to load player ship models (multiple options)
+    const shipModels = [
+      { name: 'ship', path: '/assets/models/ship.glb', priority: 1 }
+    ];
+
+    // Test if URLs are accessible first
+    await this.testAssetUrls(shipModels);
+
+    let loadedShip = false;
+
+    // Try loading ships in order of priority
+    for (const ship of shipModels) {
+      try {
+        console.log(`🚀 AssetManager: Trying to load ${ship.name} from ${ship.path}`);
+        const playerShip = await this.assetLoader.loadModel(ship.name, ship.path);
+        this.models.set('player_ship', playerShip);
+        this.models.set(ship.name, playerShip); // Store with original name too
+        console.log(`✅ AssetManager: Player ship loaded successfully (${ship.name})`);
+        console.log(`📊 AssetManager: Ship has ${playerShip.children.length} children`);
+        loadedShip = true;
+        break;
+      } catch (error) {
+        console.error(`❌ AssetManager: Failed to load ${ship.name} from ${ship.path}:`, error);
+        if (error instanceof Error) {
+          console.error(`   Error message: ${error.message}`);
+          console.error(`   Stack trace:`, error.stack);
+        }
+        continue;
+      }
+    }
+
+    if (!loadedShip) {
+      console.warn('⚠️ AssetManager: All ship models failed to load, will use fallback cube');
     }
     
     console.log('🎯 AssetManager: Models pre-loaded');
@@ -158,6 +202,34 @@ export class AssetManager {
   }): THREE.Material {
     this.ensureInitialized();
     return this.assetLoader.createMaterial(config);
+  }
+  
+  /**
+   * Get specific ship model by name (for testing different ships)
+   */
+  getShipModel(shipName: string): THREE.Group | null {
+    this.ensureInitialized();
+    
+    const ship = this.models.get(shipName);
+    if (ship) {
+      return ship.clone();
+    }
+    
+    console.warn(`AssetManager: Ship model '${shipName}' not found`);
+    return null;
+  }
+  
+  /**
+   * Get list of available ship models
+   */
+  getAvailableShips(): string[] {
+    const ships = [];
+    for (const [key] of this.models) {
+      if (key.startsWith('ship')) {
+        ships.push(key);
+      }
+    }
+    return ships;
   }
   
   /**
