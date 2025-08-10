@@ -47,6 +47,10 @@ export class RenderingSystem implements Observer {
   public renderer!: THREE.WebGLRenderer;
   private onAssetsLoaded?: () => void;
   private eventBus: EventBus;
+  
+  // UI Scene management
+  private uiScene?: THREE.Scene;
+  private uiCamera?: THREE.Camera;
 
   constructor(eventBus: EventBus) {
     this.eventBus = eventBus;
@@ -59,6 +63,12 @@ export class RenderingSystem implements Observer {
   private setupEventListeners(): void {
     this.eventBus.on('kernel:init', () => this.attachToDOM('game-container'));
     this.eventBus.on('renderer:ready', () => this.loadAssets());
+    
+    // Registrar UI scene
+    this.eventBus.on('renderer:register-ui-scene', (data) => {
+      this.uiScene = data.scene;
+      this.uiCamera = data.camera;
+    });
   }
 
   private init(): void {
@@ -137,7 +147,16 @@ export class RenderingSystem implements Observer {
   }
 
   public render(): void {
+    // Render main 3D scene
     this.renderer.render(this.scene, this.camera);
+    
+    // Render UI overlay if registered
+    if (this.uiScene && this.uiCamera) {
+      this.renderer.autoClear = false;
+      this.renderer.clearDepth();
+      this.renderer.render(this.uiScene, this.uiCamera);
+      this.renderer.autoClear = true; // Reset for next frame
+    }
   }
 
   public addToScene(object: THREE.Object3D): void {

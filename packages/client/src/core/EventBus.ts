@@ -6,6 +6,7 @@ export type GameEventMap = {
   'kernel:init': {};
   'renderer:init': {};
   'renderer:ready': { scene: any; renderer: any }; // THREE.Scene & THREE.WebGLRenderer
+  'renderer:register-ui-scene': { scene: any; camera: any };
   'assets:ready': {};
   'input:ready': {};
   'ui:ready': {};
@@ -55,7 +56,6 @@ export type GameEventMap = {
   'ui:update-score': { score: number; delta?: number };
   'ui:update-health': { current: number; max: number };
   'ui:update-ammo': { current: number; max: number };
-  'ui:render': {};
 //   'score:updated': { newScore: number; delta?: number };
 //   'ui:show_message': { text: string; type: 'success' | 'warning' | 'error' };
   

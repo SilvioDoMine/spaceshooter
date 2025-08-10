@@ -453,7 +453,6 @@ function animate() {
   eventBus.emit('particles:update', { deltaTime: 0.016 }); // ~60fps
   
   renderingSystem.render();
-  eventBus.emit('ui:render', {});
 }
 
 /**

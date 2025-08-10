@@ -73,6 +73,12 @@ export class UISystem {
     // Handler para resize
     window.addEventListener('resize', this.onWindowResize.bind(this));
     
+    // Registrar UI scene no RenderingSystem
+    this.eventBus.emit('renderer:register-ui-scene', {
+      scene: this.scene,
+      camera: this.camera
+    });
+    
     // Notificar que UI está pronta
     this.eventBus.emit('ui:ready', {});
   }
@@ -97,10 +103,6 @@ export class UISystem {
     this.eventBus.on('ui:update-score', (data: { score: number }) => {
       this.updateScore(data.score);
     });
-
-    this.eventBus.on('ui:render', () => {
-      this.render();
-    })
   }
 
   private createUIElements(): void {
@@ -440,12 +442,6 @@ export class UISystem {
     this.healthBar.position.x = -barWidth * 0.5 * (1 - (this.currentHealth / this.maxHealth));
   }
   
-  public render(): void {
-    // Render UI overlay
-    this.renderer.autoClear = false;
-    this.renderer.clearDepth();
-    this.renderer.render(this.scene, this.camera);
-  }
   
   public dispose(): void {
     window.removeEventListener('resize', this.onWindowResize.bind(this));

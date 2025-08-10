@@ -24,8 +24,8 @@ export interface Particle {
 
 export class ParticleSystem {
   private particles: Set<Particle> = new Set();
-  private scene: THREE.Scene;
-  private particleGeometry: THREE.SphereGeometry;
+  private scene!: THREE.Scene;
+  private particleGeometry!: THREE.SphereGeometry;
   
   // Configurações pré-definidas para diferentes tipos de efeitos
   private static readonly EXPLOSION_CONFIG: ParticleConfig = {
