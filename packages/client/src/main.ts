@@ -15,7 +15,6 @@ console.log('Config do jogo:', DEFAULT_GAME_CONFIG);
 let renderingSystem: RenderingSystem;
 let inputSystem: InputSystem;
 let uiSystem: UISystem;
-let audioSystem: AudioSystem;
 let particleSystem: ParticleSystem;
 let gameStateManager: GameStateManager;
 let playerShip: THREE.Group;
@@ -53,14 +52,13 @@ async function init() {
   uiSystem.updateScore(gameScore);
 
   // Inicializar sistema de áudio
-  audioSystem = new AudioSystem(eventBus);
+  new AudioSystem(eventBus);
 
   // Inicializar sistema de partículas
   particleSystem = new ParticleSystem(eventBus, renderingSystem.scene);
   
   // Inicializar sistema de menus
   new MenuSystem(eventBus);
-  // setupMenuCallbacks();
 
   // Inicializar gerenciador de estado do jogo
   gameStateManager = new GameStateManager(eventBus);
@@ -232,12 +230,9 @@ function shoot() {
     object: projectileMesh,
     data: projectileData
   });
-  
-  // Play shoot sound
-  if (audioSystem) {
-    audioSystem.playSound('shoot', { volume: 0.3 });
-  }
-  
+
+  eventBus.emit('audio:play', { soundId: 'shoot', options: { volume: 0.3 } });
+
   console.log('Projectile fired!', projectileId);
 }
 
@@ -580,11 +575,8 @@ function updateEnemies() {
         
         // Track enemy escaped
         gameStateManager.incrementStat('enemiesEscaped');
-        
-        // Efeito sonoro de penalidade
-        if (audioSystem) {
-          audioSystem.playSound('hit', { volume: 0.3 });
-        }
+
+        eventBus.emit('audio:play', { soundId: 'hit', options: { volume: 0.3 } });
         
         // Efeito visual de penalidade (flash vermelho na tela)
         if (particleSystem) {
@@ -717,12 +709,10 @@ function checkCollisions() {
           if (!enemiesToRemove.includes(enemyId)) {
             enemiesToRemove.push(enemyId);
           }
-          
-          // Play explosion sound
-          if (audioSystem) {
-            audioSystem.playSound('explosion', { volume: 0.4 });
-          }
-          
+
+          // Play hit sound
+          eventBus.emit('audio:play', { soundId: 'explosion', options: { volume: 0.4 } });
+
           // Create explosion particle effect
           if (particleSystem) {
             const explosionPos = new THREE.Vector3(
@@ -807,12 +797,9 @@ function checkEnemyPlayerCollisions() {
       const damage = getDamageForEnemyType(enemyData.type);
       playerHealth = Math.max(0, playerHealth - damage);
       uiSystem.updateHealth(playerHealth, playerMaxHealth);
-      
-      // Play hit sound
-      if (audioSystem) {
-        audioSystem.playSound('hit', { volume: 0.5 });
-      }
-      
+
+      eventBus.emit('audio:play', { soundId: 'hit', options: { volume: 0.5 } });
+
       // Create hit particle effect
       if (particleSystem) {
         const hitPos = new THREE.Vector3(
@@ -910,9 +897,7 @@ function checkPowerUpPlayerCollisions() {
       }
       
       // Efeito sonoro de coleta
-      if (audioSystem) {
-        audioSystem.playSound('powerup', { volume: 0.4 });
-      }
+      eventBus.emit('audio:play', { soundId: 'powerup', options: { volume: 0.4 } });
       
       // Remover power-up coletado
       powerUpsToRemove.push(powerUpId);

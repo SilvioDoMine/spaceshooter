@@ -36,10 +36,28 @@ export class AudioSystem {
   }
 
   private setupEventListeners(): void {
-    // this.eventBus.on('audio:play', (data) => {
-    //   this.playSound(data.soundId, data.options);
-    // });
+    this.eventBus.on('game:started', () => {
+      this.initialize();
+    });
+
+    this.eventBus.on('audio:play', (data) => {
+      this.playSound(data.soundId, data.options);
+    });
+  
     this.eventBus.on('renderer:ready', () => {
+      import('../assets/gameAssets')
+        .then(module => {
+          const { GAME_ASSETS } = module;
+
+          this.loadSounds(GAME_ASSETS.sounds)
+            .then(() => {
+              console.log('Sons carregados com sucesso');
+            })
+            .catch(error => {
+              console.error('Erro ao carregar sons:', error);
+            });
+        })
+
       this.eventBus.emit('audio:ready', {});
     });
   }

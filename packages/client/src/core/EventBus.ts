@@ -55,8 +55,8 @@ export type GameEventMap = {
 //   'score:updated': { newScore: number; delta?: number };
 //   'ui:show_message': { text: string; type: 'success' | 'warning' | 'error' };
   
-//   // Audio Events
-//   'audio:play': { soundId: string; options?: { volume?: number; loop?: boolean } };
+  // Audio Events
+  'audio:play': { soundId: string; options?: { volume?: number; loop?: boolean } };
   
 //   // Particle Events
 //   'particles:explosion': { position: Vector3; intensity?: number };
