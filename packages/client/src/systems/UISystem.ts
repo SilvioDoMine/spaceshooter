@@ -235,11 +235,21 @@ export class UISystem {
     // Draw text
     context.fillText(text, canvas.width / 2, canvas.height / 2);
     
-    // Update texture
+    // Update texture - Sempre recriar a textura para garantir atualização
     const material = sprite.material as THREE.SpriteMaterial;
+    
+    // Dispose da textura antiga se existir
     if (material.map) {
-      (material.map as THREE.CanvasTexture).needsUpdate = true;
+      material.map.dispose();
     }
+    
+    // Criar nova textura
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.needsUpdate = true;
+    texture.generateMipmaps = false;
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    material.map = texture;
   }
   
   private updateAllElements(): void {
@@ -290,7 +300,7 @@ export class UISystem {
   
   public updateScore(score: number): void {
     this.currentScore = score;
-    this.updateTextSprite(this.scoreText, `Score: ${score}`);
+    this.updateTextSprite(this.scoreText, `Score: ${score}`, '#ffffff');
   }
   
   public addScore(points: number): void {
@@ -299,6 +309,7 @@ export class UISystem {
   }
   
   public updateHealth(current: number, max?: number): void {
+    console.log(`Atualizando saúde: ${current}/${max}`);
     this.currentHealth = Math.max(0, current);
     if (max !== undefined) {
       this.maxHealth = max;
