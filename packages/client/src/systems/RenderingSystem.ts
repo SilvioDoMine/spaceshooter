@@ -143,6 +143,45 @@ export class RenderingSystem implements Observer {
 
   public removeFromScene(object: THREE.Object3D): void {
     this.scene.remove(object);
+    
+    // Dispose recursos para evitar memory leaks
+    if (object instanceof THREE.Mesh) {
+      // Dispose geometry
+      if (object.geometry) {
+        object.geometry.dispose();
+      }
+      
+      // Dispose materials
+      if (object.material) {
+        if (Array.isArray(object.material)) {
+          object.material.forEach(material => {
+            if (material instanceof THREE.Material) {
+              material.dispose();
+            }
+          });
+        } else if (object.material instanceof THREE.Material) {
+          object.material.dispose();
+        }
+      }
+    }
+    
+    // Recursively dispose children
+    object.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        if (child.geometry) child.geometry.dispose();
+        if (child.material) {
+          if (Array.isArray(child.material)) {
+            child.material.forEach(material => {
+              if (material instanceof THREE.Material) {
+                material.dispose();
+              }
+            });
+          } else if (child.material instanceof THREE.Material) {
+            child.material.dispose();
+          }
+        }
+      }
+    });
   }
 
   public async loadAssets(onProgress?: (progress: number) => void): Promise<void> {
