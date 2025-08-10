@@ -51,6 +51,9 @@ export class RenderingSystem implements Observer {
   // UI Scene management
   private uiScene?: THREE.Scene;
   private uiCamera?: THREE.Camera;
+  
+  // Request tracking for async operations
+  private pendingRequests: Map<string, Function> = new Map();
 
   constructor(eventBus: EventBus) {
     this.eventBus = eventBus;
@@ -61,14 +64,72 @@ export class RenderingSystem implements Observer {
   }
 
   private setupEventListeners(): void {
+    // Initialization events
     this.eventBus.on('kernel:init', () => this.attachToDOM('game-container'));
     this.eventBus.on('renderer:ready', () => this.loadAssets());
     
-    // Registrar UI scene
+    // DOM attachment
+    this.eventBus.on('renderer:attach-dom', (data) => {
+      this.attachToDOM(data.containerId);
+    });
+    
+    // Render coordination
+    this.eventBus.on('renderer:render-frame', () => {
+      this.render();
+    });
+    
+    // Scene management
+    this.eventBus.on('scene:add-object', (data) => {
+      this.addToScene(data.object);
+    });
+    
+    this.eventBus.on('scene:remove-object', (data) => {
+      this.removeFromScene(data.object);
+    });
+    
+    // Material factory
+    this.eventBus.on('materials:create-textured', (data) => {
+      const material = this.createTexturedMaterial(data.config);
+      this.eventBus.emit('materials:textured-response', { 
+        material, 
+        requestId: data.requestId 
+      });
+    });
+    
+    // Asset loading
+    this.eventBus.on('assets:load-model', async (data) => {
+      try {
+        const model = await this.assetLoader.loadModel(data.name, data.path);
+        this.eventBus.emit('assets:model-response', { 
+          model, 
+          requestId: data.requestId 
+        });
+      } catch (error) {
+        this.eventBus.emit('assets:model-response', { 
+          model: null, 
+          requestId: data.requestId,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    });
+    
+    // Scene queries
+    this.eventBus.on('renderer:get-scene', (data) => {
+      this.eventBus.emit('renderer:scene-response', {
+        scene: this.scene,
+        requestId: data.requestId
+      });
+    });
+    
+    // UI scene registration
     this.eventBus.on('renderer:register-ui-scene', (data) => {
       this.uiScene = data.scene;
       this.uiCamera = data.camera;
     });
+  }
+  
+  private generateRequestId(): string {
+    return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
   private init(): void {

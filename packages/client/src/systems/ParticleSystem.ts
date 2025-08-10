@@ -109,8 +109,8 @@ export class ParticleSystem {
     this.setupEventListeners();
   }
   
-  private initialize(scene: THREE.Scene): void {
-    this.scene = scene;
+  private initialize(data: { scene: THREE.Scene }): void {
+    this.scene = data.scene;
     // Geometria reutilizada para todas as partículas
     this.particleGeometry = new THREE.SphereGeometry(1, 8, 6);
     
@@ -157,7 +157,7 @@ export class ParticleSystem {
 
   private setupEventListeners(): void {
     this.eventBus.on('renderer:ready', (data) => {
-      this.initialize(data.scene);
+      this.initialize(data);
     });
     
     this.eventBus.on('particles:explosion', (data) => {

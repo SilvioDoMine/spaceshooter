@@ -51,8 +51,8 @@ export class UISystem {
     this.setupEventListeners();
   }
   
-  private initialize(renderer: THREE.WebGLRenderer): void {
-    this.renderer = renderer;
+  private initialize(data: { renderer: THREE.WebGLRenderer }): void {
+    this.renderer = data.renderer;
     this.scene = new THREE.Scene();
     
     // Setup ortographic camera para UI overlay
@@ -89,7 +89,7 @@ export class UISystem {
     //   this.showMessage(data.text, data.type);
     // });
     this.eventBus.on('renderer:ready', (data) => {
-      this.initialize(data.renderer);
+      this.initialize(data);
     });
 
     this.eventBus.on('ui:update-health', (data: { current: number; max?: number }) => {

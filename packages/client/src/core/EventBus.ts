@@ -68,9 +68,17 @@ export type GameEventMap = {
   'particles:update': { deltaTime: number };
   'particles:clear': {};
   
-//   // Particle Events
-//   'particles:explosion': { position: Vector3; intensity?: number };
-//   'particles:hit': { position: Vector3; color?: number };
+  // Rendering Events
+  'renderer:render-frame': {};
+  'scene:add-object': { object: any };
+  'scene:remove-object': { object: any };
+  'materials:create-textured': { config: any; requestId: string };
+  'materials:textured-response': { material: any; requestId: string };
+  'assets:load-model': { name: string; path: string; requestId: string };
+  'assets:model-response': { model: any; requestId: string; error?: string };
+  'renderer:attach-dom': { containerId: string };
+  'renderer:get-scene': { requestId: string };
+  'renderer:scene-response': { scene: any; requestId: string };
 };
 
 export class EventBus {
@@ -93,6 +101,13 @@ export class EventBus {
     'particles:hit',
     'particles:update',
     'input:action',
+    'renderer:render-frame',
+    'scene:add-object',
+    'scene:remove-object',
+    'materials:create-textured',
+    'materials:textured-response',
+    'renderer:get-scene',
+    'renderer:scene-response',
   ]);
 
   /**

@@ -1,17 +1,16 @@
 import * as THREE from 'three';
 import { DEFAULT_GAME_CONFIG, Projectile, PROJECTILE_CONFIG, Enemy, ENEMY_CONFIG, PowerUp, POWERUP_CONFIG } from '@spaceshooter/shared';
-import { RenderingSystem } from './systems/RenderingSystem';
-import { InputSystem, InputState } from './systems/InputSystem';
+import { InputSystem } from './systems/InputSystem';
 import { AudioSystem } from './systems/AudioSystem';
 import { UISystem } from './systems/UISystem';
-import { GameStateManager, GameStateEnum } from './systems/GameStateManager';
+import { GameStateManager } from './systems/GameStateManager';
 import { MenuSystem } from './systems/MenuSystem';
 import { EventBus } from './core/EventBus';
+import { assetManager } from './services/AssetManager';
 
 console.log('Cliente iniciado');
 console.log('Config do jogo:', DEFAULT_GAME_CONFIG);
 
-let renderingSystem: RenderingSystem;
 let inputSystem: InputSystem;
 let gameStateManager: GameStateManager;
 let playerShip: THREE.Group;
@@ -34,8 +33,13 @@ let lastFrameTime = performance.now();
 const eventBus = new EventBus();
 
 async function init() {
+  // Initialize AssetManager first
+  console.log('🎮 Initializing AssetManager...');
+  await assetManager.initialize();
+
   // Inicializar sistema de renderização
-  renderingSystem = new RenderingSystem(eventBus);
+  const { RenderingSystem } = await import('./systems/RenderingSystem');
+  new RenderingSystem(eventBus);
 
   // Inicializar sistema de input
   inputSystem = new InputSystem(eventBus);
@@ -58,7 +62,7 @@ async function init() {
   gameStateManager = new GameStateManager(eventBus);
 
   // Criar nave do jogador
-  await createPlayerShip();
+  createPlayerShip();
 
   // Aguardar UI estar pronta antes de inicializar estado
   eventBus.on('ui:ready', () => {
@@ -70,28 +74,10 @@ async function init() {
   eventBus.emit('kernel:init', {});
 }
 
-async function createPlayerShip() {
-  try {
-    // Tentar carregar nave do arquivo
-    playerShip = await renderingSystem.assetLoader.loadModel('ship', '/assets/models/ship.glb');
-    console.log('Nave carregada com sucesso!');
-  } catch (error) {
-    console.warn('Erro ao carregar nave, usando cubo como fallback:', error);
-    // Fallback: criar cubo se nave não carregar
-    const geometry = new THREE.BoxGeometry(1, 1, 1);
-    const material = renderingSystem.createTexturedMaterial({
-      color: 0x00ff00,
-      roughness: 0.3,
-      metalness: 0.7
-    });
-    
-    const cube = new THREE.Mesh(geometry, material);
-    cube.castShadow = true;
-    cube.receiveShadow = true;
-    
-    playerShip = new THREE.Group();
-    playerShip.add(cube);
-  }
+function createPlayerShip() {
+  // Get player ship from AssetManager (handles fallback internally)
+  playerShip = assetManager.getPlayerShip();
+  console.log('Nave criada via AssetManager!');
   
   // Posicionar nave
   playerShip.position.set(0, 0, 0);
@@ -102,7 +88,8 @@ async function createPlayerShip() {
   // Ele está de frente, preciso que fique de lado
   playerShip.rotation.z = Math.PI / 2; // Rotaciona para que fique de lado
   
-  renderingSystem.addToScene(playerShip);
+  // Adicionar à scene via eventos
+  eventBus.emit('scene:add-object', { object: playerShip });
 }
 
 eventBus.on('game:started', () => {
@@ -125,19 +112,19 @@ function resetGame() {
   
   // Clear all projectiles
   projectiles.forEach(projectile => {
-    renderingSystem.removeFromScene(projectile.object);
+    eventBus.emit('scene:remove-object', { object: projectile.object });
   });
   projectiles.clear();
   
   // Clear all enemies
   enemies.forEach(enemy => {
-    renderingSystem.removeFromScene(enemy.object);
+    eventBus.emit('scene:remove-object', { object: enemy.object });
   });
   enemies.clear();
   
   // Clear all power-ups
   powerUps.forEach(powerUp => {
-    renderingSystem.removeFromScene(powerUp.object);
+    eventBus.emit('scene:remove-object', { object: powerUp.object });
   });
   powerUps.clear();
   
@@ -172,6 +159,7 @@ function resetGame() {
  * @see Projectile interface no shared package
  */
 function shoot() {
+  console.log('🔫 Shoot function called');
   const currentTime = Date.now();
   if (currentTime - lastShotTime < SHOT_COOLDOWN) {
     return; // Still in cooldown
@@ -210,11 +198,12 @@ function shoot() {
     createdAt: currentTime
   };
   
-  // Create visual object
+  // Create visual object using AssetManager
+  console.log('🎯 Creating projectile geometry');
   const geometry = new THREE.SphereGeometry(PROJECTILE_CONFIG.size);
-  const material = renderingSystem.createTexturedMaterial({
-    color: 0x00ffff
-  });
+  console.log('🎨 Getting material from AssetManager');
+  const material = assetManager.getProjectileMaterial();
+  console.log('✅ Material retrieved:', material);
   
   const projectileMesh = new THREE.Mesh(geometry, material);
   projectileMesh.position.set(
@@ -224,7 +213,8 @@ function shoot() {
   );
   
   // Add to scene and tracking
-  renderingSystem.addToScene(projectileMesh);
+  eventBus.emit('scene:add-object', { object: projectileMesh });
+
   projectiles.set(projectileId, {
     object: projectileMesh,
     data: projectileData
@@ -236,7 +226,11 @@ function shoot() {
 }
 
 eventBus.on('player:shot', () => {
-  shoot();
+  try {
+    shoot();
+  } catch (error) {
+    console.error('Error shooting:', error);
+  }
 });
 
 /**
@@ -286,11 +280,9 @@ function spawnEnemy() {
     createdAt: currentTime
   };
   
-  // Criar objeto visual
+  // Criar objeto visual using AssetManager
   const geometry = new THREE.BoxGeometry(config.size, config.size, config.size);
-  const material = renderingSystem.createTexturedMaterial({
-    color: config.color
-  });
+  const material = assetManager.getEnemyMaterial(enemyType);
   
   const enemyMesh = new THREE.Mesh(geometry, material);
   enemyMesh.position.set(
@@ -302,7 +294,8 @@ function spawnEnemy() {
   enemyMesh.receiveShadow = true;
   
   // Adicionar à cena e tracking
-  renderingSystem.addToScene(enemyMesh);
+  eventBus.emit('scene:add-object', { object: enemyMesh });
+
   enemies.set(enemyId, {
     object: enemyMesh,
     data: enemyData
@@ -370,11 +363,8 @@ function spawnPowerUp() {
       break;
   }
   
-  const material = renderingSystem.createTexturedMaterial({
-    color: config.color,
-    roughness: 0.1,
-    metalness: 0.8 // Brilho metálico para destacar
-  });
+  // Get material from AssetManager
+  const material = assetManager.getPowerUpMaterial(powerUpType);
   
   const powerUpMesh = new THREE.Mesh(geometry, material);
   powerUpMesh.position.set(
@@ -390,7 +380,8 @@ function spawnPowerUp() {
   powerUpMesh.rotation.y = Math.random() * Math.PI;
   
   // Adicionar à cena e tracking
-  renderingSystem.addToScene(powerUpMesh);
+  eventBus.emit('scene:add-object', { object: powerUpMesh });
+
   powerUps.set(powerUpId, {
     object: powerUpMesh,
     data: powerUpData
@@ -446,17 +437,17 @@ function animate() {
     // Check power-up-player collisions
     checkPowerUpPlayerCollisions();
     
-    // Spawn enemies
+    // Spawn enemies (fire-and-forget)
     trySpawnEnemy();
     
-    // Spawn power-ups
+    // Spawn power-ups (fire-and-forget)
     trySpawnPowerUp();
     
     // Update particle system só quando jogando (com deltaTime real)
     eventBus.emit('particles:update', { deltaTime });
   }
   
-  renderingSystem.render();
+  eventBus.emit('renderer:render-frame', {});
 }
 
 /**
@@ -501,7 +492,7 @@ function updateProjectiles() {
   toRemove.forEach(id => {
     const projectile = projectiles.get(id);
     if (projectile) {
-      renderingSystem.removeFromScene(projectile.object);
+      eventBus.emit('scene:remove-object', { object: projectile.object });
       projectiles.delete(id);
     }
   });
@@ -518,7 +509,11 @@ function trySpawnEnemy() {
   
   // Spawn básico a cada 2 segundos
   if (currentTime - lastEnemySpawnTime > ENEMY_CONFIG.basic.spawnRate) {
-    spawnEnemy();
+    try {
+      spawnEnemy();
+    } catch (error) {
+      console.error('Error spawning enemy:', error);
+    }
     lastEnemySpawnTime = currentTime;
   }
 }
@@ -534,7 +529,11 @@ function trySpawnPowerUp() {
   
   // Spawn de power-up a cada 15 segundos (poder de munição)
   if (currentTime - lastPowerUpSpawnTime > POWERUP_CONFIG.ammo.spawnRate) {
-    spawnPowerUp();
+    try {
+      spawnPowerUp();
+    } catch (error) {
+      console.error('Error spawning power-up:', error);
+    }
     lastPowerUpSpawnTime = currentTime;
   }
 }
@@ -600,7 +599,7 @@ function updateEnemies() {
   toRemove.forEach(id => {
     const enemy = enemies.get(id);
     if (enemy) {
-      renderingSystem.removeFromScene(enemy.object);
+      eventBus.emit('scene:remove-object', { object: enemy.object });
       enemies.delete(id);
     }
   });
@@ -655,7 +654,7 @@ function updatePowerUps() {
   toRemove.forEach(id => {
     const powerUp = powerUps.get(id);
     if (powerUp) {
-      renderingSystem.removeFromScene(powerUp.object);
+      eventBus.emit('scene:remove-object', { object: powerUp.object });
       powerUps.delete(id);
     }
   });
@@ -740,7 +739,7 @@ function checkCollisions() {
   projectilesToRemove.forEach(id => {
     const projectile = projectiles.get(id);
     if (projectile) {
-      renderingSystem.removeFromScene(projectile.object);
+      eventBus.emit('scene:remove-object', { object: projectile.object });
       projectiles.delete(id);
     }
   });
@@ -749,7 +748,7 @@ function checkCollisions() {
   enemiesToRemove.forEach(id => {
     const enemy = enemies.get(id);
     if (enemy) {
-      renderingSystem.removeFromScene(enemy.object);
+      eventBus.emit('scene:remove-object', { object: enemy.object });
       enemies.delete(id);
     }
   });
@@ -824,7 +823,7 @@ function checkEnemyPlayerCollisions() {
   enemiesToRemove.forEach(id => {
     const enemy = enemies.get(id);
     if (enemy) {
-      renderingSystem.removeFromScene(enemy.object);
+      eventBus.emit('scene:remove-object', { object: enemy.object });
       enemies.delete(id);
     }
   });
@@ -905,7 +904,7 @@ function checkPowerUpPlayerCollisions() {
   powerUpsToRemove.forEach(id => {
     const powerUp = powerUps.get(id);
     if (powerUp) {
-      renderingSystem.removeFromScene(powerUp.object);
+      eventBus.emit('scene:remove-object', { object: powerUp.object });
       powerUps.delete(id);
     }
   });
