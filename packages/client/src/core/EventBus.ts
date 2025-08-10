@@ -67,7 +67,6 @@ export type GameEventMap = {
   'particles:hit': { position: { x: number; y: number; z: number } };
   'particles:update': { deltaTime: number };
   'particles:clear': {};
-  'particles:debug-stats': {};
   
 //   // Particle Events
 //   'particles:explosion': { position: Vector3; intensity?: number };

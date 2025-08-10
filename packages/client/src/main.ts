@@ -29,8 +29,7 @@ let playerMaxHealth = 100;
 let playerAmmo = 30;
 let playerMaxAmmo = 30;
 let gameScore = 0;
-
-// let gameState = new 
+let lastFrameTime = performance.now();
 
 const eventBus = new EventBus();
 
@@ -403,6 +402,11 @@ function spawnPowerUp() {
 function animate() {
   requestAnimationFrame(animate);
   
+  // Calculate real deltaTime
+  const currentTime = performance.now();
+  const deltaTime = (currentTime - lastFrameTime) / 1000; // Convert ms to seconds
+  lastFrameTime = currentTime;
+  
   // Sempre renderizar, mas só atualizar gameplay se estiver jogando
   if (gameStateManager && gameStateManager.isPlaying()) {
     // Controlar nave do jogador
@@ -448,19 +452,11 @@ function animate() {
     // Spawn power-ups
     trySpawnPowerUp();
     
-    // Update particle system só quando jogando
-    eventBus.emit('particles:update', { deltaTime: 0.016 });
+    // Update particle system só quando jogando (com deltaTime real)
+    eventBus.emit('particles:update', { deltaTime });
   }
   
   renderingSystem.render();
-  
-  // Debug stats (optional)
-  if (process.env.NODE_ENV === 'development') {
-    // Log particle stats every 5 seconds
-    if (Date.now() % 5000 < 16) { // ~60fps = 16ms per frame
-      eventBus.emit('particles:debug-stats', {});
-    }
-  }
 }
 
 /**

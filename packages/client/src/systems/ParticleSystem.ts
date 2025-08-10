@@ -177,11 +177,6 @@ export class ParticleSystem {
     this.eventBus.on('particles:clear', () => {
       this.clear();
     });
-    
-    this.eventBus.on('particles:debug-stats', () => {
-      const stats = this.getStats();
-      console.log(`🎆 Particles: ${stats.active} active, ${stats.pooled} pooled, ${stats.isActive ? 'ACTIVE' : 'INACTIVE'}`);
-    });
   }
 
   /**
@@ -343,7 +338,8 @@ export class ParticleSystem {
         particle.mesh.material.dispose();
       }
     });
-    this.particlePool.clear();
+
+    this.particlePool.length = 0;
     
     this.particleGeometry.dispose();
   }
