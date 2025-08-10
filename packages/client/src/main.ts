@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import { DEFAULT_GAME_CONFIG, Projectile, PROJECTILE_CONFIG, Enemy, ENEMY_CONFIG, PowerUp, POWERUP_CONFIG } from '@spaceshooter/shared';
 import { RenderingSystem } from './systems/RenderingSystem';
 import { InputSystem, InputState } from './systems/InputSystem';
-import { UISystem } from './systems/UISystem';
 import { AudioSystem } from './systems/AudioSystem';
+import { UISystem } from './systems/UISystem';
 import { ParticleSystem } from './systems/ParticleSystem';
 import { GameStateManager, GameStateEnum } from './systems/GameStateManager';
 import { MenuSystem } from './systems/MenuSystem';
@@ -14,7 +14,6 @@ console.log('Config do jogo:', DEFAULT_GAME_CONFIG);
 
 let renderingSystem: RenderingSystem;
 let inputSystem: InputSystem;
-let uiSystem: UISystem;
 let particleSystem: ParticleSystem;
 let gameStateManager: GameStateManager;
 let playerShip: THREE.Group;
@@ -46,10 +45,7 @@ async function init() {
   // inputSystem.addInputCallback(onInputChange);
 
   // Inicializar sistema de UI
-  uiSystem = new UISystem(eventBus, renderingSystem.renderer);
-  uiSystem.updateHealth(playerHealth, playerMaxHealth);
-  uiSystem.updateAmmo(playerAmmo, playerMaxAmmo);
-  uiSystem.updateScore(gameScore);
+  new UISystem(eventBus, renderingSystem.renderer);
 
   // Inicializar sistema de áudio
   new AudioSystem(eventBus);
@@ -65,6 +61,13 @@ async function init() {
 
   // Criar nave do jogador
   await createPlayerShip();
+
+  // Aguardar UI estar pronta antes de inicializar estado
+  eventBus.on('ui:ready', () => {
+    eventBus.emit('ui:update-health', { current: playerHealth, max: playerMaxHealth });
+    eventBus.emit('ui:update-ammo', { current: playerAmmo, max: playerMaxAmmo });
+    eventBus.emit('ui:update-score', { score: gameScore });
+  });
 
   eventBus.emit('kernel:init', {});
 }
@@ -118,9 +121,9 @@ function resetGame() {
   gameScore = 0;
   
   // Update UI
-  uiSystem.updateHealth(playerHealth, playerMaxHealth);
-  uiSystem.updateAmmo(playerAmmo, playerMaxAmmo);
-  uiSystem.updateScore(gameScore);
+  eventBus.emit('ui:update-health', { current: playerHealth, max: playerMaxHealth });
+  eventBus.emit('ui:update-score', { score: gameScore });
+  eventBus.emit('ui:update-ammo', { current: playerAmmo, max: playerMaxAmmo });
   
   // Clear all projectiles
   projectiles.forEach(projectile => {
@@ -188,7 +191,7 @@ function shoot() {
   
   // Use ammo
   playerAmmo--;
-  uiSystem.updateAmmo(playerAmmo, playerMaxAmmo);
+  eventBus.emit('ui:update-ammo', { current: playerAmmo, max: playerMaxAmmo });
   
   // Track shot fired
   gameStateManager.incrementStat('shotsFired');
@@ -455,7 +458,7 @@ function animate() {
   }
   
   renderingSystem.render();
-  uiSystem.render();
+  eventBus.emit('ui:render', {});
 }
 
 /**
@@ -569,7 +572,8 @@ function updateEnemies() {
       if (data.position.y < -4) {
         const escapePenalty = getEscapePenaltyForEnemyType(data.type);
         playerHealth = Math.max(0, playerHealth - escapePenalty);
-        uiSystem.updateHealth(playerHealth, playerMaxHealth);
+        eventBus.emit('ui:update-health', { current: playerHealth, max: playerMaxHealth });
+        eventBus.emit('ui:update-score', { score: gameScore });
         
         console.log(`Inimigo ${data.type} escapou! -${escapePenalty} HP (Total: ${playerHealth})`);
         
@@ -726,7 +730,7 @@ function checkCollisions() {
           // Add score based on enemy type
           const scorePoints = getScoreForEnemyType(enemyData.type);
           gameScore += scorePoints;
-          uiSystem.updateScore(gameScore);
+          eventBus.emit('ui:update-score', { score: gameScore });
           
           // Track enemy destroyed
           gameStateManager.incrementStat('enemiesDestroyed');
@@ -796,7 +800,7 @@ function checkEnemyPlayerCollisions() {
       // Causar dano ao jogador baseado no tipo de inimigo
       const damage = getDamageForEnemyType(enemyData.type);
       playerHealth = Math.max(0, playerHealth - damage);
-      uiSystem.updateHealth(playerHealth, playerMaxHealth);
+      eventBus.emit('ui:update-health', { current: playerHealth, max: playerMaxHealth });
 
       eventBus.emit('audio:play', { soundId: 'hit', options: { volume: 0.5 } });
 
@@ -924,14 +928,14 @@ function applyPowerUpEffect(powerUpType: PowerUp['type']) {
     case 'ammo':
       // Recarregar munição (não ultrapassar máximo)
       playerAmmo = Math.min(playerMaxAmmo, playerAmmo + config.effect);
-      uiSystem.updateAmmo(playerAmmo, playerMaxAmmo);
+      eventBus.emit('ui:update-ammo', { current: playerAmmo, max: playerMaxAmmo });
       console.log(`Munição recarregada! +${config.effect} balas (Total: ${playerAmmo})`);
       break;
       
     case 'health':
       // Restaurar vida (não ultrapassar máximo)
       playerHealth = Math.min(playerMaxHealth, playerHealth + config.effect);
-      uiSystem.updateHealth(playerHealth, playerMaxHealth);
+      eventBus.emit('ui:update-health', { current: playerHealth, max: playerMaxHealth });
       console.log(`Vida restaurada! +${config.effect} HP (Total: ${playerHealth})`);
       break;
       

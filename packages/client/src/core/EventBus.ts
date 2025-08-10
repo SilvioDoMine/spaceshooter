@@ -2,39 +2,39 @@ import { GameStats } from "../systems/GameStateManager";
 import { InputState } from "../systems/InputSystem";
 
 export type GameEventMap = {
-    // Startup Events
-    'kernel:init': {};
-    'renderer:init': {};
-    'renderer:ready': {};
-    'assets:ready': {};
-    'input:ready': {};
-    'ui:ready': {};
-    'menu:ready': {};
-    'audio:ready': {};
-    'particles:ready': {};
-    'gameState:ready': {};
+  // Startup Events
+  'kernel:init': {};
+  'renderer:init': {};
+  'renderer:ready': {};
+  'assets:ready': {};
+  'input:ready': {};
+  'ui:ready': {};
+  'menu:ready': {};
+  'audio:ready': {};
+  'particles:ready': {};
+  'gameState:ready': {};
 
-    // Game State Events
-    'game:main': {};
-    'game:started': { difficulty: string };
-    'game:paused': {};
-    'game:resumed': {};
-    'game:over': { finalScore: number; stats: GameStats };
-    'game:exit': {};
+  // Game State Events
+  'game:main': {};
+  'game:started': { difficulty: string };
+  'game:paused': {};
+  'game:resumed': {};
+  'game:over': { finalScore: number; stats: GameStats };
+  'game:exit': {};
 
-    // Player Events
-    'player:shot': {};
+  // Player Events
+  'player:shot': {};
 
-    // Input Events
-    'input:action': { action: keyof InputState; pressed: boolean };
-    'input:reset': {};
+  // Input Events
+  'input:action': { action: keyof InputState; pressed: boolean };
+  'input:reset': {};
 
-    // Menu Events
-    'menu:click': { type: 'main' | 'pause' | 'gameOver' | 'settings'; action: string };
-    'menu:opened': { type: 'main' | 'pause' | 'gameOver' | 'settings' };
-    'menu:closed': { type: 'main' | 'pause' | 'gameOver' | 'settings' };
-    'menu:optionSelected': { type: 'main' | 'pause' | 'gameOver' | 'settings'; option: string };
-    'menu:settingsChanged': { settings: Record<string, any> };
+  // Menu Events
+  'menu:click': { type: 'main' | 'pause' | 'gameOver' | 'settings'; action: string };
+  'menu:opened': { type: 'main' | 'pause' | 'gameOver' | 'settings' };
+  'menu:closed': { type: 'main' | 'pause' | 'gameOver' | 'settings' };
+  'menu:optionSelected': { type: 'main' | 'pause' | 'gameOver' | 'settings'; option: string };
+  'menu:settingsChanged': { settings: Record<string, any> };
 
 //   // Combat Events
 //   'projectile:fired': { position: Vector2; playerId: string };
@@ -51,7 +51,11 @@ export type GameEventMap = {
 //   'powerup:spawned': { powerUp: PowerUp };
 //   'powerup:collected': { powerUp: PowerUp; effect: any };
   
-//   // UI Events
+  // UI Events
+  'ui:update-score': { score: number; delta?: number };
+  'ui:update-health': { current: number; max: number };
+  'ui:update-ammo': { current: number; max: number };
+  'ui:render': {};
 //   'score:updated': { newScore: number; delta?: number };
 //   'ui:show_message': { text: string; type: 'success' | 'warning' | 'error' };
   

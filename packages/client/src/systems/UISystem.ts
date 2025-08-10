@@ -29,12 +29,12 @@ export class UISystem {
   
   // UI Elements
   private hudGroup: THREE.Group;
-  private scoreText: THREE.Sprite;
-  private healthText: THREE.Sprite;
-  private ammoText: THREE.Sprite;
-  private healthBar: THREE.Mesh;
-  private healthBarBg: THREE.Mesh;
-  
+  private scoreText?: THREE.Sprite;
+  private healthText?: THREE.Sprite;
+  private ammoText?: THREE.Sprite;
+  private healthBar?: THREE.Mesh;
+  private healthBarBg?: THREE.Mesh;
+
   // Canvas global não mais necessário - cada sprite tem seu próprio canvas
   
   // State
@@ -80,6 +80,22 @@ export class UISystem {
     this.eventBus.on('renderer:ready', () => {
       this.eventBus.emit('ui:ready', {});
     });
+
+    this.eventBus.on('ui:update-health', (data: { current: number; max?: number }) => {
+      this.updateHealth(data.current, data.max);
+    });
+
+    this.eventBus.on('ui:update-ammo', (data: { current: number; max: number }) => {
+      this.updateAmmo(data.current, data.max);
+    });
+
+    this.eventBus.on('ui:update-score', (data: { score: number }) => {
+      this.updateScore(data.score);
+    });
+
+    this.eventBus.on('ui:render', () => {
+      this.render();
+    })
   }
 
   private createUIElements(): void {
@@ -252,64 +268,84 @@ export class UISystem {
     material.map = texture;
   }
   
-  private updateAllElements(): void {
-    // Update score text
-    this.updateTextSprite(this.scoreText, `Score: ${this.currentScore}`);
+  // private updateAllElements(): void {
+  //   // Update score text
+  //   this.updateTextSprite(this.scoreText, `Score: ${this.currentScore}`);
     
-    // Update health text with color coding
-    const healthPercent = (this.currentHealth / this.maxHealth) * 100;
-    let healthColor = '#00ff00'; // Green
-    if (healthPercent < 50) healthColor = '#ffff00'; // Yellow
-    if (healthPercent < 25) healthColor = '#ff0000'; // Red
+  //   // Update health text with color coding
+  //   const healthPercent = (this.currentHealth / this.maxHealth) * 100;
+  //   let healthColor = '#00ff00'; // Green
+  //   if (healthPercent < 50) healthColor = '#ffff00'; // Yellow
+  //   if (healthPercent < 25) healthColor = '#ff0000'; // Red
     
-    this.updateTextSprite(
-      this.healthText, 
-      `Health: ${this.currentHealth}/${this.maxHealth}`,
-      healthColor
-    );
+  //   this.updateTextSprite(
+  //     this.healthText, 
+  //     `Health: ${this.currentHealth}/${this.maxHealth}`,
+  //     healthColor
+  //   );
     
-    // Update health bar
-    const healthBarScale = Math.max(0, this.currentHealth / this.maxHealth);
-    this.healthBar.scale.x = healthBarScale;
-    this.healthBar.position.x = -0.2 * (1 - healthBarScale); // Align to left
+  //   // Update health bar
+  //   const healthBarScale = Math.max(0, this.currentHealth / this.maxHealth);
+  //   this.healthBar.scale.x = healthBarScale;
+  //   this.healthBar.position.x = -0.2 * (1 - healthBarScale); // Align to left
     
-    // Update health bar color
-    const healthBarMaterial = this.healthBar.material as THREE.MeshBasicMaterial;
-    if (healthPercent > 50) {
-      healthBarMaterial.color.setHex(0x00ff00); // Green
-    } else if (healthPercent > 25) {
-      healthBarMaterial.color.setHex(0xffff00); // Yellow
-    } else {
-      healthBarMaterial.color.setHex(0xff0000); // Red
-    }
+  //   // Update health bar color
+  //   const healthBarMaterial = this.healthBar.material as THREE.MeshBasicMaterial;
+  //   if (healthPercent > 50) {
+  //     healthBarMaterial.color.setHex(0x00ff00); // Green
+  //   } else if (healthPercent > 25) {
+  //     healthBarMaterial.color.setHex(0xffff00); // Yellow
+  //   } else {
+  //     healthBarMaterial.color.setHex(0xff0000); // Red
+  //   }
     
-    // Update ammo text with color coding
-    const ammoPercent = (this.currentAmmo / this.maxAmmo) * 100;
-    let ammoColor = '#ffffff'; // White
-    if (ammoPercent < 30) ammoColor = '#ffff00'; // Yellow
-    if (ammoPercent === 0) ammoColor = '#ff0000'; // Red
+  //   // Update ammo text with color coding
+  //   const ammoPercent = (this.currentAmmo / this.maxAmmo) * 100;
+  //   let ammoColor = '#ffffff'; // White
+  //   if (ammoPercent < 30) ammoColor = '#ffff00'; // Yellow
+  //   if (ammoPercent === 0) ammoColor = '#ff0000'; // Red
     
-    this.updateTextSprite(
-      this.ammoText,
-      `Ammo: ${this.currentAmmo}/${this.maxAmmo}`,
-      ammoColor
-    );
-  }
+  //   this.updateTextSprite(
+  //     this.ammoText,
+  //     `Ammo: ${this.currentAmmo}/${this.maxAmmo}`,
+  //     ammoColor
+  //   );
+  // }
   
   // Public methods para atualizar UI state
   
   public updateScore(score: number): void {
+    if (this.scoreText === undefined) {
+      console.warn('Score text not initialized yet, skipping update');
+      return;
+    }
+
     this.currentScore = score;
     this.updateTextSprite(this.scoreText, `Score: ${score}`, '#ffffff');
   }
   
   public addScore(points: number): void {
+    if (this.scoreText === undefined) {
+      console.warn('Score text not initialized yet, skipping update');
+      return;
+    }
+
     this.currentScore += points;
     this.updateTextSprite(this.scoreText, `Score: ${this.currentScore}`);
   }
   
   public updateHealth(current: number, max?: number): void {
     console.log(`Atualizando saúde: ${current}/${max}`);
+
+    if (
+      this.healthBar === undefined 
+      || this.healthBarBg === undefined
+      || this.healthText === undefined
+    ) {
+      console.warn('Health bar not initialized yet, skipping update');
+      return;
+    }
+
     this.currentHealth = Math.max(0, current);
     if (max !== undefined) {
       this.maxHealth = max;
@@ -343,37 +379,25 @@ export class UISystem {
     }
   }
   
-  public updateAmmo(current: number, max?: number): void {
-    this.currentAmmo = Math.max(0, current);
-    if (max !== undefined) {
-      this.maxAmmo = max;
-    }
-    
+  public updateAmmo(current: number, max: number): void {    
     // Update ammo text with color
-    const ammoPercent = (this.currentAmmo / this.maxAmmo) * 100;
+    const ammoPercent = (current / max) * 100;
     let ammoColor = '#ffffff';
     if (ammoPercent < 30) ammoColor = '#ffff00';
     if (ammoPercent === 0) ammoColor = '#ff0000';
-    
+
+    if (this.ammoText === undefined) {
+      console.warn('Ammo text not initialized yet, skipping update');
+      return;
+    }
+
     this.updateTextSprite(
       this.ammoText,
-      `Ammo: ${this.currentAmmo}/${this.maxAmmo}`,
+      `Ammo: ${current}/${max}`,
       ammoColor
     );
   }
-  
-  public damageHealth(damage: number): void {
-    this.updateHealth(this.currentHealth - damage);
-  }
-  
-  public useAmmo(amount: number = 1): void {
-    this.updateAmmo(this.currentAmmo - amount);
-  }
-  
-  public reloadAmmo(): void {
-    this.updateAmmo(this.maxAmmo);
-  }
-  
+
   private onWindowResize(): void {
     const aspect = window.innerWidth / window.innerHeight;
     this.camera.left = -aspect;
@@ -382,7 +406,18 @@ export class UISystem {
     
     // Reposicionar elementos com escala fixa
     const baseScale = 0.15;
-    
+
+    if (
+      this.scoreText === undefined 
+      || this.healthText === undefined 
+      || this.healthBar === undefined
+      || this.healthBarBg === undefined
+      || this.ammoText === undefined
+    ) {
+      console.warn('One or more UI elements not initialized yet, skipping update');
+      return;
+    }
+
     // Update positions
     this.scoreText.position.x = -aspect * 0.9;
     this.scoreText.scale.setScalar(baseScale);
