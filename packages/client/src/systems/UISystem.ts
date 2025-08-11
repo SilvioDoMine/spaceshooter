@@ -103,6 +103,10 @@ export class UISystem {
     this.eventBus.on('ui:update-score', (data: { score: number }) => {
       this.updateScore(data.score);
     });
+
+    this.eventBus.on('game:started', () => {
+      this.resetUI();
+    });
   }
 
   private createUIElements(): void {
@@ -115,8 +119,13 @@ export class UISystem {
     this.scoreText.scale.setScalar(baseScale);
     this.hudGroup.add(this.scoreText);
     
-    // Health text (top-center)
-    this.healthText = this.createTextSprite(`Health: ${this.currentHealth}/${this.maxHealth}`);
+    // Health text (top-center) with correct initial color
+    const healthPercent = (this.currentHealth / this.maxHealth) * 100;
+    let healthColor = '#00ff00'; // Green
+    if (healthPercent < 50) healthColor = '#ffff00'; // Yellow
+    if (healthPercent < 25) healthColor = '#ff0000'; // Red
+    
+    this.healthText = this.createTextSprite(`Health: ${this.currentHealth}/${this.maxHealth}`, healthColor);
     this.healthText.position.set(0, 0.85, 0);
     this.healthText.scale.setScalar(baseScale);
     this.hudGroup.add(this.healthText);
@@ -320,6 +329,41 @@ export class UISystem {
   // }
   
   // Public methods para atualizar UI state
+  
+  public resetUI(): void {
+    console.log('🔄 Resetting UI to initial values');
+    
+    // Reset all values to initial state
+    this.currentScore = 0;
+    this.currentHealth = 100;
+    this.maxHealth = 100;
+    this.currentAmmo = 30;
+    this.maxAmmo = 30;
+    
+    // Update all UI elements
+    if (this.scoreText) {
+      this.updateTextSprite(this.scoreText, `Score: ${this.currentScore}`);
+    }
+    
+    if (this.healthText) {
+      const healthPercent = (this.currentHealth / this.maxHealth) * 100;
+      let healthColor = '#00ff00'; // Green
+      if (healthPercent < 50) healthColor = '#ffff00'; // Yellow
+      if (healthPercent < 25) healthColor = '#ff0000'; // Red
+      
+      this.updateTextSprite(this.healthText, `Health: ${this.currentHealth}/${this.maxHealth}`, healthColor);
+    }
+    
+    if (this.ammoText) {
+      this.updateTextSprite(this.ammoText, `Ammo: ${this.currentAmmo}/${this.maxAmmo}`);
+    }
+    
+    // Update health bar
+    if (this.healthBar) {
+      const healthBarScale = Math.max(0, this.currentHealth / this.maxHealth);
+      this.healthBar.scale.setX(healthBarScale);
+    }
+  }
   
   public updateScore(score: number): void {
     if (this.scoreText === undefined) {
