@@ -91,7 +91,12 @@ export class GameStateManager implements Subject {
     this.eventBus.on('game:started', () => this.startNewGame());
     this.eventBus.on('game:paused', () => this.pauseGame());
     this.eventBus.on('game:resumed', () => this.resumeGame());
-    // this.eventBus.on('game:over', () => this.endGame());
+    
+    // Listen to game:over from Player and change state
+    this.eventBus.on('game:over', (data) => {
+      console.log('🔚 GameStateManager received game:over with stats:', data.stats);
+      this.setState(GameStateEnum.GAME_OVER);
+    });
     this.eventBus.on('game:exit', () => {
       this.resetGameStats();
       this.returnToMenu();

@@ -25,6 +25,13 @@ export type GameEventMap = {
 
   // Player Events
   'player:shot': {};
+  'player:damage': { damage: number; reason?: string; enemyType?: string };
+  'player:score': { points: number };
+
+  // Collision Events
+  'collision:check': { entityId: string; entityType: string; position: { x: number; y: number }; radius: number; damage: number };
+  'collision:projectile-enemy': { projectileId: string; position: { x: number; y: number }; damage: number; radius: number };
+  'collision:powerup-player': { powerUpId: string; type: string; position: { x: number; y: number }; radius: number; effect: number };
 
   // Input Events
   'input:action': { action: keyof InputState; pressed: boolean };
