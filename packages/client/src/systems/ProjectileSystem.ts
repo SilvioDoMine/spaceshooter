@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { EventBus } from '../core/EventBus';
+import { RenderingSystem } from './RenderingSystem';
 import { assetManager } from '../services/AssetManager';
 import { PROJECTILE_CONFIG } from '@spaceshooter/shared';
 import type { Projectile } from '@spaceshooter/shared';
@@ -13,12 +14,18 @@ export interface ProjectileData {
 
 export class ProjectileSystem {
   private eventBus: EventBus;
+  private renderingSystem?: RenderingSystem;
   private projectiles: Map<string, ProjectileData> = new Map();
   private isActive: boolean = false;
 
-  constructor(eventBus: EventBus) {
+  constructor(eventBus: EventBus, renderingSystem?: RenderingSystem) {
     this.eventBus = eventBus;
+    this.renderingSystem = renderingSystem;
     this.setupEventHandlers();
+  }
+
+  public setRenderingSystem(renderingSystem: RenderingSystem): void {
+    this.renderingSystem = renderingSystem;
   }
 
   private setupEventHandlers(): void {
@@ -64,7 +71,11 @@ export class ProjectileSystem {
     
     projectileMesh.position.set(position.x, position.y, 0);
     
-    this.eventBus.emit('scene:add-object', { object: projectileMesh });
+    if (this.renderingSystem) {
+      this.renderingSystem.addToScene(projectileMesh);
+    } else {
+      this.eventBus.emit('scene:add-object', { object: projectileMesh });
+    }
 
     this.projectiles.set(projectileId, {
       id: projectileId,
@@ -130,7 +141,11 @@ export class ProjectileSystem {
   public removeProjectile(projectileId: string): void {
     const projectile = this.projectiles.get(projectileId);
     if (projectile) {
-      this.eventBus.emit('scene:remove-object', { object: projectile.object });
+      if (this.renderingSystem) {
+        this.renderingSystem.removeFromScene(projectile.object);
+      } else {
+        this.eventBus.emit('scene:remove-object', { object: projectile.object });
+      }
       this.projectiles.delete(projectileId);
       console.log(`Projectile removed: ${projectileId}`);
     }
@@ -152,7 +167,11 @@ export class ProjectileSystem {
 
   public clearAllProjectiles(): void {
     this.projectiles.forEach((projectile) => {
-      this.eventBus.emit('scene:remove-object', { object: projectile.object });
+      if (this.renderingSystem) {
+        this.renderingSystem.removeFromScene(projectile.object);
+      } else {
+        this.eventBus.emit('scene:remove-object', { object: projectile.object });
+      }
     });
     this.projectiles.clear();
     console.log('All projectiles cleared');

@@ -1,5 +1,6 @@
 import { Entity, Position } from './Entity';
 import { EventBus } from '../core/EventBus';
+import { RenderingSystem } from '../systems/RenderingSystem';
 import { assetManager } from '../services/AssetManager';
 import { ProjectileSystem } from '../systems/ProjectileSystem';
 
@@ -22,11 +23,13 @@ export class Player extends Entity {
   private lastShotTime: number = 0;
   private shotCooldown: number = 200;
   private speed: number = 5;
+  private renderingSystem: RenderingSystem;
   private projectileSystem: ProjectileSystem;
   private gameStartTime: number;
 
   constructor(
     eventBus: EventBus,
+    renderingSystem: RenderingSystem,
     projectileSystem: ProjectileSystem,
     initialPosition: Position = { x: 0, y: 0 },
     initialStats: PlayerStats = {
@@ -44,6 +47,7 @@ export class Player extends Entity {
   ) {
     super(eventBus, 'player', initialPosition);
     this.stats = { ...initialStats };
+    this.renderingSystem = renderingSystem;
     this.projectileSystem = projectileSystem;
     this.gameStartTime = Date.now();
     
@@ -86,7 +90,7 @@ export class Player extends Entity {
     
     this.object.add(playerShip);
     
-    this.eventBus.emit('scene:add-object', { object: this.object });
+    this.renderingSystem.addToScene(this.object);
   }
 
   private handleInputAction(action: string, pressed: boolean): void {
@@ -265,6 +269,6 @@ export class Player extends Entity {
   }
 
   protected onDestroy(): void {
-    this.eventBus.emit('scene:remove-object', { object: this.object });
+    this.renderingSystem.removeFromScene(this.object);
   }
 }

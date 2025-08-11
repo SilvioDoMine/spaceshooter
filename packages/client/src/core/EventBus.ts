@@ -2,90 +2,51 @@ import { GameStats } from "../systems/GameStateManager";
 import { InputState } from "../systems/InputSystem";
 
 export type GameEventMap = {
-  // Startup Events
-  'kernel:init': {};
-  'renderer:init': {};
-  'renderer:ready': { scene: any; renderer: any }; // THREE.Scene & THREE.WebGLRenderer
-  'renderer:register-ui-scene': { scene: any; camera: any };
+  // Startup Events - for system coordination
+  'renderer:ready': { scene: any; renderer: any };
   'assets:ready': {};
-  'input:ready': {};
-  'ui:ready': {};
-  'menu:ready': {};
-  'audio:ready': {};
-  'particles:ready': {};
-  'gameState:ready': {};
 
-  // Game State Events
-  'game:main': {};
+  // Game State Events - KEEP: Core game flow communication
   'game:started': { difficulty: string };
   'game:paused': {};
   'game:resumed': {};
   'game:over': { finalScore: number; stats: GameStats };
-  'game:exit': {};
 
-  // Player Events
-  'player:shot': {};
+  // Player Events - KEEP: UI notifications
   'player:damage': { damage: number; reason?: string; enemyType?: string };
   'player:score': { points: number };
 
-  // Collision Events
+  // Collision Events - KEEP: Entity interaction
   'collision:check': { entityId: string; entityType: string; position: { x: number; y: number }; radius: number; damage: number };
   'collision:projectile-enemy': { projectileId: string; position: { x: number; y: number }; damage: number; radius: number };
   'collision:powerup-player': { powerUpId: string; type: string; position: { x: number; y: number }; radius: number; effect: number };
 
-  // Input Events
+  // Input Events - KEEP: Loose coupling for input
   'input:action': { action: keyof InputState; pressed: boolean };
-  'input:reset': {};
 
-  // Menu Events
+  // Menu Events - KEEP: UI communication
   'menu:click': { type: 'main' | 'pause' | 'gameOver' | 'settings'; action: string };
   'menu:opened': { type: 'main' | 'pause' | 'gameOver' | 'settings' };
   'menu:closed': { type: 'main' | 'pause' | 'gameOver' | 'settings' };
-  'menu:optionSelected': { type: 'main' | 'pause' | 'gameOver' | 'settings'; option: string };
-  'menu:settingsChanged': { settings: Record<string, any> };
 
-//   // Combat Events
-//   'projectile:fired': { position: Vector2; playerId: string };
-//   'enemy:spawned': { enemy: Enemy };
-//   'enemy:destroyed': { enemy: Enemy; position: Vector2; scorePoints: number };
-//   'enemy:hit': { enemy: Enemy; damage: number };
-  
-//   // Player Events
-//   'player:hit': { damage: number; position: Vector2 };
-//   'player:health_changed': { current: number; max: number };
-//   'player:ammo_changed': { current: number; max: number };
-  
-//   // PowerUp Events  
-//   'powerup:spawned': { powerUp: PowerUp };
-//   'powerup:collected': { powerUp: PowerUp; effect: any };
-  
-  // UI Events
+  // UI Events - KEEP: Loose coupling for UI updates
   'ui:update-score': { score: number; delta?: number };
   'ui:update-health': { current: number; max: number };
   'ui:update-ammo': { current: number; max: number };
-//   'score:updated': { newScore: number; delta?: number };
-//   'ui:show_message': { text: string; type: 'success' | 'warning' | 'error' };
   
-  // Audio Events
+  // Audio Events - KEEP: Loose coupling for sound
   'audio:play': { soundId: string; options?: { volume?: number; loop?: boolean } };
   
-  // Particle Events
+  // Particle Events - KEEP: Visual effects
   'particles:explosion': { position: { x: number; y: number; z: number } };
   'particles:hit': { position: { x: number; y: number; z: number } };
-  'particles:update': { deltaTime: number };
-  'particles:clear': {};
   
-  // Rendering Events
-  'renderer:render-frame': {};
+  // Scene Events - KEEP: For entities that need to add/remove from scene
   'scene:add-object': { object: any };
   'scene:remove-object': { object: any };
-  'materials:create-textured': { config: any; requestId: string };
-  'materials:textured-response': { material: any; requestId: string };
-  'assets:load-model': { name: string; path: string; requestId: string };
-  'assets:model-response': { model: any; requestId: string; error?: string };
-  'renderer:attach-dom': { containerId: string };
-  'renderer:get-scene': { requestId: string };
-  'renderer:scene-response': { scene: any; requestId: string };
+
+  // UI Scene registration - KEEP: One-time setup
+  'renderer:register-ui-scene': { scene: any; camera: any };
 };
 
 export class EventBus {
@@ -93,28 +54,18 @@ export class EventBus {
   private onceListeners: Map<keyof GameEventMap, Set<Function>> = new Map();
 
   private silencedEvents: Set<keyof GameEventMap> = new Set([
-    'kernel:init',
-    'renderer:init',
-    'renderer:ready',
     'assets:ready',
-    'input:ready',
-    'ui:ready',
-    'menu:ready',
-    'audio:ready',
-    'particles:ready',
-    'gameState:ready',
     'audio:play',
     'particles:explosion',
     'particles:hit',
-    'particles:update',
     'input:action',
-    'renderer:render-frame',
     'scene:add-object',
     'scene:remove-object',
-    'materials:create-textured',
-    'materials:textured-response',
-    'renderer:get-scene',
-    'renderer:scene-response',
+    'renderer:register-ui-scene',
+
+    'collision:check',
+    'collision:projectile-enemy',
+    'collision:powerup-player',
   ]);
 
   /**

@@ -170,9 +170,7 @@ export class ParticleSystem {
       this.createHitEffect(position);
     });
     
-    this.eventBus.on('particles:update', (data) => {
-      this.update(data.deltaTime);
-    });
+    // ParticleSystem update is now called directly from Game loop
     
     this.eventBus.on('particles:clear', () => {
       this.clear();

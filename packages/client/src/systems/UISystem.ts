@@ -46,9 +46,13 @@ export class UISystem {
 
   private eventBus: EventBus;
 
-  constructor(eventBus: EventBus) {
+  constructor(eventBus: EventBus, renderingSystem?: THREE.Scene & THREE.WebGLRenderer) {
     this.eventBus = eventBus;
     this.setupEventListeners();
+  }
+  
+  public setRenderingSystem(scene: THREE.Scene, renderer: THREE.WebGLRenderer): void {
+    this.initialize({ scene, renderer });
   }
   
   private initialize(data: { renderer: THREE.WebGLRenderer }): void {

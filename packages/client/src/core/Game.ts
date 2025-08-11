@@ -6,6 +6,8 @@ import { UISystem } from '../systems/UISystem';
 import { GameStateManager } from '../systems/GameStateManager';
 import { MenuSystem } from '../systems/MenuSystem';
 import { EntitySystem } from '../systems/EntitySystem';
+import { RenderingSystem } from '../systems/RenderingSystem';
+import { ParticleSystem } from '../systems/ParticleSystem';
 
 /**
  * Game - Core game class that manages all systems and lifecycle
@@ -18,10 +20,19 @@ import { EntitySystem } from '../systems/EntitySystem';
  */
 export class Game {
   private eventBus: EventBus;
-  private systems: Map<string, any> = new Map();
   private isRunning: boolean = false;
   private lastFrameTime: number = 0;
   private animationId: number | null = null;
+
+  // Direct system references - no more Map lookup hell
+  private renderingSystem!: RenderingSystem;
+  private inputSystem!: InputSystem;
+  private audioSystem!: AudioSystem;  
+  private uiSystem!: UISystem;
+  private particleSystem!: ParticleSystem;
+  private menuSystem!: MenuSystem;
+  private gameStateManager!: GameStateManager;
+  private entitySystem!: EntitySystem;
 
   constructor() {
     this.eventBus = new EventBus();
@@ -36,16 +47,19 @@ export class Game {
       console.log('🎮 Initializing game...');
       
       // Phase 1: Initialize assets
+      console.log('📦 Phase 1: Initialize assets...');
       await this.initializeAssets();
+      console.log('✅ Assets initialized');
       
-      // Phase 2: Initialize core systems
-      await this.initializeSystems();
+      // Phase 2: Initialize systems with proper dependencies
+      console.log('⚙️ Phase 2: Initialize systems...');
+      this.initializeSystems();
+      console.log('✅ Systems initialized');
       
-      // Phase 3: Setup system interactions
-      this.setupSystemInteractions();
-      
-      // Phase 4: Signal ready
-      this.eventBus.emit('kernel:init', {});
+      // Phase 3: Setup DOM and load assets
+      console.log('🎨 Phase 3: Setup rendering and assets...');
+      await this.setupRenderingAndAssets();
+      console.log('✅ Rendering and assets setup complete');
       
       console.log('✅ Game initialized successfully');
       
@@ -91,33 +105,26 @@ export class Game {
   public dispose(): void {
     this.stop();
     
-    // Dispose all systems
-    this.systems.forEach((system, name) => {
-      if (system.dispose) {
-        console.log(`🧹 Disposing ${name}...`);
-        system.dispose();
-      }
-    });
+    // Dispose all systems directly
+    if (this.entitySystem) this.entitySystem.dispose();
+    if (this.renderingSystem) this.renderingSystem.dispose();
+    if (this.particleSystem) this.particleSystem.dispose();
+    if (this.audioSystem) this.audioSystem.dispose();
+    if (this.uiSystem) this.uiSystem.dispose();
+    if (this.inputSystem) this.inputSystem.dispose();
     
-    this.systems.clear();
     assetManager.dispose();
     
     console.log('✅ Game disposed');
   }
 
   /**
-   * Get system by name
+   * Get direct access to systems
    */
-  public getSystem<T>(name: string): T | undefined {
-    return this.systems.get(name);
-  }
-
-  /**
-   * Get event bus instance
-   */
-  public getEventBus(): EventBus {
-    return this.eventBus;
-  }
+  public getRenderingSystem(): RenderingSystem { return this.renderingSystem; }
+  public getEntitySystem(): EntitySystem { return this.entitySystem; }
+  public getGameStateManager(): GameStateManager { return this.gameStateManager; }
+  public getEventBus(): EventBus { return this.eventBus; }
 
   // Private methods
 
@@ -126,48 +133,42 @@ export class Game {
     await assetManager.initialize();
   }
 
-  private async initializeSystems(): Promise<void> {
+  private initializeSystems(): void {
     console.log('⚙️ Initializing systems...');
 
-    // Import dynamic systems
-    const [
-      { RenderingSystem },
-      { ParticleSystem }
-    ] = await Promise.all([
-      import('../systems/RenderingSystem'),
-      import('../systems/ParticleSystem')
-    ]);
+    // Initialize systems in dependency order with direct injection
+    this.renderingSystem = new RenderingSystem(this.eventBus);
+    this.inputSystem = new InputSystem(this.eventBus);
+    this.audioSystem = new AudioSystem(this.eventBus);
+    this.uiSystem = new UISystem(this.eventBus);
+    this.particleSystem = new ParticleSystem(this.eventBus);
+    this.menuSystem = new MenuSystem(this.eventBus);
+    this.gameStateManager = new GameStateManager(this.eventBus);
+    
+    // EntitySystem needs RenderingSystem for direct scene manipulation
+    this.entitySystem = new EntitySystem(this.eventBus, this.renderingSystem);
+    
+    // Initialize UISystem with rendering system after both are created
+    this.uiSystem.setRenderingSystem(this.renderingSystem.scene, this.renderingSystem.renderer);
+    
+    // Initialize ParticleSystem with scene reference (it will still listen to renderer:ready event too)
+    // This ensures it works even if the event timing is off
 
-    // Initialize systems in dependency order
-    const systemConfigs = [
-      { name: 'rendering', class: RenderingSystem },
-      { name: 'input', class: InputSystem },
-      { name: 'ui', class: UISystem },
-      { name: 'audio', class: AudioSystem },
-      { name: 'particles', class: ParticleSystem },
-      { name: 'menu', class: MenuSystem },
-      { name: 'gameState', class: GameStateManager },
-      { name: 'entities', class: EntitySystem },
-    ];
-
-    for (const config of systemConfigs) {
-      try {
-        const system = new config.class(this.eventBus);
-        this.systems.set(config.name, system);
-        console.log(`✅ ${config.name} system initialized`);
-      } catch (error) {
-        console.error(`❌ Failed to initialize ${config.name} system:`, error);
-        throw error;
-      }
-    }
+    console.log('✅ All systems initialized');
   }
 
-  private setupSystemInteractions(): void {
-    // Remove UI coupling from main - UI handles its own state
-    console.log('🔗 Setting up system interactions...');
+  private async setupRenderingAndAssets(): Promise<void> {
+    // Attach rendering system to DOM
+    this.renderingSystem.attachToDOM('game-container');
     
-    // Systems communicate via events only
-    // No direct coupling needed here
+    // Load assets directly
+    await this.renderingSystem.loadAssets((progress) => {
+      console.log(`Loading progress: ${progress.toFixed(1)}%`);
+    });
+    
+    // Start the game automatically after everything is loaded
+    console.log('🎮 Starting game automatically...');
+    this.gameStateManager.startNewGame();
   }
 
   private gameLoop = (): void => {
@@ -177,17 +178,14 @@ export class Game {
     const deltaTime = (currentTime - this.lastFrameTime) / 1000;
     this.lastFrameTime = currentTime;
 
-    // Update systems via events
-    const gameStateManager = this.systems.get('gameState') as GameStateManager;
-    const entitySystem = this.systems.get('entities') as EntitySystem;
-
-    if (gameStateManager?.isPlaying() && entitySystem) {
-      entitySystem.update(deltaTime);
-      this.eventBus.emit('particles:update', { deltaTime });
+    // Update systems directly - no events needed for core game loop
+    if (this.gameStateManager.isPlaying()) {
+      this.entitySystem.update(deltaTime);
+      this.particleSystem.update(deltaTime);
     }
 
-    // Render frame
-    this.eventBus.emit('renderer:render-frame', {});
+    // Render frame directly
+    this.renderingSystem.render();
 
     // Schedule next frame
     this.animationId = requestAnimationFrame(this.gameLoop);

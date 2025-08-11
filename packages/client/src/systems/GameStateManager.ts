@@ -307,8 +307,9 @@ export class GameStateManager implements Subject {
 
       case GameStateEnum.PLAYING:
         // Ações específicas para quando o jogo inicia
-        if (oldState === GameStateEnum.MENU) {
+        if (oldState === GameStateEnum.MENU || oldState === GameStateEnum.INIT) {
           console.log('Game started!');
+          this.eventBus.emit('game:started', { difficulty: 'normal' });
         } else if (oldState === GameStateEnum.PAUSED) {
           
           // if (this.currentState !== GameStateEnum.PLAYING) {

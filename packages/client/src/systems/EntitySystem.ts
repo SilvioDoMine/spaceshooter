@@ -3,10 +3,12 @@ import { Player, PlayerStats } from '../entities/Player';
 import { Enemy } from '../entities/Enemy';
 import { PowerUp } from '../entities/PowerUp';
 import { ProjectileSystem } from './ProjectileSystem';
+import { RenderingSystem } from './RenderingSystem';
 import { ENEMY_CONFIG, POWERUP_CONFIG } from '@spaceshooter/shared';
 
 export class EntitySystem {
   private eventBus: EventBus;
+  private renderingSystem: RenderingSystem;
   private projectileSystem: ProjectileSystem;
   private player: Player | null = null;
   private enemies: Map<string, Enemy> = new Map();
@@ -15,9 +17,10 @@ export class EntitySystem {
   private lastPowerUpSpawnTime: number = 0;
   private isActive: boolean = false;
 
-  constructor(eventBus: EventBus) {
+  constructor(eventBus: EventBus, renderingSystem?: RenderingSystem) {
     this.eventBus = eventBus;
-    this.projectileSystem = new ProjectileSystem(eventBus);
+    this.renderingSystem = renderingSystem!; // Will be injected later if not provided
+    this.projectileSystem = new ProjectileSystem(eventBus, renderingSystem);
     this.setupEventHandlers();
   }
 
@@ -104,10 +107,16 @@ export class EntitySystem {
 
     this.player = new Player(
       this.eventBus,
+      this.renderingSystem,
       this.projectileSystem,
       { x: 0, y: 0 },
       initialStats
     );
+  }
+
+  public setRenderingSystem(renderingSystem: RenderingSystem): void {
+    this.renderingSystem = renderingSystem;
+    this.projectileSystem.setRenderingSystem(renderingSystem);
   }
 
   private handlePlayerDamage(damage: number): void {
