@@ -320,8 +320,8 @@ export class GameStateManager implements Subject {
         break;
       
       case GameStateEnum.GAME_OVER:
-        this.eventBus.emit('game:over', { finalScore: 99, stats: this.gameStats });
-        console.log('Game over! Final stats:', this.gameStats);
+        // Don't emit game:over here - let the Player emit it with correct stats
+        console.log('Game state changed to GAME_OVER');
         break;
     }
   }

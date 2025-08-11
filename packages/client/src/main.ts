@@ -34,7 +34,7 @@ async function init() {
 
   gameStateManager = new GameStateManager(eventBus);
 
-  entitySystem = new EntitySystem(eventBus);
+  entitySystem = new EntitySystem(eventBus, gameStateManager);
 
   eventBus.on('ui:ready', () => {
     const player = entitySystem.getPlayer();

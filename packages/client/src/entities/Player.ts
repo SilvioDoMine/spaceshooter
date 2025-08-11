@@ -9,6 +9,11 @@ export interface PlayerStats {
   ammo: number;
   maxAmmo: number;
   score: number;
+  shotsFired: number;
+  enemiesDestroyed: number;
+  enemiesEscaped: number;
+  timeAlive: number;
+  accuracy: number;
 }
 
 export class Player extends Entity {
@@ -18,6 +23,7 @@ export class Player extends Entity {
   private shotCooldown: number = 200;
   private speed: number = 5;
   private projectileSystem: ProjectileSystem;
+  private gameStartTime: number;
 
   constructor(
     eventBus: EventBus,
@@ -28,12 +34,18 @@ export class Player extends Entity {
       maxHealth: 100,
       ammo: 30,
       maxAmmo: 30,
-      score: 0
+      score: 0,
+      shotsFired: 0,
+      enemiesDestroyed: 0,
+      enemiesEscaped: 0,
+      timeAlive: 0,
+      accuracy: 0
     }
   ) {
     super(eventBus, 'player', initialPosition);
     this.stats = { ...initialStats };
     this.projectileSystem = projectileSystem;
+    this.gameStartTime = Date.now();
     
     // Create visual after all properties are set
     this.createVisual();
@@ -48,8 +60,22 @@ export class Player extends Entity {
       this.tryShoot();
     });
 
+    const unsubscribeScore = this.eventBus.on('player:score', (data) => {
+      this.addScore(data.points);
+      this.stats.enemiesDestroyed++;
+      this.updateAccuracy();
+    });
+
+    const unsubscribeDamage = this.eventBus.on('player:damage', (data) => {
+      if (data.reason === 'enemy_escape') {
+        this.stats.enemiesEscaped++;
+      }
+    });
+
     this.addCleanupFunction(unsubscribeInput);
     this.addCleanupFunction(unsubscribeShot);
+    this.addCleanupFunction(unsubscribeScore);
+    this.addCleanupFunction(unsubscribeDamage);
   }
 
   protected createVisual(): void {
@@ -110,6 +136,7 @@ export class Player extends Entity {
 
     this.lastShotTime = currentTime;
     this.stats.ammo--;
+    this.stats.shotsFired++;
     
     this.updateUI();
     
@@ -160,6 +187,14 @@ export class Player extends Entity {
     this.updateUI();
   }
 
+  private updateAccuracy(): void {
+    if (this.stats.shotsFired > 0) {
+      this.stats.accuracy = Math.round((this.stats.enemiesDestroyed / this.stats.shotsFired) * 100);
+    } else {
+      this.stats.accuracy = 0;
+    }
+  }
+
   public getStats(): PlayerStats {
     return { ...this.stats };
   }
@@ -171,13 +206,19 @@ export class Player extends Entity {
       maxHealth: this.stats.maxHealth,
       ammo: this.stats.maxAmmo,
       maxAmmo: this.stats.maxAmmo,
-      score: 0
+      score: 0,
+      shotsFired: 0,
+      enemiesDestroyed: 0,
+      enemiesEscaped: 0,
+      timeAlive: 0,
+      accuracy: 0
     };
     
     this.setPosition({ x: 0, y: 0 });
     this.setVelocity({ x: 0, y: 0 });
     this.lastShotTime = 0;
     this.inputState = {};
+    this.gameStartTime = Date.now();
     
     console.log('📊 Player stats after reset:', this.stats);
     this.updateUI();
@@ -201,15 +242,24 @@ export class Player extends Entity {
     console.log('Player died!');
     this.isActive = false;
     
+    // Calculate final time alive
+    const currentTime = Date.now();
+    this.stats.timeAlive = currentTime - this.gameStartTime;
+    
+    // Final accuracy calculation
+    this.updateAccuracy();
+    
+    console.log('💀 Final player stats:', this.stats);
+    
     this.eventBus.emit('game:over', { 
       finalScore: this.stats.score, 
       stats: {
         score: this.stats.score,
-        shotsFired: 0, 
-        enemiesDestroyed: 0,
-        enemiesEscaped: 0,
-        timeAlive: Date.now(),
-        accuracy: 0
+        shotsFired: this.stats.shotsFired, 
+        enemiesDestroyed: this.stats.enemiesDestroyed,
+        enemiesEscaped: this.stats.enemiesEscaped,
+        timeAlive: this.stats.timeAlive,
+        accuracy: this.stats.accuracy
       }
     });
   }

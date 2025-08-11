@@ -5,10 +5,12 @@ import { PowerUp } from '../entities/PowerUp';
 import { ProjectileSystem } from './ProjectileSystem';
 import { Position } from '../entities/Entity';
 import { ENEMY_CONFIG, POWERUP_CONFIG } from '@spaceshooter/shared';
+import { GameStateManager, GameStateEnum } from './GameStateManager';
 
 export class EntitySystem {
   private eventBus: EventBus;
   private projectileSystem: ProjectileSystem;
+  private gameStateManager: GameStateManager;
   private player: Player | null = null;
   private enemies: Map<string, Enemy> = new Map();
   private powerUps: Map<string, PowerUp> = new Map();
@@ -16,8 +18,9 @@ export class EntitySystem {
   private lastPowerUpSpawnTime: number = 0;
   private isActive: boolean = false;
 
-  constructor(eventBus: EventBus) {
+  constructor(eventBus: EventBus, gameStateManager: GameStateManager) {
     this.eventBus = eventBus;
+    this.gameStateManager = gameStateManager;
     this.projectileSystem = new ProjectileSystem(eventBus);
     this.setupEventHandlers();
   }
@@ -28,8 +31,8 @@ export class EntitySystem {
       this.startGame();
     });
 
-    this.eventBus.on('game:over', () => {
-      console.log('🔚 EntitySystem received game:over event');
+    this.eventBus.on('game:over', (data) => {
+      console.log('🔚 EntitySystem received game:over event with stats:', data.stats);
       this.endGame();
     });
 
@@ -114,9 +117,11 @@ export class EntitySystem {
   private handlePlayerDamage(damage: number): void {
     if (!this.player) return;
 
-    const isDead = this.player.takeDamage(damage);
+    const isDead = this.player!.takeDamage(damage);
     if (isDead) {
+      console.log('💀 Player died, triggering game over...');
       this.isActive = false;
+      this.gameStateManager.setState(GameStateEnum.GAME_OVER);
     }
   }
 
