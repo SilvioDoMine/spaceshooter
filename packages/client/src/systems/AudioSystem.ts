@@ -3,6 +3,8 @@
  * Gerencia carregamento, cache e reprodução de efeitos sonoros
  */
 
+import { EventBus } from "../core/EventBus";
+
 export interface AudioConfig {
   volume: number;
   enabled: boolean;
@@ -24,8 +26,41 @@ export class AudioSystem {
   };
   private initialized: boolean = false;
 
-  constructor() {
+  private eventBus: EventBus;
+
+  constructor(eventBus: EventBus) {
+    this.eventBus = eventBus;
+    this.setupEventListeners();
+
     this.context = new (window.AudioContext || (window as any).webkitAudioContext)();
+  }
+
+  private setupEventListeners(): void {
+    this.eventBus.on('game:started', () => {
+      this.initialize();
+    });
+
+    this.eventBus.on('audio:play', (data) => {
+      console.log('🔊 Audio play requested:', data.soundId);
+      this.playSound(data.soundId, data.options);
+    });
+  
+    this.eventBus.on('renderer:ready', () => {
+      import('../assets/gameAssets')
+        .then(module => {
+          const { GAME_ASSETS } = module;
+
+          this.loadSounds(GAME_ASSETS.sounds)
+            .then(() => {
+              console.log('Sons carregados com sucesso');
+            })
+            .catch(error => {
+              console.error('Erro ao carregar sons:', error);
+            });
+        })
+
+      this.eventBus.emit('audio:ready', {});
+    });
   }
 
   /**
@@ -37,13 +72,39 @@ export class AudioSystem {
 
     try {
       if (this.context.state === 'suspended') {
-        await this.context.resume();
+        console.log('🔊 AudioContext suspended, will resume on first user interaction...');
+        // Don't await here - just set up the interaction listeners
+        this.setupUserInteractionListeners();
       }
       this.initialized = true;
-      console.log('AudioSystem inicializado');
+      console.log('AudioSystem inicializado (may need user interaction for audio)');
     } catch (error) {
       console.error('Erro ao inicializar AudioSystem:', error);
     }
+  }
+
+  /**
+   * Configura listeners para ativar o AudioContext na primeira interação do usuário
+   */
+  private setupUserInteractionListeners(): void {
+    const resumeAudio = async () => {
+      if (this.context && this.context.state === 'suspended') {
+        try {
+          await this.context.resume();
+          console.log('✅ AudioContext resumed after user interaction');
+        } catch (error) {
+          console.error('Error resuming AudioContext:', error);
+        }
+      }
+      // Remove listeners after first interaction
+      document.removeEventListener('click', resumeAudio);
+      document.removeEventListener('keydown', resumeAudio);
+      document.removeEventListener('touchstart', resumeAudio);
+    };
+
+    document.addEventListener('click', resumeAudio, { once: true });
+    document.addEventListener('keydown', resumeAudio, { once: true });
+    document.addEventListener('touchstart', resumeAudio, { once: true });
   }
 
   /**
@@ -146,6 +207,7 @@ export class AudioSystem {
    * Reproduz um som
    */
   playSound(name: string, options: { volume?: number; loop?: boolean } = {}): AudioBufferSourceNode | null {
+    console.log(`🎵 playSound called: ${name}, enabled: ${this.config.enabled}, initialized: ${this.initialized}`);
     if (!this.config.enabled || !this.initialized) return null;
 
     const buffer = this.sounds.get(name);

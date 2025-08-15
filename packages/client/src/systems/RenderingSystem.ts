@@ -1,83 +1,88 @@
 import * as THREE from 'three';
 import { AssetLoader } from '../assets/AssetLoader';
+import { EventBus } from '../core/EventBus';
 
 /**
  * Sistema de Renderização do Space Shooter
  * 
  * Responsável por gerenciar toda a renderização 3D do jogo usando Three.js.
  * Inclui configuração de scene, camera, renderer, iluminação e integração com AssetLoader.
- * 
- * @example
- * ```typescript
- * const renderingSystem = new RenderingSystem();
- * renderingSystem.attachToDOM('game-container');
- * 
- * // Carregar assets
- * await renderingSystem.loadAssets((progress) => {
- *   console.log(`Loading: ${progress}%`);
- * });
- * 
- * // Adicionar objetos à cena
- * const cube = new THREE.Mesh(geometry, material);
- * renderingSystem.addToScene(cube);
- * 
- * // Loop de renderização
- * function animate() {
- *   requestAnimationFrame(animate);
- *   renderingSystem.render();
- * }
- * ```
- * 
- * @features
- * - Scene 3D com background espacial
- * - Camera perspectiva configurável
- * - WebGL renderer com shadows e antialias
- * - Sistema de iluminação (ambiente, direcional, pontual)
- * - Integração com AssetLoader para texturas e modelos
- * - Responsivo (redimensionamento automático)
- * - Factory de materiais texturizados
  */
 export class RenderingSystem {
-  public assetLoader: AssetLoader;
-  public scene!: THREE.Scene;
-  public camera!: THREE.PerspectiveCamera;
-  public renderer!: THREE.WebGLRenderer;
+  public readonly assetLoader: AssetLoader;
+  public readonly scene: THREE.Scene;
+  public readonly camera: THREE.PerspectiveCamera;
+  public readonly renderer: THREE.WebGLRenderer;
+  private eventBus: EventBus;
   
-  constructor() {
+  // UI Scene management
+  private uiScene?: THREE.Scene;
+  private uiCamera?: THREE.Camera;
+
+  constructor(eventBus: EventBus) {
+    this.eventBus = eventBus;
     this.assetLoader = new AssetLoader();
-    this.init();
+    
+    // Initialize Three.js components
+    this.scene = this.createScene();
+    this.camera = this.createCamera();
+    this.renderer = this.createRenderer();
+    
+    this.setupLighting();
+    this.setupEventListeners();
+    this.setupWindowResize();
   }
 
-  private init(): void {
-    // Criar scene
-    this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x000011);
+  private setupEventListeners(): void {
+    // UI scene registration
+    this.eventBus.on('renderer:register-ui-scene', (data) => {
+      this.uiScene = data.scene;
+      this.uiCamera = data.camera;
+    });
+    
+    // Scene management - for entities that still use events
+    this.eventBus.on('scene:add-object', (data) => {
+      this.addToScene(data.object);
+    });
+    
+    this.eventBus.on('scene:remove-object', (data) => {
+      this.removeFromScene(data.object);
+    });
+  }
 
-    // Criar camera
-    this.camera = new THREE.PerspectiveCamera(
+  private createScene(): THREE.Scene {
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x000011);
+    return scene;
+  }
+
+  private createCamera(): THREE.PerspectiveCamera {
+    const camera = new THREE.PerspectiveCamera(
       75, // field of view
       window.innerWidth / window.innerHeight, // aspect ratio
       0.1, // near plane
       1000 // far plane
     );
-    this.camera.position.z = 5;
+    camera.position.z = 5;
+    return camera;
+  }
 
-    // Criar renderer
-    this.renderer = new THREE.WebGLRenderer({ antialias: true });
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(window.devicePixelRatio);
-    this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  private createRenderer(): THREE.WebGLRenderer {
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     
     // Garantir que o canvas ocupe toda a tela
-    this.renderer.domElement.style.width = '100%';
-    this.renderer.domElement.style.height = '100%';
-    this.renderer.domElement.style.display = 'block';
+    renderer.domElement.style.width = '100%';
+    renderer.domElement.style.height = '100%';
+    renderer.domElement.style.display = 'block';
+    
+    return renderer;
+  }
 
-    // Configurar iluminação básica
-    this.setupLighting();
-
-    // Handler para resize da janela
+  private setupWindowResize(): void {
     window.addEventListener('resize', this.onWindowResize.bind(this));
   }
 
@@ -102,8 +107,16 @@ export class RenderingSystem {
 
   public attachToDOM(containerId: string): void {
     const gameContainer = document.getElementById(containerId);
+
     if (gameContainer) {
       gameContainer.appendChild(this.renderer.domElement);
+      console.log('✅ RenderingSystem attached to DOM');
+      
+      // Emit renderer:ready for systems that still depend on it
+      this.eventBus.emit('renderer:ready', { 
+        scene: this.scene, 
+        renderer: this.renderer 
+      });
     }
   }
 
@@ -119,7 +132,16 @@ export class RenderingSystem {
   }
 
   public render(): void {
+    // Render main 3D scene
     this.renderer.render(this.scene, this.camera);
+    
+    // Render UI overlay if registered
+    if (this.uiScene && this.uiCamera) {
+      this.renderer.autoClear = false;
+      this.renderer.clearDepth();
+      this.renderer.render(this.uiScene, this.uiCamera);
+      this.renderer.autoClear = true; // Reset for next frame
+    }
   }
 
   public addToScene(object: THREE.Object3D): void {
@@ -128,6 +150,45 @@ export class RenderingSystem {
 
   public removeFromScene(object: THREE.Object3D): void {
     this.scene.remove(object);
+    
+    // Dispose recursos para evitar memory leaks
+    if (object instanceof THREE.Mesh) {
+      // Dispose geometry
+      if (object.geometry) {
+        object.geometry.dispose();
+      }
+      
+      // Dispose materials
+      if (object.material) {
+        if (Array.isArray(object.material)) {
+          object.material.forEach(material => {
+            if (material instanceof THREE.Material) {
+              material.dispose();
+            }
+          });
+        } else if (object.material instanceof THREE.Material) {
+          object.material.dispose();
+        }
+      }
+    }
+    
+    // Recursively dispose children
+    object.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        if (child.geometry) child.geometry.dispose();
+        if (child.material) {
+          if (Array.isArray(child.material)) {
+            child.material.forEach(material => {
+              if (material instanceof THREE.Material) {
+                material.dispose();
+              }
+            });
+          } else if (child.material instanceof THREE.Material) {
+            child.material.dispose();
+          }
+        }
+      }
+    });
   }
 
   public async loadAssets(onProgress?: (progress: number) => void): Promise<void> {
@@ -138,6 +199,16 @@ export class RenderingSystem {
     // Carregar assets básicos primeiro
     const { CORE_ASSETS } = await import('../assets/gameAssets');
     await this.assetLoader.loadAssetManifest(CORE_ASSETS);
+
+    // Carregar assets do jogo também
+    const { GAME_ASSETS } = await import('../assets/gameAssets');
+    await this.assetLoader.loadAssetManifest(GAME_ASSETS)
+      .catch((error) => {
+        console.warn('Alguns assets do jogo não puderam ser carregados:', error.message);
+      });
+
+    console.log('✅ Assets loaded');
+    this.eventBus.emit('assets:ready', {});
   }
 
   public createTexturedMaterial(options: {
@@ -148,6 +219,11 @@ export class RenderingSystem {
     metalness?: number;
   }): THREE.MeshStandardMaterial {
     return this.assetLoader.createMaterial(options);
+  }
+
+  public registerUIScene(scene: THREE.Scene, camera: THREE.Camera): void {
+    this.uiScene = scene;
+    this.uiCamera = camera;
   }
 
   public dispose(): void {

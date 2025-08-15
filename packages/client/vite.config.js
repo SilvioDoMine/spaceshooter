@@ -33,5 +33,14 @@ export default defineConfig({
     alias: {
       '@shared': path.resolve(__dirname, '../shared/src')
     }
-  }
+  },
+  assetsInclude: [
+    // Add support for GLTF and related files
+    '**/*.gltf',
+    '**/*.glb',
+    '**/*.bin',
+    '**/*.jpg',
+    '**/*.png',
+    '**/*.jpeg'
+  ]
 });

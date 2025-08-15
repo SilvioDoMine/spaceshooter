@@ -4,6 +4,7 @@
  */
 
 import * as THREE from 'three';
+import { EventBus } from '../core/EventBus';
 
 export interface ParticleConfig {
   count: number;
@@ -19,12 +20,64 @@ export interface Particle {
   createdAt: number;
   lifetime: number;
   initialSize: number;
+  
+  // Lifecycle management
+  get isDead(): boolean;
+  reset(config: ParticleConfig, position: THREE.Vector3): void;
+}
+
+export class ParticleImpl implements Particle {
+  mesh!: THREE.Mesh;
+  velocity!: THREE.Vector3;
+  createdAt!: number;
+  lifetime!: number;
+  initialSize!: number;
+  
+  constructor(geometry: THREE.BufferGeometry) {
+    this.mesh = new THREE.Mesh(geometry);
+    this.velocity = new THREE.Vector3();
+  }
+  
+  get isDead(): boolean {
+    return (performance.now() - this.createdAt) > this.lifetime;
+  }
+  
+  reset(config: ParticleConfig, position: THREE.Vector3): void {
+    this.createdAt = performance.now();
+    this.lifetime = config.lifetime;
+    this.initialSize = Math.random() * (config.size.max - config.size.min) + config.size.min;
+    
+    // Reset position
+    this.mesh.position.copy(position);
+    
+    // Reset velocity
+    const speed = Math.random() * (config.speed.max - config.speed.min) + config.speed.min;
+    const angle = Math.random() * Math.PI * 2;
+    this.velocity.set(
+      Math.cos(angle) * speed,
+      Math.sin(angle) * speed,
+      0
+    );
+    
+    // Reset scale
+    this.mesh.scale.setScalar(this.initialSize);
+    
+    // Reset color
+    const material = this.mesh.material as THREE.MeshBasicMaterial;
+    material.color.copy(config.color.start);
+    material.opacity = 1.0;
+  }
 }
 
 export class ParticleSystem {
-  private particles: Set<Particle> = new Set();
-  private scene: THREE.Scene;
-  private particleGeometry: THREE.SphereGeometry;
+  private activeParticles: Set<Particle> = new Set();
+  private particlePool: Particle[] = [];
+  private scene!: THREE.Scene;
+  private particleGeometry!: THREE.SphereGeometry;
+  
+  // State management
+  private isActive: boolean = false;
+  private readonly POOL_SIZE = 50; // Pre-allocate particles
   
   // Configurações pré-definidas para diferentes tipos de efeitos
   private static readonly EXPLOSION_CONFIG: ParticleConfig = {
@@ -49,10 +102,79 @@ export class ParticleSystem {
     }
   };
 
-  constructor(scene: THREE.Scene) {
-    this.scene = scene;
+  private eventBus: EventBus;
+
+  constructor(eventBus: EventBus) {
+    this.eventBus = eventBus;
+    this.setupEventListeners();
+  }
+  
+  private initialize(data: { scene: THREE.Scene }): void {
+    this.scene = data.scene;
     // Geometria reutilizada para todas as partículas
     this.particleGeometry = new THREE.SphereGeometry(1, 8, 6);
+    
+    // Pre-allocate particle pool
+    this.createParticlePool();
+    
+    // Setup state listeners
+    this.setupStateListeners();
+    
+    // Notificar que ParticleSystem está pronto
+    this.eventBus.emit('particles:ready', {});
+  }
+  
+  private createParticlePool(): void {
+    for (let i = 0; i < this.POOL_SIZE; i++) {
+      const particle = new ParticleImpl(this.particleGeometry);
+      // Create material for each particle
+      const material = new THREE.MeshBasicMaterial({
+        transparent: true,
+        opacity: 1.0
+      });
+      particle.mesh.material = material;
+      this.particlePool.push(particle);
+    }
+  }
+  
+  private setupStateListeners(): void {
+    this.eventBus.on('game:started', () => this.activate());
+    this.eventBus.on('game:paused', () => this.deactivate());
+    this.eventBus.on('game:resumed', () => this.activate());
+    this.eventBus.on('game:over', () => this.deactivate());
+    this.eventBus.on('game:exit', () => this.deactivate());
+  }
+  
+  private activate(): void {
+    this.isActive = true;
+    console.log('ParticleSystem activated');
+  }
+  
+  private deactivate(): void {
+    this.isActive = false;
+    console.log('ParticleSystem deactivated');
+  }
+
+  private setupEventListeners(): void {
+    this.eventBus.on('renderer:ready', (data) => {
+      this.initialize(data);
+    });
+    
+    this.eventBus.on('particles:explosion', (data) => {
+      const position = new THREE.Vector3(data.position.x, data.position.y, data.position.z);
+      this.createExplosion(position);
+    });
+    
+    this.eventBus.on('particles:hit', (data) => {
+      const position = new THREE.Vector3(data.position.x, data.position.y, data.position.z);
+      this.createHitEffect(position);
+    });
+    
+    // ParticleSystem update is now called directly from Game loop
+    
+    this.eventBus.on('particles:clear', () => {
+      this.clear();
+    });
   }
 
   /**
@@ -73,68 +195,93 @@ export class ParticleSystem {
    * Cria um efeito de partículas personalizado
    */
   createParticleEffect(position: THREE.Vector3, config: ParticleConfig): void {
-    const currentTime = Date.now();
-
-    for (let i = 0; i < config.count; i++) {
-      // Criar material individual para cada partícula
-      const material = new THREE.MeshBasicMaterial({
-        color: config.color.start.clone(),
-        transparent: true,
-        opacity: 1
-      });
-
-      // Criar mesh da partícula
-      const mesh = new THREE.Mesh(this.particleGeometry, material);
-      
-      // Tamanho aleatório
-      const size = this.randomBetween(config.size.min, config.size.max);
-      mesh.scale.setScalar(size);
-      
-      // Posição inicial
-      mesh.position.copy(position);
-      
-      // Velocidade aleatória em direção esférica
-      const velocity = new THREE.Vector3(
-        (Math.random() - 0.5) * 2,
-        (Math.random() - 0.5) * 2,
-        (Math.random() - 0.5) * 2
-      ).normalize();
-      
-      const speed = this.randomBetween(config.speed.min, config.speed.max);
-      velocity.multiplyScalar(speed);
-
-      // Criar partícula
-      const particle: Particle = {
-        mesh,
-        velocity,
-        createdAt: currentTime,
-        lifetime: config.lifetime,
-        initialSize: size
-      };
-
-      // Adicionar à cena e rastreamento
-      this.scene.add(mesh);
-      this.particles.add(particle);
+    if (!this.isActive) {
+      return; // Don't create particles when inactive
     }
+    
+    for (let i = 0; i < config.count; i++) {
+      // Get particle from pool
+      const particle = this.getParticleFromPool();
+      if (!particle) {
+        console.warn('Particle pool exhausted');
+        break;
+      }
+      
+      // Add small random offset to position
+      const offsetPosition = position.clone().add(new THREE.Vector3(
+        (Math.random() - 0.5) * 0.2,
+        (Math.random() - 0.5) * 0.2,
+        (Math.random() - 0.5) * 0.2
+      ));
+      
+      // Reset particle with new config
+      particle.reset(config, offsetPosition);
+      
+      // Add to scene and active particles
+      this.scene.add(particle.mesh);
+      this.activeParticles.add(particle);
+    }
+  }
+  
+  /**
+   * Get particle from pool or create new one if pool is empty
+   */
+  private getParticleFromPool(): Particle | null {
+    if (this.particlePool.length > 0) {
+      return this.particlePool.pop()!;
+    }
+    
+    // Pool exhausted, create new particle (emergency fallback)
+    console.warn('Creating new particle - pool exhausted');
+    const particle = new ParticleImpl(this.particleGeometry);
+    const material = new THREE.MeshBasicMaterial({
+      transparent: true,
+      opacity: 1.0
+    });
+    particle.mesh.material = material;
+    return particle;
+  }
+  
+  /**
+   * Return particle to pool
+   */
+  private returnParticleToPool(particle: Particle): void {
+    // Remove from scene
+    this.scene.remove(particle.mesh);
+    
+    // Reset material opacity
+    const material = particle.mesh.material as THREE.MeshBasicMaterial;
+    material.opacity = 1.0;
+    
+    // Return to pool
+    this.particlePool.push(particle);
+    
+    // Remove from active particles
+    this.activeParticles.delete(particle);
   }
 
   /**
-   * Atualiza todas as partículas ativas
+   * Atualiza todas as partículas ativas com early exit e lifecycle-aware updates
    * Deve ser chamado a cada frame
    */
   update(deltaTime: number): void {
-    const currentTime = Date.now();
+    // Early exit if inactive or no particles
+    if (!this.isActive || this.activeParticles.size === 0) {
+      return;
+    }
+
     const particlesToRemove: Particle[] = [];
 
-    this.particles.forEach(particle => {
-      const age = currentTime - particle.createdAt;
-      const normalizedAge = age / particle.lifetime;
-
-      // Verificar se partícula expirou
-      if (normalizedAge >= 1) {
+    this.activeParticles.forEach(particle => {
+      // Use built-in isDead check
+      if (particle.isDead) {
         particlesToRemove.push(particle);
         return;
       }
+
+      // Calculate normalized age
+      const age = performance.now() - particle.createdAt;
+      const normalizedAge = age / particle.lifetime;
 
       // Atualizar posição
       particle.mesh.position.add(
@@ -161,30 +308,20 @@ export class ParticleSystem {
       particle.mesh.rotation.y += 0.1 * deltaTime;
     });
 
-    // Remover partículas expiradas
+    // Remover partículas expiradas e retornar ao pool
     particlesToRemove.forEach(particle => {
-      this.scene.remove(particle.mesh);
-      
-      // Limpar material para evitar vazamentos de memória
-      if (particle.mesh.material instanceof THREE.Material) {
-        particle.mesh.material.dispose();
-      }
-      
-      this.particles.delete(particle);
+      this.returnParticleToPool(particle);
     });
   }
 
   /**
-   * Limpa todas as partículas ativas
+   * Limpa todas as partículas ativas e retorna ao pool
    */
   clear(): void {
-    this.particles.forEach(particle => {
-      this.scene.remove(particle.mesh);
-      if (particle.mesh.material instanceof THREE.Material) {
-        particle.mesh.material.dispose();
-      }
+    const particlesToClear = Array.from(this.activeParticles);
+    particlesToClear.forEach(particle => {
+      this.returnParticleToPool(particle);
     });
-    this.particles.clear();
   }
 
   /**
@@ -192,14 +329,36 @@ export class ParticleSystem {
    */
   dispose(): void {
     this.clear();
+    
+    // Dispose all pooled particles
+    this.particlePool.forEach(particle => {
+      if (particle.mesh.material instanceof THREE.Material) {
+        particle.mesh.material.dispose();
+      }
+    });
+
+    this.particlePool.length = 0;
+    
     this.particleGeometry.dispose();
   }
 
   /**
+   * Retorna estatísticas do sistema de partículas
+   */
+  getStats(): { active: number; pooled: number; total: number; isActive: boolean } {
+    return {
+      active: this.activeParticles.size,
+      pooled: this.particlePool.length,
+      total: this.activeParticles.size + this.particlePool.length,
+      isActive: this.isActive
+    };
+  }
+  
+  /**
    * Retorna o número de partículas ativas
    */
   getActiveParticleCount(): number {
-    return this.particles.size;
+    return this.activeParticles.size;
   }
 
   /**

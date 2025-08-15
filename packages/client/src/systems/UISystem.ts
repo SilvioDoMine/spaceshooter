@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { EventBus } from '../core/EventBus';
 
 /**
  * Sistema de UI/HUD totalmente em Three.js
@@ -28,12 +29,12 @@ export class UISystem {
   
   // UI Elements
   private hudGroup: THREE.Group;
-  private scoreText: THREE.Sprite;
-  private healthText: THREE.Sprite;
-  private ammoText: THREE.Sprite;
-  private healthBar: THREE.Mesh;
-  private healthBarBg: THREE.Mesh;
-  
+  private scoreText?: THREE.Sprite;
+  private healthText?: THREE.Sprite;
+  private ammoText?: THREE.Sprite;
+  private healthBar?: THREE.Mesh;
+  private healthBarBg?: THREE.Mesh;
+
   // Canvas global não mais necessário - cada sprite tem seu próprio canvas
   
   // State
@@ -42,9 +43,20 @@ export class UISystem {
   private maxHealth: number = 100;
   private currentAmmo: number = 30;
   private maxAmmo: number = 30;
+
+  private eventBus: EventBus;
+
+  constructor(eventBus: EventBus, renderingSystem?: THREE.Scene & THREE.WebGLRenderer) {
+    this.eventBus = eventBus;
+    this.setupEventListeners();
+  }
   
-  constructor(renderer: THREE.WebGLRenderer) {
-    this.renderer = renderer;
+  public setRenderingSystem(scene: THREE.Scene, renderer: THREE.WebGLRenderer): void {
+    this.initialize({ scene, renderer });
+  }
+  
+  private initialize(data: { renderer: THREE.WebGLRenderer }): void {
+    this.renderer = data.renderer;
     this.scene = new THREE.Scene();
     
     // Setup ortographic camera para UI overlay
@@ -64,8 +76,43 @@ export class UISystem {
     
     // Handler para resize
     window.addEventListener('resize', this.onWindowResize.bind(this));
+    
+    // Registrar UI scene no RenderingSystem
+    this.eventBus.emit('renderer:register-ui-scene', {
+      scene: this.scene,
+      camera: this.camera
+    });
+    
+    // Notificar que UI está pronta
+    this.eventBus.emit('ui:ready', {});
   }
-  
+
+  private setupEventListeners(): void {
+    // Exemplo de uso do EventBus para mostrar mensagens na UI
+    // this.eventBus.on('ui:show_message', (data) => {
+    //   this.showMessage(data.text, data.type);
+    // });
+    this.eventBus.on('renderer:ready', (data) => {
+      this.initialize(data);
+    });
+
+    this.eventBus.on('ui:update-health', (data: { current: number; max?: number }) => {
+      this.updateHealth(data.current, data.max);
+    });
+
+    this.eventBus.on('ui:update-ammo', (data: { current: number; max: number }) => {
+      this.updateAmmo(data.current, data.max);
+    });
+
+    this.eventBus.on('ui:update-score', (data: { score: number }) => {
+      this.updateScore(data.score);
+    });
+
+    this.eventBus.on('game:started', () => {
+      this.resetUI();
+    });
+  }
+
   private createUIElements(): void {
     const aspect = window.innerWidth / window.innerHeight;
     const baseScale = 0.15; // Fixed base scale instead of responsive
@@ -76,8 +123,13 @@ export class UISystem {
     this.scoreText.scale.setScalar(baseScale);
     this.hudGroup.add(this.scoreText);
     
-    // Health text (top-center)
-    this.healthText = this.createTextSprite(`Health: ${this.currentHealth}/${this.maxHealth}`);
+    // Health text (top-center) with correct initial color
+    const healthPercent = (this.currentHealth / this.maxHealth) * 100;
+    let healthColor = '#00ff00'; // Green
+    if (healthPercent < 50) healthColor = '#ffff00'; // Yellow
+    if (healthPercent < 25) healthColor = '#ff0000'; // Red
+    
+    this.healthText = this.createTextSprite(`Health: ${this.currentHealth}/${this.maxHealth}`, healthColor);
     this.healthText.position.set(0, 0.85, 0);
     this.healthText.scale.setScalar(baseScale);
     this.hudGroup.add(this.healthText);
@@ -219,70 +271,136 @@ export class UISystem {
     // Draw text
     context.fillText(text, canvas.width / 2, canvas.height / 2);
     
-    // Update texture
+    // Update texture - Sempre recriar a textura para garantir atualização
     const material = sprite.material as THREE.SpriteMaterial;
+    
+    // Dispose da textura antiga se existir
     if (material.map) {
-      (material.map as THREE.CanvasTexture).needsUpdate = true;
+      material.map.dispose();
     }
+    
+    // Criar nova textura
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.needsUpdate = true;
+    texture.generateMipmaps = false;
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    material.map = texture;
   }
   
-  private updateAllElements(): void {
-    // Update score text
-    this.updateTextSprite(this.scoreText, `Score: ${this.currentScore}`);
+  // private updateAllElements(): void {
+  //   // Update score text
+  //   this.updateTextSprite(this.scoreText, `Score: ${this.currentScore}`);
     
-    // Update health text with color coding
-    const healthPercent = (this.currentHealth / this.maxHealth) * 100;
-    let healthColor = '#00ff00'; // Green
-    if (healthPercent < 50) healthColor = '#ffff00'; // Yellow
-    if (healthPercent < 25) healthColor = '#ff0000'; // Red
+  //   // Update health text with color coding
+  //   const healthPercent = (this.currentHealth / this.maxHealth) * 100;
+  //   let healthColor = '#00ff00'; // Green
+  //   if (healthPercent < 50) healthColor = '#ffff00'; // Yellow
+  //   if (healthPercent < 25) healthColor = '#ff0000'; // Red
     
-    this.updateTextSprite(
-      this.healthText, 
-      `Health: ${this.currentHealth}/${this.maxHealth}`,
-      healthColor
-    );
+  //   this.updateTextSprite(
+  //     this.healthText, 
+  //     `Health: ${this.currentHealth}/${this.maxHealth}`,
+  //     healthColor
+  //   );
     
-    // Update health bar
-    const healthBarScale = Math.max(0, this.currentHealth / this.maxHealth);
-    this.healthBar.scale.x = healthBarScale;
-    this.healthBar.position.x = -0.2 * (1 - healthBarScale); // Align to left
+  //   // Update health bar
+  //   const healthBarScale = Math.max(0, this.currentHealth / this.maxHealth);
+  //   this.healthBar.scale.x = healthBarScale;
+  //   this.healthBar.position.x = -0.2 * (1 - healthBarScale); // Align to left
     
-    // Update health bar color
-    const healthBarMaterial = this.healthBar.material as THREE.MeshBasicMaterial;
-    if (healthPercent > 50) {
-      healthBarMaterial.color.setHex(0x00ff00); // Green
-    } else if (healthPercent > 25) {
-      healthBarMaterial.color.setHex(0xffff00); // Yellow
-    } else {
-      healthBarMaterial.color.setHex(0xff0000); // Red
-    }
+  //   // Update health bar color
+  //   const healthBarMaterial = this.healthBar.material as THREE.MeshBasicMaterial;
+  //   if (healthPercent > 50) {
+  //     healthBarMaterial.color.setHex(0x00ff00); // Green
+  //   } else if (healthPercent > 25) {
+  //     healthBarMaterial.color.setHex(0xffff00); // Yellow
+  //   } else {
+  //     healthBarMaterial.color.setHex(0xff0000); // Red
+  //   }
     
-    // Update ammo text with color coding
-    const ammoPercent = (this.currentAmmo / this.maxAmmo) * 100;
-    let ammoColor = '#ffffff'; // White
-    if (ammoPercent < 30) ammoColor = '#ffff00'; // Yellow
-    if (ammoPercent === 0) ammoColor = '#ff0000'; // Red
+  //   // Update ammo text with color coding
+  //   const ammoPercent = (this.currentAmmo / this.maxAmmo) * 100;
+  //   let ammoColor = '#ffffff'; // White
+  //   if (ammoPercent < 30) ammoColor = '#ffff00'; // Yellow
+  //   if (ammoPercent === 0) ammoColor = '#ff0000'; // Red
     
-    this.updateTextSprite(
-      this.ammoText,
-      `Ammo: ${this.currentAmmo}/${this.maxAmmo}`,
-      ammoColor
-    );
-  }
+  //   this.updateTextSprite(
+  //     this.ammoText,
+  //     `Ammo: ${this.currentAmmo}/${this.maxAmmo}`,
+  //     ammoColor
+  //   );
+  // }
   
   // Public methods para atualizar UI state
   
+  public resetUI(): void {
+    console.log('🔄 Resetting UI to initial values');
+    
+    // Reset all values to initial state
+    this.currentScore = 0;
+    this.currentHealth = 100;
+    this.maxHealth = 100;
+    this.currentAmmo = 30;
+    this.maxAmmo = 30;
+    
+    // Update all UI elements
+    if (this.scoreText) {
+      this.updateTextSprite(this.scoreText, `Score: ${this.currentScore}`);
+    }
+    
+    if (this.healthText) {
+      const healthPercent = (this.currentHealth / this.maxHealth) * 100;
+      let healthColor = '#00ff00'; // Green
+      if (healthPercent < 50) healthColor = '#ffff00'; // Yellow
+      if (healthPercent < 25) healthColor = '#ff0000'; // Red
+      
+      this.updateTextSprite(this.healthText, `Health: ${this.currentHealth}/${this.maxHealth}`, healthColor);
+    }
+    
+    if (this.ammoText) {
+      this.updateTextSprite(this.ammoText, `Ammo: ${this.currentAmmo}/${this.maxAmmo}`);
+    }
+    
+    // Update health bar
+    if (this.healthBar) {
+      const healthBarScale = Math.max(0, this.currentHealth / this.maxHealth);
+      this.healthBar.scale.setX(healthBarScale);
+    }
+  }
+  
   public updateScore(score: number): void {
+    if (this.scoreText === undefined) {
+      console.warn('Score text not initialized yet, skipping update');
+      return;
+    }
+
     this.currentScore = score;
-    this.updateTextSprite(this.scoreText, `Score: ${score}`);
+    this.updateTextSprite(this.scoreText, `Score: ${score}`, '#ffffff');
   }
   
   public addScore(points: number): void {
+    if (this.scoreText === undefined) {
+      console.warn('Score text not initialized yet, skipping update');
+      return;
+    }
+
     this.currentScore += points;
     this.updateTextSprite(this.scoreText, `Score: ${this.currentScore}`);
   }
   
   public updateHealth(current: number, max?: number): void {
+    console.log(`Atualizando saúde: ${current}/${max}`);
+
+    if (
+      this.healthBar === undefined 
+      || this.healthBarBg === undefined
+      || this.healthText === undefined
+    ) {
+      console.warn('Health bar not initialized yet, skipping update');
+      return;
+    }
+
     this.currentHealth = Math.max(0, current);
     if (max !== undefined) {
       this.maxHealth = max;
@@ -316,37 +434,25 @@ export class UISystem {
     }
   }
   
-  public updateAmmo(current: number, max?: number): void {
-    this.currentAmmo = Math.max(0, current);
-    if (max !== undefined) {
-      this.maxAmmo = max;
-    }
-    
+  public updateAmmo(current: number, max: number): void {    
     // Update ammo text with color
-    const ammoPercent = (this.currentAmmo / this.maxAmmo) * 100;
+    const ammoPercent = (current / max) * 100;
     let ammoColor = '#ffffff';
     if (ammoPercent < 30) ammoColor = '#ffff00';
     if (ammoPercent === 0) ammoColor = '#ff0000';
-    
+
+    if (this.ammoText === undefined) {
+      console.warn('Ammo text not initialized yet, skipping update');
+      return;
+    }
+
     this.updateTextSprite(
       this.ammoText,
-      `Ammo: ${this.currentAmmo}/${this.maxAmmo}`,
+      `Ammo: ${current}/${max}`,
       ammoColor
     );
   }
-  
-  public damageHealth(damage: number): void {
-    this.updateHealth(this.currentHealth - damage);
-  }
-  
-  public useAmmo(amount: number = 1): void {
-    this.updateAmmo(this.currentAmmo - amount);
-  }
-  
-  public reloadAmmo(): void {
-    this.updateAmmo(this.maxAmmo);
-  }
-  
+
   private onWindowResize(): void {
     const aspect = window.innerWidth / window.innerHeight;
     this.camera.left = -aspect;
@@ -355,7 +461,18 @@ export class UISystem {
     
     // Reposicionar elementos com escala fixa
     const baseScale = 0.15;
-    
+
+    if (
+      this.scoreText === undefined 
+      || this.healthText === undefined 
+      || this.healthBar === undefined
+      || this.healthBarBg === undefined
+      || this.ammoText === undefined
+    ) {
+      console.warn('One or more UI elements not initialized yet, skipping update');
+      return;
+    }
+
     // Update positions
     this.scoreText.position.x = -aspect * 0.9;
     this.scoreText.scale.setScalar(baseScale);
@@ -373,12 +490,6 @@ export class UISystem {
     this.healthBar.position.x = -barWidth * 0.5 * (1 - (this.currentHealth / this.maxHealth));
   }
   
-  public render(): void {
-    // Render UI overlay
-    this.renderer.autoClear = false;
-    this.renderer.clearDepth();
-    this.renderer.render(this.scene, this.camera);
-  }
   
   public dispose(): void {
     window.removeEventListener('resize', this.onWindowResize.bind(this));
