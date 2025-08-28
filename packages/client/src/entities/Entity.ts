@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { EventBus } from '../core/EventBus';
+import { PLAYER_CONFIG } from '@spaceshooter/shared';
 
 export interface Position {
   x: number;
@@ -109,7 +110,7 @@ export abstract class Entity {
            this.position.y <= maxY;
   }
 
-  protected isCollidingWith(other: Entity, radius: number = 0.5): boolean {
+  protected isCollidingWith(other: Entity, radius: number = PLAYER_CONFIG.radius): boolean {
     const dx = this.position.x - other.position.x;
     const dy = this.position.y - other.position.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
