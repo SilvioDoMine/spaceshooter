@@ -138,12 +138,6 @@ export class GameStateManager implements Subject {
     
     console.log(`Game state changed: ${oldState} -> ${newState}`);
     
-    // Executar callbacks específicos do novo estado
-    // const callbacks = this.stateChangeCallbacks.get(newState) || [];
-    // callbacks.forEach(callback => callback());
-
-    // Notificar observadores sobre a mudança de estado
-    // this.notify();
 
     // Ações específicas por estado
     this.handleStateChange(newState, oldState);
@@ -312,9 +306,7 @@ export class GameStateManager implements Subject {
           this.eventBus.emit('game:started', { difficulty: 'normal' });
         } else if (oldState === GameStateEnum.PAUSED) {
           
-          // if (this.currentState !== GameStateEnum.PLAYING) {
             this.eventBus.emit('game:resumed', {});
-          // }
 
           console.log('Game resumed!');
         }
@@ -403,11 +395,9 @@ export class GameStateManager implements Subject {
         break;
       case 'pause':
         if (data.action === 'resume') {
-          // this.resumeGame();
           this.eventBus.emit('game:resumed', {});
         } else if (data.action === 'exit') {
           this.eventBus.emit('game:exit', {});
-          // this.returnToMenu();
         }
         break;
       case 'gameOver':

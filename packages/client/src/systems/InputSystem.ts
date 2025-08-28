@@ -130,7 +130,6 @@ export class InputSystem {
       
       // Notificar callbacks
       this.eventBus.emit('input:action', { action, pressed: false });
-      // this.callbacks.forEach(callback => callback(action, false));
       
       event.preventDefault();
     }

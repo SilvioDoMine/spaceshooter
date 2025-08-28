@@ -260,7 +260,6 @@ export class EntitySystem {
     const timeSinceLastSpawn = currentTime - this.lastEnemySpawnTime;
     const spawnRate = ENEMY_CONFIG.basic.spawnRate;
     
-    // console.log(`Enemy spawn check: time since last=${timeSinceLastSpawn}ms, required=${spawnRate}ms, should spawn=${timeSinceLastSpawn > spawnRate}`);
     
     if (timeSinceLastSpawn > spawnRate) {
       try {

@@ -66,9 +66,6 @@ export class MenuSystem {
       </div>
     `;
 
-    // this.eventBus.emit('menu:opened', {
-    //   type: 'main'
-    // });
 
     this.container.style.display = 'flex';
     this.setupMainMenuEvents();
@@ -118,9 +115,6 @@ export class MenuSystem {
       </div>
     `;
 
-    // this.eventBus.emit('menu:opened', {
-    //   type: 'gameOver'
-    // });
 
     this.container.style.display = 'flex';
     this.setupGameOverEvents();
@@ -142,9 +136,6 @@ export class MenuSystem {
       </div>
     `;
 
-    // this.eventBus.emit('menu:opened', {
-    //   type: 'pause'
-    // });
 
     this.container.style.display = 'flex';
     this.setupPauseEvents();
@@ -364,7 +355,6 @@ export class MenuSystem {
     if (restartButton) {
       restartButton.addEventListener('click', () => {
         // this.hideAllMenus();
-        // this.callbacks.onRestartGame?.();
 
         this.eventBus.emit('menu:click', {
           type: 'gameOver',
@@ -375,7 +365,6 @@ export class MenuSystem {
 
     if (menuButton) {
       menuButton.addEventListener('click', () => {
-        // this.callbacks.onReturnToMenu?.();
         this.eventBus.emit('menu:click', {
           type: 'gameOver',
           action: 'exit'
@@ -394,7 +383,6 @@ export class MenuSystem {
     if (resumeButton) {
       resumeButton.addEventListener('click', () => {
         this.hideAllMenus();
-        // this.callbacks.onResumeGame?.();
         this.eventBus.emit('menu:click', {
           type: 'pause',
           action: 'resume',
@@ -404,7 +392,6 @@ export class MenuSystem {
 
     if (menuButton) {
       menuButton.addEventListener('click', () => {
-        // this.callbacks.onReturnToMenu?.();
         this.eventBus.emit('menu:click', {
           type: 'pause',
           action: 'exit',

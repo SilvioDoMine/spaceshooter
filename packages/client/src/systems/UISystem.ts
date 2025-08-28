@@ -88,10 +88,6 @@ export class UISystem {
   }
 
   private setupEventListeners(): void {
-    // Exemplo de uso do EventBus para mostrar mensagens na UI
-    // this.eventBus.on('ui:show_message', (data) => {
-    //   this.showMessage(data.text, data.type);
-    // });
     this.eventBus.on('renderer:ready', (data) => {
       this.initialize(data);
     });
@@ -287,50 +283,6 @@ export class UISystem {
     texture.magFilter = THREE.LinearFilter;
     material.map = texture;
   }
-  
-  // private updateAllElements(): void {
-  //   // Update score text
-  //   this.updateTextSprite(this.scoreText, `Score: ${this.currentScore}`);
-    
-  //   // Update health text with color coding
-  //   const healthPercent = (this.currentHealth / this.maxHealth) * 100;
-  //   let healthColor = '#00ff00'; // Green
-  //   if (healthPercent < 50) healthColor = '#ffff00'; // Yellow
-  //   if (healthPercent < 25) healthColor = '#ff0000'; // Red
-    
-  //   this.updateTextSprite(
-  //     this.healthText, 
-  //     `Health: ${this.currentHealth}/${this.maxHealth}`,
-  //     healthColor
-  //   );
-    
-  //   // Update health bar
-  //   const healthBarScale = Math.max(0, this.currentHealth / this.maxHealth);
-  //   this.healthBar.scale.x = healthBarScale;
-  //   this.healthBar.position.x = -0.2 * (1 - healthBarScale); // Align to left
-    
-  //   // Update health bar color
-  //   const healthBarMaterial = this.healthBar.material as THREE.MeshBasicMaterial;
-  //   if (healthPercent > 50) {
-  //     healthBarMaterial.color.setHex(0x00ff00); // Green
-  //   } else if (healthPercent > 25) {
-  //     healthBarMaterial.color.setHex(0xffff00); // Yellow
-  //   } else {
-  //     healthBarMaterial.color.setHex(0xff0000); // Red
-  //   }
-    
-  //   // Update ammo text with color coding
-  //   const ammoPercent = (this.currentAmmo / this.maxAmmo) * 100;
-  //   let ammoColor = '#ffffff'; // White
-  //   if (ammoPercent < 30) ammoColor = '#ffff00'; // Yellow
-  //   if (ammoPercent === 0) ammoColor = '#ff0000'; // Red
-    
-  //   this.updateTextSprite(
-  //     this.ammoText,
-  //     `Ammo: ${this.currentAmmo}/${this.maxAmmo}`,
-  //     ammoColor
-  //   );
-  // }
   
   // Public methods para atualizar UI state
   

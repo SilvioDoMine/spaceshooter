@@ -2,22 +2,11 @@ import { AssetManifest } from './AssetLoader';
 
 // Manifest com assets básicos para o jogo
 export const GAME_ASSETS: AssetManifest = {
-  textures: {
-    // Texturas básicas para desenvolvimento
-    // 'metal': '/assets/textures/metal.jpg',
-    // 'star': '/assets/textures/star.png',
-    // 'plasma': '/assets/textures/plasma.png',
-    // 'explosion': '/assets/textures/explosion.png'
-  },
+  textures: {},
   models: {
-    // Modelos 3D para o jogo
-    'ship': '/assets/models/ship.glb',
-    // 'player_ship': '/assets/models/player_ship.glb',
-    // 'enemy_ship': '/assets/models/enemy_ship.glb',
-    // 'asteroid': '/assets/models/asteroid.glb'
+    'ship': '/assets/models/ship.glb'
   },
   sounds: {
-    // Sons básicos do jogo
     'shoot': '/assets/sounds/shoot.wav',
     'explosion': '/assets/sounds/explosion.wav',
     'hit': '/assets/sounds/hit.wav',
