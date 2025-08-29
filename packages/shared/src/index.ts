@@ -92,7 +92,7 @@ export const PLAYER_CONFIG = {
   health: 100,
   maxHealth: 100,
   ammo: 30,
-  maxAmmo: 30,
+  maxAmmo: 50,
   speed: 5,
   size: 0.3,              // Escala visual do modelo
   radius: 0.15,            // Raio da hitbox
@@ -145,7 +145,7 @@ export const ENEMY_CONFIG = {
     size: 0.3,              // Tamanho visual
     radius: 0.15,           // Raio da hitbox
     color: 0xff4444,        // Vermelho
-    spawnRate: 500         // A cada 2 segundos
+    spawnRate: 1000         // A cada 2 segundos
   },
   fast: {
     health: 10,             // 1 hit para destruir
@@ -153,7 +153,7 @@ export const ENEMY_CONFIG = {
     size: 0.2,              // Tamanho visual
     radius: 0.1,            // Raio da hitbox (menor)
     color: 0xff8800,        // Laranja
-    spawnRate: 1000         // A cada 3 segundos
+    spawnRate: 1500         // A cada 3 segundos
   },
   heavy: {
     health: 50,             // 5 hits para destruir
@@ -161,7 +161,7 @@ export const ENEMY_CONFIG = {
     size: 0.5,              // Tamanho visual
     radius: 0.25,           // Raio da hitbox (maior)
     color: 0x8844ff,        // Roxo
-    spawnRate: 1500         // A cada 5 segundos
+    spawnRate: 2500         // A cada 5 segundos
   }
 };
 
