@@ -141,12 +141,12 @@ export class EntitySystem {
     if (!this.player || data.entityType !== 'enemy') return;
 
     const playerPos = this.player.getPosition();
-    const playerRadius = PLAYER_CONFIG.radius;
+    const playerCollisionShape = this.player.getCollisionShape();
     
-    // Use unified collision detection
-    const hasCollision = CollisionUtils.checkCircularCollision(
+    // Use compound-circle collision detection (player as compound shape, enemy as circle)
+    const hasCollision = CollisionUtils.checkCompoundCircleCollision(
       playerPos,
-      playerRadius,
+      playerCollisionShape,
       data.position,
       data.radius
     );
@@ -187,12 +187,12 @@ export class EntitySystem {
     if (!this.player) return;
 
     const playerPos = this.player.getPosition();
-    const playerRadius = PLAYER_CONFIG.radius;
+    const playerCollisionShape = this.player.getCollisionShape();
     
-    // Use unified collision detection
-    const hasCollision = CollisionUtils.checkCircularCollision(
+    // Use compound-circle collision detection (player as compound shape, powerup as circle)
+    const hasCollision = CollisionUtils.checkCompoundCircleCollision(
       playerPos,
-      playerRadius,
+      playerCollisionShape,
       data.position,
       data.radius
     );

@@ -5,6 +5,7 @@ import { RenderingSystem } from '../systems/RenderingSystem';
 import { assetManager } from '../services/AssetManager';
 import { ProjectileSystem } from '../systems/ProjectileSystem';
 import { PLAYER_CONFIG } from '@spaceshooter/shared';
+import { CompoundCollisionShape, CollisionUtils } from '../utils/CollisionUtils';
 
 export interface PlayerStats {
   health: number;
@@ -29,6 +30,10 @@ export class Player extends Entity {
   private projectileSystem: ProjectileSystem;
   private gameStartTime: number;
   private godModeEnabled: boolean = false;
+  private boundingBox: THREE.Box3 = new THREE.Box3();
+  private playerShipModel?: THREE.Group;
+  private collisionShape: CompoundCollisionShape;
+  private collisionVisualizers: THREE.LineLoop[] = [];
 
   constructor(
     eventBus: EventBus,
@@ -53,6 +58,26 @@ export class Player extends Entity {
     this.renderingSystem = renderingSystem;
     this.projectileSystem = projectileSystem;
     this.gameStartTime = Date.now();
+    
+    // Define collision shape for cross-shaped spaceship
+    // Adjust these values based on your ship model
+    this.collisionShape = {
+      circles: [
+        // Center/cockpit circle
+        { offset: { x: -0.05, y: -0.2 }, radius: 0.25, name: 'cockpit' },
+        // Front nose
+        { offset: { x: -0.05, y: 0.52 }, radius: 0.16, name: 'nose_far' },
+        { offset: { x: -0.05, y: 0.20 }, radius: 0.16, name: 'nose_close' },
+        // Left wing
+        { offset: { x: -0.70, y: -0.20 }, radius: 0.16, name: 'left_wing_far' },
+        { offset: { x: -0.40, y: -0.20 }, radius: 0.16, name: 'left_wing_close' },
+        // Right wing
+        { offset: { x: 0.55, y: -0.20 }, radius: 0.16, name: 'right_wing_far' },
+        { offset: { x: 0.30, y: -0.20 }, radius: 0.16, name: 'right_wing_close' },
+        // Rear engine (optional)
+        { offset: { x: -0.05, y: -0.70 }, radius: 0.25, name: 'engine' }
+      ]
+    };
     
     // Create visual after all properties are set
     this.createVisual();
@@ -96,12 +121,97 @@ export class Player extends Entity {
     playerShip.rotation.x = -Math.PI / 2;
     playerShip.rotation.z = Math.PI / 2;
     
+    this.playerShipModel = playerShip;
     this.object.add(playerShip);
 
-    // Create collision visualizer for player (using PLAYER_CONFIG radius)
-    this.createCollisionVisualizer(PLAYER_CONFIG.radius);
+    // Create collision visualizers for compound shape
+    this.createCompoundCollisionVisualizers();
 
     this.renderingSystem.addToScene(this.object);
+  }
+
+  private createCompoundCollisionVisualizers(): void {
+    // Clear any existing visualizers
+    this.collisionVisualizers.forEach(visualizer => {
+      this.object.remove(visualizer);
+      visualizer.geometry.dispose();
+      (visualizer.material as THREE.Material).dispose();
+    });
+    this.collisionVisualizers = [];
+
+    // Create a circular visualizer for each collision circle
+    this.collisionShape.circles.forEach((circle, index) => {
+      const geometry = new THREE.BufferGeometry();
+      const segments = 32;
+      const vertices = [];
+      
+      // Create circle vertices
+      for (let i = 0; i <= segments; i++) {
+        const theta = (i / segments) * Math.PI * 2;
+        vertices.push(
+          Math.cos(theta) * circle.radius + circle.offset.x,
+          Math.sin(theta) * circle.radius + circle.offset.y,
+          0
+        );
+      }
+      
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+      
+      // Different colors for different circles (for debugging)
+      const colors = [0x00ff00, 0xff0000, 0x0000ff, 0xffff00, 0xff00ff];
+      const material = new THREE.LineBasicMaterial({ 
+        color: colors[index % colors.length], 
+        transparent: true, 
+        opacity: 0.8 
+      });
+      
+      const visualizer = new THREE.LineLoop(geometry, material);
+      
+      // Set initial visibility based on current debug state
+      const game = (window as any).game;
+      if (game) {
+        try {
+          const isVisible = game.getDebugSystem().isCollisionDebugEnabled();
+          visualizer.visible = isVisible;
+        } catch (error) {
+          visualizer.visible = false;
+        }
+      } else {
+        visualizer.visible = false;
+      }
+      
+      this.collisionVisualizers.push(visualizer);
+      this.object.add(visualizer);
+    });
+  }
+
+  public getCollisionShape(): CompoundCollisionShape {
+    return this.collisionShape;
+  }
+
+  public getAbsoluteCollisionCircles() {
+    return CollisionUtils.getAbsoluteCollisionCircles(this.position, this.collisionShape);
+  }
+
+  // Override the collision visibility method to handle multiple visualizers
+  protected setCollisionVisibility(visible: boolean): void {
+    this.collisionVisualizers.forEach(visualizer => {
+      visualizer.visible = visible;
+    });
+  }
+
+  // Override the update collision visibility method
+  protected updateCollisionVisibility(): void {
+    const game = (window as any).game;
+    if (game && this.collisionVisualizers.length > 0) {
+      try {
+        const isVisible = game.getDebugSystem().isCollisionDebugEnabled();
+        this.setCollisionVisibility(isVisible);
+      } catch (error) {
+        // DebugSystem not ready yet, default to false
+        this.setCollisionVisibility(false);
+      }
+    }
   }
 
   private handleInputAction(action: string, pressed: boolean): void {
