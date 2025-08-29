@@ -209,6 +209,22 @@
                 <button id="debug-reset-time" style="background: #333; color: #00ff00; border: 1px solid #00ff00; padding: 3px 8px; cursor: pointer;">Reset</button>
             </div>
         </div>
+
+        <div class="debug-section">
+            <h4>Player Scale</h4>
+            <div class="debug-item">
+                <span class="debug-label">Size:</span>
+                <span class="debug-value" id="debug-size-value">0.30</span>
+            </div>
+            <div style="margin: 5px 0;">
+                <input type="range" id="debug-size-slider" min="10" max="200" value="30" step="5" style="width: 100%;">
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-top: 5px;">
+                <button id="debug-reset-size" style="background: #333; color: #00ff00; border: 1px solid #00ff00; padding: 3px 8px; cursor: pointer;">Reset</button>
+                <button id="debug-size-tiny" style="background: #333; color: #00ff00; border: 1px solid #00ff00; padding: 3px 8px; cursor: pointer;">Tiny</button>
+                <button id="debug-size-huge" style="background: #333; color: #00ff00; border: 1px solid #00ff00; padding: 3px 8px; cursor: pointer;">Huge</button>
+            </div>
+        </div>
     </div>
     
     <script type="module" src="/src/main.ts"></script>

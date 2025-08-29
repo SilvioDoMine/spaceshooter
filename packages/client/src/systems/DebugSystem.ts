@@ -1,4 +1,5 @@
 import { EventBus } from '../core/EventBus';
+import { updatePlayerSize, PLAYER_CONFIG } from '@spaceshooter/shared';
 
 interface DebugData {
   fps?: number;
@@ -31,6 +32,7 @@ export class DebugSystem {
   private showCollisions: boolean = false;
   private timeScale: number = 1.0;
   private isPaused: boolean = false;
+  private playerSize: number = PLAYER_CONFIG.size;
 
   constructor(eventBus: EventBus) {
     this.eventBus = eventBus;
@@ -255,6 +257,19 @@ export class DebugSystem {
     return this.isPaused;
   }
 
+  private updatePlayerSize(newSize: number): void {
+    this.playerSize = newSize;
+    updatePlayerSize(newSize); // Update the shared config
+    this.updateSizeDisplay();
+  }
+
+  private updateSizeDisplay(): void {
+    const sizeValueElement = document.getElementById('debug-size-value');
+    if (sizeValueElement) {
+      sizeValueElement.textContent = this.playerSize.toFixed(2);
+    }
+  }
+
   private updateTimeScaleDisplay(): void {
     const timeScaleElement = document.getElementById('debug-time-scale');
     if (timeScaleElement) {
@@ -321,6 +336,40 @@ export class DebugSystem {
         this.updateTimeScaleDisplay();
         
         this.eventBus.emit('debug:time-scale-change', { timeScale: this.getTimeScale() });
+      });
+    }
+
+    // Player size controls
+    const sizeSlider = document.getElementById('debug-size-slider') as HTMLInputElement;
+    if (sizeSlider) {
+      sizeSlider.addEventListener('input', (event) => {
+        const target = event.target as HTMLInputElement;
+        const sizeValue = parseInt(target.value) / 100; // Convert 10-200 to 0.1-2.0
+        this.updatePlayerSize(sizeValue);
+      });
+    }
+
+    const resetSizeButton = document.getElementById('debug-reset-size') as HTMLButtonElement;
+    if (resetSizeButton) {
+      resetSizeButton.addEventListener('click', () => {
+        this.updatePlayerSize(0.3); // Default size
+        if (sizeSlider) sizeSlider.value = '30';
+      });
+    }
+
+    const tinyButton = document.getElementById('debug-size-tiny') as HTMLButtonElement;
+    if (tinyButton) {
+      tinyButton.addEventListener('click', () => {
+        this.updatePlayerSize(0.1); // Tiny size
+        if (sizeSlider) sizeSlider.value = '10';
+      });
+    }
+
+    const hugeButton = document.getElementById('debug-size-huge') as HTMLButtonElement;
+    if (hugeButton) {
+      hugeButton.addEventListener('click', () => {
+        this.updatePlayerSize(1.5); // Huge size
+        if (sizeSlider) sizeSlider.value = '150';
       });
     }
   }

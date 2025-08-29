@@ -95,12 +95,31 @@ export const PLAYER_CONFIG = {
   maxAmmo: 50,
   speed: 5,
   size: 0.3,              // Escala visual do modelo
-  radius: 0.15,            // Raio da hitbox
+  radius: 0.15,            // Raio da hitbox (legacy - não usado com compound shapes)
   bounds: {               // Limites de movimento
     minX: -5,
     maxX: 5,
     minY: -4,
     maxY: 4
+  },
+  // Compound collision shape em valores relativos (0-1 baseado no size)
+  // Essas coordenadas são multiplicadas pelo 'size' para obter valores absolutos
+  collisionShape: {
+    circles: [
+      // Center/cockpit circle
+      { offset: { x: -0.17, y: -0.67 }, radius: 0.83, name: 'cockpit' },
+      // Front nose
+      { offset: { x: -0.17, y: 1.73 }, radius: 0.53, name: 'nose_far' },
+      { offset: { x: -0.17, y: 0.67 }, radius: 0.53, name: 'nose_close' },
+      // Left wing
+      { offset: { x: -2.33, y: -0.67 }, radius: 0.53, name: 'left_wing_far' },
+      { offset: { x: -1.33, y: -0.67 }, radius: 0.53, name: 'left_wing_close' },
+      // Right wing
+      { offset: { x: 1.83, y: -0.67 }, radius: 0.53, name: 'right_wing_far' },
+      { offset: { x: 1.00, y: -0.67 }, radius: 0.53, name: 'right_wing_close' },
+      // Rear engine
+      { offset: { x: -0.17, y: -2.33 }, radius: 0.83, name: 'engine' }
+    ]
   }
 };
 
@@ -227,6 +246,30 @@ export const POWERUP_CONFIG = {
  */
 export function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
+}
+
+/**
+ * Utilitário para alterar o tamanho do player dinamicamente
+ * Atualiza PLAYER_CONFIG.size e permite que sistemas reajam à mudança
+ */
+export function updatePlayerSize(newSize: number): void {
+  const oldSize = PLAYER_CONFIG.size;
+  PLAYER_CONFIG.size = clamp(newSize, 0.1, 2.0); // Limitar entre 0.1 e 2.0
+  
+  console.log(`Player size changed: ${oldSize.toFixed(2)} -> ${PLAYER_CONFIG.size.toFixed(2)}`);
+  
+  // Emitir evento se há um eventBus global disponível
+  if (typeof window !== 'undefined' && (window as any).game) {
+    try {
+      const eventBus = (window as any).game.getEventBus();
+      eventBus.emit('player:size-changed', { 
+        oldSize, 
+        newSize: PLAYER_CONFIG.size 
+      });
+    } catch (error) {
+      console.warn('Could not emit player:size-changed event:', error);
+    }
+  }
 }
 
 export interface Subject {

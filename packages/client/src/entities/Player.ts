@@ -59,25 +59,8 @@ export class Player extends Entity {
     this.projectileSystem = projectileSystem;
     this.gameStartTime = Date.now();
     
-    // Define collision shape for cross-shaped spaceship
-    // Adjust these values based on your ship model
-    this.collisionShape = {
-      circles: [
-        // Center/cockpit circle
-        { offset: { x: -0.05, y: -0.2 }, radius: 0.25, name: 'cockpit' },
-        // Front nose
-        { offset: { x: -0.05, y: 0.52 }, radius: 0.16, name: 'nose_far' },
-        { offset: { x: -0.05, y: 0.20 }, radius: 0.16, name: 'nose_close' },
-        // Left wing
-        { offset: { x: -0.70, y: -0.20 }, radius: 0.16, name: 'left_wing_far' },
-        { offset: { x: -0.40, y: -0.20 }, radius: 0.16, name: 'left_wing_close' },
-        // Right wing
-        { offset: { x: 0.55, y: -0.20 }, radius: 0.16, name: 'right_wing_far' },
-        { offset: { x: 0.30, y: -0.20 }, radius: 0.16, name: 'right_wing_close' },
-        // Rear engine (optional)
-        { offset: { x: -0.05, y: -0.70 }, radius: 0.25, name: 'engine' }
-      ]
-    };
+    // Create collision shape from config, scaled by player size
+    this.collisionShape = this.createScaledCollisionShape();
     
     // Create visual after all properties are set
     this.createVisual();
@@ -108,11 +91,17 @@ export class Player extends Entity {
       this.godModeEnabled = data.enabled;
     });
 
+    const unsubscribeSizeChange = this.eventBus.on('player:size-changed', (data) => {
+      console.log('Player received size change event:', data);
+      this.handleSizeChange(data.newSize);
+    });
+
     this.addCleanupFunction(unsubscribeInput);
     this.addCleanupFunction(unsubscribeShot);
     this.addCleanupFunction(unsubscribeScore);
     this.addCleanupFunction(unsubscribeDamage);
     this.addCleanupFunction(unsubscribeGodMode);
+    this.addCleanupFunction(unsubscribeSizeChange);
   }
 
   protected createVisual(): void {
@@ -193,6 +182,49 @@ export class Player extends Entity {
     return CollisionUtils.getAbsoluteCollisionCircles(this.position, this.collisionShape);
   }
 
+  /**
+   * Creates a collision shape scaled by the current player size configuration
+   */
+  private createScaledCollisionShape(): CompoundCollisionShape {
+    const baseShape = PLAYER_CONFIG.collisionShape;
+    const scale = PLAYER_CONFIG.size;
+    
+    return {
+      circles: baseShape.circles.map(circle => ({
+        offset: {
+          x: circle.offset.x * scale,
+          y: circle.offset.y * scale
+        },
+        radius: circle.radius * scale,
+        name: circle.name
+      }))
+    };
+  }
+
+  /**
+   * Updates collision shape when player size changes
+   * Call this if PLAYER_CONFIG.size changes dynamically
+   */
+  public updateCollisionShape(): void {
+    this.collisionShape = this.createScaledCollisionShape();
+    this.createCompoundCollisionVisualizers(); // Recreate visualizers
+  }
+
+  /**
+   * Handle size changes dynamically
+   */
+  private handleSizeChange(newSize: number): void {
+    // Update visual model scale
+    if (this.playerShipModel) {
+      this.playerShipModel.scale.setScalar(newSize);
+    }
+    
+    // Update collision shape
+    this.updateCollisionShape();
+    
+    console.log(`Player visual and collision updated for size: ${newSize}`);
+  }
+
   // Override the collision visibility method to handle multiple visualizers
   protected setCollisionVisibility(visible: boolean): void {
     this.collisionVisualizers.forEach(visualizer => {
@@ -269,9 +301,11 @@ export class Player extends Entity {
     
     this.updateUI();
     
+    // Calculate projectile spawn position based on ship scale
+    const shipScale = PLAYER_CONFIG.size;
     const projectilePosition = {
-      x: this.position.x - 0.05,
-      y: this.position.y + 0.60
+      x: this.position.x + (-0.17 * shipScale), // Offset from center of ship
+      y: this.position.y + (2.0 * shipScale)    // Spawn in front of nose
     };
     
     this.projectileSystem.createProjectile('player', projectilePosition, { x: 0, y: 15 });
