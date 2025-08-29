@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { ENEMY_CONFIG, POWERUP_CONFIG, PROJECTILE_CONFIG } from '@spaceshooter/shared';
+import { ENEMY_CONFIG, POWERUP_CONFIG, PROJECTILE_CONFIG, PLAYER_CONFIG } from '@spaceshooter/shared';
 import { AssetLoader } from '../assets/AssetLoader';
 
 /**
@@ -179,7 +179,7 @@ export class AssetManager {
 
     // Fallback: create cube
     console.log('🔧 AssetManager: Using fallback cube for player ship');
-    const geometry = new THREE.BoxGeometry(1, 1, 1);
+    const geometry = new THREE.BoxGeometry(PLAYER_CONFIG.size, PLAYER_CONFIG.size, PLAYER_CONFIG.size);
     const material = this.materials.get('player_fallback')!.clone();
     
     const cube = new THREE.Mesh(geometry, material);

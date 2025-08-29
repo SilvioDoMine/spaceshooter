@@ -8,6 +8,7 @@ import { MenuSystem } from '../systems/MenuSystem';
 import { EntitySystem } from '../systems/EntitySystem';
 import { RenderingSystem } from '../systems/RenderingSystem';
 import { ParticleSystem } from '../systems/ParticleSystem';
+import { BackgroundSystem } from '../systems/BackgroundSystem';
 
 /**
  * Game - Core game class that manages all systems and lifecycle
@@ -33,6 +34,7 @@ export class Game {
   private menuSystem!: MenuSystem;
   private gameStateManager!: GameStateManager;
   private entitySystem!: EntitySystem;
+  private backgroundSystem!: BackgroundSystem;
 
   constructor() {
     this.eventBus = new EventBus();
@@ -112,6 +114,7 @@ export class Game {
     if (this.audioSystem) this.audioSystem.dispose();
     if (this.uiSystem) this.uiSystem.dispose();
     if (this.inputSystem) this.inputSystem.dispose();
+    if (this.backgroundSystem) this.backgroundSystem.dispose();
     
     assetManager.dispose();
     
@@ -144,9 +147,13 @@ export class Game {
     this.particleSystem = new ParticleSystem(this.eventBus);
     this.menuSystem = new MenuSystem(this.eventBus);
     this.gameStateManager = new GameStateManager(this.eventBus);
+    this.backgroundSystem = new BackgroundSystem(this.eventBus);
     
     // EntitySystem needs RenderingSystem for direct scene manipulation
     this.entitySystem = new EntitySystem(this.eventBus, this.renderingSystem);
+    
+    // BackgroundSystem needs RenderingSystem reference
+    this.backgroundSystem.setRenderingSystem(this.renderingSystem);
     
     // Initialize UISystem with rendering system after both are created
     this.uiSystem.setRenderingSystem(this.renderingSystem.scene, this.renderingSystem.renderer);
@@ -180,6 +187,7 @@ export class Game {
 
     // Update systems directly - no events needed for core game loop
     if (this.gameStateManager.isPlaying()) {
+      this.backgroundSystem.update(deltaTime);
       this.entitySystem.update(deltaTime);
       this.particleSystem.update(deltaTime);
     }

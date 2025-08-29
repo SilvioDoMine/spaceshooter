@@ -4,7 +4,7 @@ import { Enemy } from '../entities/Enemy';
 import { PowerUp } from '../entities/PowerUp';
 import { ProjectileSystem } from './ProjectileSystem';
 import { RenderingSystem } from './RenderingSystem';
-import { ENEMY_CONFIG, POWERUP_CONFIG } from '@spaceshooter/shared';
+import { ENEMY_CONFIG, POWERUP_CONFIG, PLAYER_CONFIG, PROJECTILE_CONFIG } from '@spaceshooter/shared';
 
 export class EntitySystem {
   private eventBus: EventBus;
@@ -144,7 +144,7 @@ export class EntitySystem {
     const dy = data.position.y - playerPos.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
     
-    const playerRadius = 0.3;
+    const playerRadius = PLAYER_CONFIG.radius;
     const collisionDistance = playerRadius + data.radius;
 
     if (distance < collisionDistance) {
@@ -168,7 +168,7 @@ export class EntitySystem {
       const dy = data.position.y - enemyPos.y;
       const distance = Math.sqrt(dx * dx + dy * dy);
       
-      const collisionDistance = data.radius + 0.5;
+      const collisionDistance = data.radius + PROJECTILE_CONFIG.radius;
 
       if (distance < collisionDistance && !hitEnemy) {
         hitEnemy = enemy;
@@ -194,7 +194,7 @@ export class EntitySystem {
     const dy = data.position.y - playerPos.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
     
-    const playerRadius = 0.3;
+    const playerRadius = PLAYER_CONFIG.radius;
     const collisionDistance = playerRadius + data.radius;
 
     if (distance < collisionDistance) {

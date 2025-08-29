@@ -54,7 +54,7 @@ export class Enemy extends Entity {
     const size = this.config.size || 0.3;
     const geometry = new THREE.BoxGeometry(size, size, size);
     const material = assetManager.getEnemyMaterial(this.enemyType);
-    
+
     const mesh = new THREE.Mesh(geometry, material);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
@@ -112,13 +112,11 @@ export class Enemy extends Entity {
   }
 
   private checkPlayerCollision(): void {
-    const size = this.config?.size || 0.3;
-    
     this.eventBus.emit('collision:check', {
       entityId: this.id,
       entityType: 'enemy',
       position: this.position,
-      radius: size / 2,
+      radius: this.config.radius,
       damage: this.getCollisionDamage()
     });
   }

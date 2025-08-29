@@ -1,8 +1,10 @@
+import * as THREE from 'three';
 import { Entity, Position } from './Entity';
 import { EventBus } from '../core/EventBus';
 import { RenderingSystem } from '../systems/RenderingSystem';
 import { assetManager } from '../services/AssetManager';
 import { ProjectileSystem } from '../systems/ProjectileSystem';
+import { PLAYER_CONFIG } from '@spaceshooter/shared';
 
 export interface PlayerStats {
   health: number;
@@ -22,7 +24,7 @@ export class Player extends Entity {
   private inputState: any = {};
   private lastShotTime: number = 0;
   private shotCooldown: number = 200;
-  private speed: number = 5;
+  private speed: number = PLAYER_CONFIG.speed;
   private renderingSystem: RenderingSystem;
   private projectileSystem: ProjectileSystem;
   private gameStartTime: number;
@@ -33,10 +35,10 @@ export class Player extends Entity {
     projectileSystem: ProjectileSystem,
     initialPosition: Position = { x: 0, y: 0 },
     initialStats: PlayerStats = {
-      health: 100,
-      maxHealth: 100,
-      ammo: 30,
-      maxAmmo: 30,
+      health: PLAYER_CONFIG.health,
+      maxHealth: PLAYER_CONFIG.maxHealth,
+      ammo: PLAYER_CONFIG.ammo,
+      maxAmmo: PLAYER_CONFIG.maxAmmo,
       score: 0,
       shotsFired: 0,
       enemiesDestroyed: 0,
@@ -84,12 +86,12 @@ export class Player extends Entity {
 
   protected createVisual(): void {
     const playerShip = assetManager.getPlayerShip();
-    playerShip.scale.setScalar(0.3);
+    playerShip.scale.setScalar(PLAYER_CONFIG.size);
     playerShip.rotation.x = -Math.PI / 2;
     playerShip.rotation.z = Math.PI / 2;
     
     this.object.add(playerShip);
-    
+
     this.renderingSystem.addToScene(this.object);
   }
 
@@ -122,7 +124,7 @@ export class Player extends Entity {
   }
 
   private constrainToScreen(): void {
-    const bounds = { minX: -5, maxX: 5, minY: -4, maxY: 4 };
+    const bounds = PLAYER_CONFIG.bounds;
     this.position.x = Math.max(bounds.minX, Math.min(bounds.maxX, this.position.x));
     this.position.y = Math.max(bounds.minY, Math.min(bounds.maxY, this.position.y));
   }
@@ -206,10 +208,10 @@ export class Player extends Entity {
   public reset(): void {
     console.log('🔄 Player reset called');
     this.stats = {
-      health: this.stats.maxHealth,
-      maxHealth: this.stats.maxHealth,
-      ammo: this.stats.maxAmmo,
-      maxAmmo: this.stats.maxAmmo,
+      health: PLAYER_CONFIG.health,
+      maxHealth: PLAYER_CONFIG.maxHealth,
+      ammo: PLAYER_CONFIG.ammo,
+      maxAmmo: PLAYER_CONFIG.maxAmmo,
       score: 0,
       shotsFired: 0,
       enemiesDestroyed: 0,

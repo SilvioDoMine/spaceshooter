@@ -70,7 +70,7 @@ export class ProjectileSystem {
     const projectileMesh = new THREE.Mesh(geometry, material);
     
     projectileMesh.position.set(position.x, position.y, 0);
-    
+
     if (this.renderingSystem) {
       this.renderingSystem.addToScene(projectileMesh);
     } else {

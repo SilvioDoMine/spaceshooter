@@ -79,6 +79,32 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
 };
 
 /**
+ * Configurações do jogador
+ * 
+ * Define características do jogador:
+ * - health: Vida inicial e máxima
+ * - speed: Velocidade de movimento (unidades/segundo)
+ * - size: Tamanho visual (escala do modelo)
+ * - radius: Raio da hitbox para colisões
+ * - bounds: Limites de movimento na tela
+ */
+export const PLAYER_CONFIG = {
+  health: 100,
+  maxHealth: 100,
+  ammo: 30,
+  maxAmmo: 30,
+  speed: 5,
+  size: 0.3,              // Escala visual do modelo
+  radius: 0.15,            // Raio da hitbox
+  bounds: {               // Limites de movimento
+    minX: -5,
+    maxX: 5,
+    minY: -4,
+    maxY: 4
+  }
+};
+
+/**
  * Configurações dos projéteis
  * 
  * Define comportamento padrão dos projéteis do jogador:
@@ -86,12 +112,14 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
  * - damage: Dano causado aos inimigos
  * - lifetime: Tempo de vida antes de ser removido (ms)
  * - size: Tamanho visual (raio da esfera)
+ * - radius: Raio da hitbox para colisões
  */
 export const PROJECTILE_CONFIG = {
   speed: 15,                // Unidades por segundo
   damage: 10,               // Dano por hit
   lifetime: 3000,           // 3 segundos em milliseconds
-  size: 0.1                 // Raio visual
+  size: 0.1,                // Raio visual
+  radius: 0.05              // Raio da hitbox
 };
 
 /**
@@ -101,6 +129,7 @@ export const PROJECTILE_CONFIG = {
  * - health: Vida total do inimigo
  * - speed: Velocidade de movimento (unidades/segundo)
  * - size: Tamanho visual (lado do cubo)
+ * - radius: Raio da hitbox para colisões
  * - color: Cor hexadecimal para identificação visual
  * - spawnRate: Intervalo entre spawns (ms)
  * 
@@ -113,23 +142,26 @@ export const ENEMY_CONFIG = {
   basic: {
     health: 20,             // 2 hits para destruir
     speed: 1.5,             // Velocidade moderada
-    size: 0.3,              // Tamanho médio
+    size: 0.3,              // Tamanho visual
+    radius: 0.15,           // Raio da hitbox
     color: 0xff4444,        // Vermelho
     spawnRate: 500         // A cada 2 segundos
   },
   fast: {
     health: 10,             // 1 hit para destruir
     speed: 2.5,             // Mais rápido
-    size: 0.2,              // Menor
+    size: 0.2,              // Tamanho visual
+    radius: 0.1,            // Raio da hitbox (menor)
     color: 0xff8800,        // Laranja
-    spawnRate: 500         // A cada 3 segundos
+    spawnRate: 1000         // A cada 3 segundos
   },
   heavy: {
     health: 50,             // 5 hits para destruir
     speed: 0.8,             // Mais lento
-    size: 0.5,              // Maior
+    size: 0.5,              // Tamanho visual
+    radius: 0.25,           // Raio da hitbox (maior)
     color: 0x8844ff,        // Roxo
-    spawnRate: 500         // A cada 5 segundos
+    spawnRate: 1500         // A cada 5 segundos
   }
 };
 
@@ -140,6 +172,7 @@ export const ENEMY_CONFIG = {
  * - effect: Quantidade do efeito aplicado
  * - speed: Velocidade de movimento (unidades/segundo)
  * - size: Tamanho visual
+ * - radius: Raio da hitbox para colisões
  * - color: Cor hexadecimal para identificação visual
  * - spawnRate: Intervalo entre spawns (ms)
  * - lifetime: Tempo de vida antes de desaparecer (ms)
@@ -153,7 +186,8 @@ export const POWERUP_CONFIG = {
   ammo: {
     effect: 15,             // +15 balas
     speed: 1.0,             // Velocidade lenta
-    size: 0.2,              // Tamanho pequeno
+    size: 0.2,              // Tamanho visual
+    radius: 0.1,            // Raio da hitbox
     color: 0x00ff00,        // Verde
     spawnRate: 5000,       // A cada 15 segundos
     lifetime: 10000         // 10 segundos para coletar
@@ -161,7 +195,8 @@ export const POWERUP_CONFIG = {
   health: {
     effect: 25,             // +25 HP
     speed: 1.0,             // Velocidade lenta
-    size: 0.2,              // Tamanho pequeno
+    size: 0.2,              // Tamanho visual
+    radius: 0.1,            // Raio da hitbox
     color: 0xff0088,        // Rosa/Magenta
     spawnRate: 20000,       // A cada 20 segundos
     lifetime: 12000         // 12 segundos para coletar
@@ -169,7 +204,8 @@ export const POWERUP_CONFIG = {
   shield: {
     effect: 5000,           // 5 segundos de proteção
     speed: 1.0,             // Velocidade lenta
-    size: 0.25,             // Tamanho médio
+    size: 0.25,             // Tamanho visual
+    radius: 0.125,          // Raio da hitbox
     color: 0x0088ff,        // Azul
     spawnRate: 30000,       // A cada 30 segundos
     lifetime: 8000          // 8 segundos para coletar
