@@ -8,7 +8,8 @@ import type { PowerUp as PowerUpData } from '@spaceshooter/shared';
 export class PowerUp extends Entity {
   private powerUpType: PowerUpData['type'];
   private config: typeof POWERUP_CONFIG[keyof typeof POWERUP_CONFIG];
-  private createdAt: number;
+  private lifetime: number; // Time remaining in seconds
+  private animationTime: number = 0; // Accumulated time for animations
 
   constructor(
     eventBus: EventBus,
@@ -27,7 +28,7 @@ export class PowerUp extends Entity {
     
     this.powerUpType = powerUpType;
     this.config = config;
-    this.createdAt = Date.now();
+    this.lifetime = (this.config?.lifetime || 10000) / 1000; // Convert ms to seconds
     
     // Create visual after all properties are set
     this.createVisual();
@@ -86,29 +87,30 @@ export class PowerUp extends Entity {
   protected onUpdate(deltaTime: number): void {
     if (!this.isActive) return;
 
-    this.updateVisualEffects();
-    this.checkExpiry();
+    // Update lifetime
+    this.lifetime -= deltaTime;
+    if (this.lifetime <= 0) {
+      this.destroy();
+      return;
+    }
+
+    // Update animation time
+    this.animationTime += deltaTime;
+    
+    this.updateVisualEffects(deltaTime);
     this.checkBoundsAndDestroy();
     this.checkPlayerCollision();
   }
 
-  private updateVisualEffects(): void {
-    const currentTime = Date.now();
+  private updateVisualEffects(deltaTime: number): void {
+    // Rotation speed affected by deltaTime (2 rad/s for X, 3 rad/s for Y)
+    this.object.rotation.x += 2 * deltaTime;
+    this.object.rotation.y += 3 * deltaTime;
     
-    this.object.rotation.x += 0.02;
-    this.object.rotation.y += 0.03;
-    
-    const pulseScale = 1 + Math.sin(currentTime * 0.005) * 0.1;
+    const pulseScale = 1 + Math.sin(this.animationTime * 5) * 0.1;
     this.object.scale.setScalar(pulseScale);
   }
 
-  private checkExpiry(): void {
-    const currentTime = Date.now();
-    const lifetime = this.config?.lifetime || 10000; // default 10 seconds
-    if (currentTime - this.createdAt > lifetime) {
-      this.destroy();
-    }
-  }
 
   private checkBoundsAndDestroy(): void {
     const bounds = { minX: -10, maxX: 10, minY: -6, maxY: 10 };
