@@ -9,6 +9,9 @@ async function init() {
     game = new Game();
     await game.initialize();
     game.start();
+    
+    // Make game accessible globally for debug queries
+    (window as any).game = game;
   } catch (error) {
     console.error('❌ Failed to start game:', error);
   }

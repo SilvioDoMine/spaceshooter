@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { EventBus } from '../core/EventBus';
 import { PLAYER_CONFIG } from '@spaceshooter/shared';
+import { CollisionDebugHelper } from '../utils/CollisionDebugHelper';
+import { CollisionUtils } from '../utils/CollisionUtils';
 
 export interface Position {
   x: number;
@@ -20,6 +22,10 @@ export abstract class Entity {
   protected velocity: Velocity;
   protected isActive: boolean = true;
   private cleanupFunctions: Array<() => void> = [];
+  
+  // Collision debug
+  protected collisionVisualizer?: THREE.LineLoop;
+  protected collisionRadius: number = 1;
 
   constructor(
     eventBus: EventBus,
@@ -34,6 +40,7 @@ export abstract class Entity {
     this.object = new THREE.Group();
     
     this.setupEventHandlers();
+    this.setupCollisionDebug();
     // createVisual will be called by subclass after initialization
     this.updateObjectPosition();
   }
@@ -70,6 +77,10 @@ export abstract class Entity {
     return this.isActive;
   }
 
+  public getRadius(): number {
+    return this.collisionRadius;
+  }
+
   public update(deltaTime: number): void {
     if (!this.isActive) return;
 
@@ -100,7 +111,59 @@ export abstract class Entity {
   }
 
   protected onDestroy(): void {
+    // Cleanup collision visualizer
+    if (this.collisionVisualizer && this.collisionVisualizer.parent) {
+      this.collisionVisualizer.parent.remove(this.collisionVisualizer);
+    }
     // Override in subclasses for specific cleanup logic
+  }
+  
+  private setupCollisionDebug(): void {
+    // Listen for collision debug toggle
+    this.addCleanupFunction(
+      this.eventBus.on('debug:collision-visibility-toggle', (data: { visible: boolean }) => {
+        this.setCollisionVisibility(data.visible);
+      })
+    );
+  }
+  
+  protected createCollisionVisualizer(radius?: number): void {
+    if (radius) this.collisionRadius = radius;
+    
+    this.collisionVisualizer = CollisionDebugHelper.createCollisionVisualizer(
+      this.collisionRadius
+    );
+    this.object.add(this.collisionVisualizer);
+    
+    // Set initial visibility based on current debug state
+    this.updateCollisionVisibilityFromGlobalState();
+  }
+  
+  private updateCollisionVisibilityFromGlobalState(): void {
+    // Check if game is available globally and get debug state
+    const game = (window as any).game;
+    if (game && this.collisionVisualizer) {
+      try {
+        const isVisible = game.getDebugSystem().isCollisionDebugEnabled();
+        this.collisionVisualizer.visible = isVisible;
+      } catch (error) {
+        // DebugSystem not ready yet, default to false
+        this.collisionVisualizer.visible = false;
+      }
+    }
+  }
+  
+  protected setCollisionVisibility(visible: boolean): void {
+    if (this.collisionVisualizer) {
+      this.collisionVisualizer.visible = visible;
+    }
+  }
+  
+  protected updateCollisionVisualizerSize(radius: number): void {
+    if (this.collisionVisualizer) {
+      this.object.remove(this.collisionVisualizer);
+    }
+    this.createCollisionVisualizer(radius);
   }
 
   protected checkBounds(minX: number, maxX: number, minY: number, maxY: number): boolean {
@@ -110,10 +173,12 @@ export abstract class Entity {
            this.position.y <= maxY;
   }
 
-  protected isCollidingWith(other: Entity, radius: number = PLAYER_CONFIG.radius): boolean {
-    const dx = this.position.x - other.position.x;
-    const dy = this.position.y - other.position.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    return distance < radius;
+  protected isCollidingWith(other: Entity, thisRadius: number = PLAYER_CONFIG.radius, otherRadius: number = PLAYER_CONFIG.radius): boolean {
+    return CollisionUtils.checkCircularCollision(
+      this.position,
+      thisRadius,
+      other.position,
+      otherRadius
+    );
   }
 }

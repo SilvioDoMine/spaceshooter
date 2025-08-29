@@ -4,6 +4,7 @@ import { Enemy } from '../entities/Enemy';
 import { PowerUp } from '../entities/PowerUp';
 import { ProjectileSystem } from './ProjectileSystem';
 import { RenderingSystem } from './RenderingSystem';
+import { CollisionUtils } from '../utils/CollisionUtils';
 import { ENEMY_CONFIG, POWERUP_CONFIG, PLAYER_CONFIG, PROJECTILE_CONFIG } from '@spaceshooter/shared';
 
 export class EntitySystem {
@@ -13,8 +14,8 @@ export class EntitySystem {
   private player: Player | null = null;
   private enemies: Map<string, Enemy> = new Map();
   private powerUps: Map<string, PowerUp> = new Map();
-  private lastEnemySpawnTime: number = 0;
-  private lastPowerUpSpawnTime: number = 0;
+  private enemySpawnTimer: number = 0;
+  private powerUpSpawnTimer: number = 0;
   private isActive: boolean = false;
 
   constructor(eventBus: EventBus, renderingSystem?: RenderingSystem) {
@@ -69,9 +70,9 @@ export class EntitySystem {
   private startGame(): void {
     console.log('🚀 EntitySystem.startGame called');
     this.isActive = true;
-    // Set normal spawn timing like main2.ts
-    this.lastEnemySpawnTime = Date.now();
-    this.lastPowerUpSpawnTime = Date.now();
+    // Reset spawn timers
+    this.enemySpawnTimer = 0;
+    this.powerUpSpawnTimer = 0;
     
     console.log('👤 Creating player...');
     this.createPlayer();
@@ -140,14 +141,17 @@ export class EntitySystem {
     if (!this.player || data.entityType !== 'enemy') return;
 
     const playerPos = this.player.getPosition();
-    const dx = data.position.x - playerPos.x;
-    const dy = data.position.y - playerPos.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    
     const playerRadius = PLAYER_CONFIG.radius;
-    const collisionDistance = playerRadius + data.radius;
+    
+    // Use unified collision detection
+    const hasCollision = CollisionUtils.checkCircularCollision(
+      playerPos,
+      playerRadius,
+      data.position,
+      data.radius
+    );
 
-    if (distance < collisionDistance) {
+    if (hasCollision) {
       this.handlePlayerDamage(data.damage);
       
       const enemy = this.enemies.get(data.entityId);
@@ -159,24 +163,17 @@ export class EntitySystem {
   }
 
   private handleProjectileEnemyCollision(data: any): void {
-    let hitEnemy: Enemy | null = null;
-    let hitEnemyId: string | null = null;
+    // Use collision utility to find closest enemy that collides with projectile
+    const collision = CollisionUtils.findClosestCollision(
+      data.position,
+      data.radius,
+      this.enemies,
+      (enemy) => enemy.getRadius()
+    );
 
-    this.enemies.forEach((enemy, id) => {
-      const enemyPos = enemy.getPosition();
-      const dx = data.position.x - enemyPos.x;
-      const dy = data.position.y - enemyPos.y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-      
-      const collisionDistance = data.radius + PROJECTILE_CONFIG.radius;
-
-      if (distance < collisionDistance && !hitEnemy) {
-        hitEnemy = enemy;
-        hitEnemyId = id;
-      }
-    });
-
-    if (hitEnemy && hitEnemyId) {
+    if (collision) {
+      const hitEnemy = collision.target;
+      const hitEnemyId = collision.id!;
       const isDead = hitEnemy.takeDamage(data.damage);
       this.projectileSystem.removeProjectile(data.projectileId);
       
@@ -190,14 +187,17 @@ export class EntitySystem {
     if (!this.player) return;
 
     const playerPos = this.player.getPosition();
-    const dx = data.position.x - playerPos.x;
-    const dy = data.position.y - playerPos.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    
     const playerRadius = PLAYER_CONFIG.radius;
-    const collisionDistance = playerRadius + data.radius;
+    
+    // Use unified collision detection
+    const hasCollision = CollisionUtils.checkCircularCollision(
+      playerPos,
+      playerRadius,
+      data.position,
+      data.radius
+    );
 
-    if (distance < collisionDistance) {
+    if (hasCollision) {
       switch (data.type) {
         case 'ammo':
           this.player.addAmmo(data.effect || 10);
@@ -251,36 +251,34 @@ export class EntitySystem {
 
     this.projectileSystem.update(deltaTime);
     
-    this.trySpawnEnemy();
-    this.trySpawnPowerUp();
+    this.trySpawnEnemy(deltaTime);
+    this.trySpawnPowerUp(deltaTime);
   }
 
-  private trySpawnEnemy(): void {
-    const currentTime = Date.now();
-    const timeSinceLastSpawn = currentTime - this.lastEnemySpawnTime;
-    const spawnRate = ENEMY_CONFIG.basic.spawnRate;
+  private trySpawnEnemy(deltaTime: number): void {
+    this.enemySpawnTimer += deltaTime;
+    const spawnRate = ENEMY_CONFIG.basic.spawnRate / 1000; // Convert milliseconds to seconds
     
-    
-    if (timeSinceLastSpawn > spawnRate) {
+    if (this.enemySpawnTimer >= spawnRate) {
       try {
         const enemy = Enemy.spawnEnemy(this.eventBus);
         this.enemies.set(enemy.getId(), enemy);
-        this.lastEnemySpawnTime = currentTime;
+        this.enemySpawnTimer = 0; // Reset timer
       } catch (error) {
         console.error('❌ Error spawning enemy:', error);
       }
     }
   }
 
-  private trySpawnPowerUp(): void {
-    const currentTime = Date.now();
+  private trySpawnPowerUp(deltaTime: number): void {
+    this.powerUpSpawnTimer += deltaTime;
+    const spawnRate = POWERUP_CONFIG.ammo.spawnRate / 1000; // Convert milliseconds to seconds
     
-    // Spawn de power-up usando a mesma lógica do main2.ts
-    if (currentTime - this.lastPowerUpSpawnTime > POWERUP_CONFIG.ammo.spawnRate) {
+    if (this.powerUpSpawnTimer >= spawnRate) {
       try {
         const powerUp = PowerUp.spawnPowerUp(this.eventBus);
         this.powerUps.set(powerUp.getId(), powerUp);
-        this.lastPowerUpSpawnTime = currentTime;
+        this.powerUpSpawnTimer = 0; // Reset timer
       } catch (error) {
         console.error('Error spawning power-up:', error);
       }

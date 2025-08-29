@@ -36,10 +36,181 @@
             width: 100% !important;
             height: 100% !important;
         }
+        
+        #debug-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            padding: 15px;
+            border: 1px solid #00ff00;
+            border-radius: 5px;
+            min-width: 280px;
+            z-index: 1000;
+            display: none;
+        }
+        
+        #debug-panel.visible {
+            display: block;
+        }
+        
+        #debug-panel h3 {
+            color: #00ff00;
+            margin-bottom: 10px;
+            text-align: center;
+            font-size: 14px;
+            border-bottom: 1px solid #00ff00;
+            padding-bottom: 5px;
+        }
+        
+        .debug-section {
+            margin-bottom: 10px;
+        }
+        
+        .debug-section h4 {
+            color: #ffff00;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+        
+        .debug-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 3px;
+        }
+        
+        .debug-label {
+            color: #00ff00;
+        }
+        
+        .debug-value {
+            color: #ffffff;
+            text-align: right;
+        }
+        
+        .debug-checkbox {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        
+        .debug-checkbox input[type="checkbox"] {
+            margin-right: 8px;
+            transform: scale(1.2);
+        }
+        
+        .debug-checkbox label {
+            color: #00ff00;
+            cursor: pointer;
+            user-select: none;
+        }
     </style>
 </head>
 <body>
     <div id="game-container"></div>
+    
+    <div id="debug-panel">
+        <h3>DEBUG INFO (Press U to toggle)</h3>
+        
+        <div class="debug-section">
+            <h4>Performance</h4>
+            <div class="debug-item">
+                <span class="debug-label">FPS:</span>
+                <span class="debug-value" id="debug-fps">60</span>
+            </div>
+            <div class="debug-item">
+                <span class="debug-label">Memory:</span>
+                <span class="debug-value" id="debug-memory">0 MB</span>
+            </div>
+            <div class="debug-item">
+                <span class="debug-label">Render Calls:</span>
+                <span class="debug-value" id="debug-render-calls">0</span>
+            </div>
+        </div>
+        
+        <div class="debug-section">
+            <h4>Game State</h4>
+            <div class="debug-item">
+                <span class="debug-label">State:</span>
+                <span class="debug-value" id="debug-game-state">Running</span>
+            </div>
+            <div class="debug-item">
+                <span class="debug-label">Level:</span>
+                <span class="debug-value" id="debug-level">1</span>
+            </div>
+            <div class="debug-item">
+                <span class="debug-label">Score:</span>
+                <span class="debug-value" id="debug-score">0</span>
+            </div>
+        </div>
+        
+        <div class="debug-section">
+            <h4>Entities</h4>
+            <div class="debug-item">
+                <span class="debug-label">Total:</span>
+                <span class="debug-value" id="debug-entities">0</span>
+            </div>
+            <div class="debug-item">
+                <span class="debug-label">Enemies:</span>
+                <span class="debug-value" id="debug-enemies">0</span>
+            </div>
+            <div class="debug-item">
+                <span class="debug-label">Projectiles:</span>
+                <span class="debug-value" id="debug-projectiles">0</span>
+            </div>
+            <div class="debug-item">
+                <span class="debug-label">Particles:</span>
+                <span class="debug-value" id="debug-particles">0</span>
+            </div>
+        </div>
+        
+        <div class="debug-section">
+            <h4>Player</h4>
+            <div class="debug-item">
+                <span class="debug-label">Position:</span>
+                <span class="debug-value" id="debug-player-pos">(0, 0, 0)</span>
+            </div>
+            <div class="debug-item">
+                <span class="debug-label">Health:</span>
+                <span class="debug-value" id="debug-player-health">100/100</span>
+            </div>
+            <div class="debug-item">
+                <span class="debug-label">Ammo:</span>
+                <span class="debug-value" id="debug-player-ammo">30/30</span>
+            </div>
+            <div class="debug-checkbox">
+                <input type="checkbox" id="debug-god-mode">
+                <label for="debug-god-mode">God Mode</label>
+            </div>
+        </div>
+        
+        <div class="debug-section">
+            <h4>Collision Debug</h4>
+            <div class="debug-checkbox">
+                <input type="checkbox" id="debug-show-collisions">
+                <label for="debug-show-collisions">Show Collision Boxes</label>
+            </div>
+        </div>
+        
+        <div class="debug-section">
+            <h4>Time Control</h4>
+            <div class="debug-item">
+                <span class="debug-label">Time Scale:</span>
+                <span class="debug-value" id="debug-time-scale">1.0x</span>
+            </div>
+            <div style="margin: 5px 0;">
+                <input type="range" id="debug-time-slider" min="0" max="200" value="100" step="5" style="width: 100%;">
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-top: 5px;">
+                <button id="debug-pause" style="background: #333; color: #00ff00; border: 1px solid #00ff00; padding: 3px 8px; cursor: pointer;">Pause</button>
+                <button id="debug-reset-time" style="background: #333; color: #00ff00; border: 1px solid #00ff00; padding: 3px 8px; cursor: pointer;">Reset</button>
+            </div>
+        </div>
+    </div>
+    
     <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

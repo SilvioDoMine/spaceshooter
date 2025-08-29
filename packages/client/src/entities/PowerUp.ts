@@ -75,6 +75,11 @@ export class PowerUp extends Entity {
     mesh.rotation.y = Math.random() * Math.PI;
     
     this.object.add(mesh);
+    
+    // Create collision visualizer for power-up
+    const radius = this.config.radius || (this.config.size || 0.2);
+    this.createCollisionVisualizer(radius);
+    
     this.eventBus.emit('scene:add-object', { object: this.object });
   }
 

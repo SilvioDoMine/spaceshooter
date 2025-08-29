@@ -5,11 +5,14 @@ import { assetManager } from '../services/AssetManager';
 import { PROJECTILE_CONFIG } from '@spaceshooter/shared';
 import type { Projectile } from '@spaceshooter/shared';
 import { Position, Velocity } from '../entities/Entity';
+import { CollisionDebugHelper } from '../utils/CollisionDebugHelper';
 
 export interface ProjectileData {
   id: string;
   object: THREE.Mesh;
   data: Projectile;
+  collisionVisualizer?: THREE.LineLoop;
+  lifetime: number; // Time remaining in seconds
 }
 
 export class ProjectileSystem {
@@ -17,6 +20,7 @@ export class ProjectileSystem {
   private renderingSystem?: RenderingSystem;
   private projectiles: Map<string, ProjectileData> = new Map();
   private isActive: boolean = false;
+  private collisionDebugEnabled: boolean = false;
 
   constructor(eventBus: EventBus, renderingSystem?: RenderingSystem) {
     this.eventBus = eventBus;
@@ -45,6 +49,11 @@ export class ProjectileSystem {
     this.eventBus.on('game:resumed', () => {
       this.isActive = true;
     });
+
+    this.eventBus.on('debug:collision-visibility-toggle', (data: { visible: boolean }) => {
+      this.collisionDebugEnabled = data.visible;
+      this.updateAllCollisionVisibility();
+    });
   }
 
   public createProjectile(
@@ -71,16 +80,39 @@ export class ProjectileSystem {
     
     projectileMesh.position.set(position.x, position.y, 0);
 
+    // Create collision visualizer for projectile
+    const collisionVisualizer = CollisionDebugHelper.createCollisionVisualizer(
+      PROJECTILE_CONFIG.size
+    );
+    collisionVisualizer.position.set(position.x, position.y, 0);
+    // Set initial visibility based on current debug state
+    const game = (window as any).game;
+    if (game) {
+      try {
+        const isVisible = game.getDebugSystem().isCollisionDebugEnabled();
+        collisionVisualizer.visible = isVisible;
+        this.collisionDebugEnabled = isVisible; // Sync internal state
+      } catch (error) {
+        collisionVisualizer.visible = false;
+      }
+    } else {
+      collisionVisualizer.visible = this.collisionDebugEnabled;
+    }
+
     if (this.renderingSystem) {
       this.renderingSystem.addToScene(projectileMesh);
+      this.renderingSystem.addToScene(collisionVisualizer);
     } else {
       this.eventBus.emit('scene:add-object', { object: projectileMesh });
+      this.eventBus.emit('scene:add-object', { object: collisionVisualizer });
     }
 
     this.projectiles.set(projectileId, {
       id: projectileId,
       object: projectileMesh,
-      data: projectileData
+      data: projectileData,
+      collisionVisualizer: collisionVisualizer,
+      lifetime: PROJECTILE_CONFIG.lifetime / 1000 // Convert milliseconds to seconds
     });
 
     console.log(`Projectile created: ${projectileId} by ${ownerId}`);
@@ -91,13 +123,14 @@ export class ProjectileSystem {
   public update(deltaTime: number): void {
     if (!this.isActive) return;
 
-    const currentTime = Date.now();
     const toRemove: string[] = [];
 
     this.projectiles.forEach((projectile, id) => {
       const { object, data } = projectile;
 
-      if (currentTime - data.createdAt > PROJECTILE_CONFIG.lifetime) {
+      // Update lifetime
+      projectile.lifetime -= deltaTime;
+      if (projectile.lifetime <= 0) {
         toRemove.push(id);
         return;
       }
@@ -106,6 +139,11 @@ export class ProjectileSystem {
       data.position.y += data.velocity.y * deltaTime;
 
       object.position.set(data.position.x, data.position.y, 0);
+      
+      // Update collision visualizer position
+      if (projectile.collisionVisualizer) {
+        projectile.collisionVisualizer.position.set(data.position.x, data.position.y, 0);
+      }
 
       if (this.isOutOfBounds(data.position)) {
         toRemove.push(id);
@@ -143,8 +181,14 @@ export class ProjectileSystem {
     if (projectile) {
       if (this.renderingSystem) {
         this.renderingSystem.removeFromScene(projectile.object);
+        if (projectile.collisionVisualizer) {
+          this.renderingSystem.removeFromScene(projectile.collisionVisualizer);
+        }
       } else {
         this.eventBus.emit('scene:remove-object', { object: projectile.object });
+        if (projectile.collisionVisualizer) {
+          this.eventBus.emit('scene:remove-object', { object: projectile.collisionVisualizer });
+        }
       }
       this.projectiles.delete(projectileId);
       console.log(`Projectile removed: ${projectileId}`);
@@ -183,6 +227,14 @@ export class ProjectileSystem {
 
   public getProjectileCount(): number {
     return this.projectiles.size;
+  }
+
+  private updateAllCollisionVisibility(): void {
+    this.projectiles.forEach(projectile => {
+      if (projectile.collisionVisualizer) {
+        projectile.collisionVisualizer.visible = this.collisionDebugEnabled;
+      }
+    });
   }
 
   public dispose(): void {

@@ -22,12 +22,13 @@ export interface PlayerStats {
 export class Player extends Entity {
   private stats: PlayerStats;
   private inputState: any = {};
-  private lastShotTime: number = 0;
-  private shotCooldown: number = 200;
+  private shotTimer: number = 0;
+  private shotCooldown: number = 0.2; // 200ms converted to seconds
   private speed: number = PLAYER_CONFIG.speed;
   private renderingSystem: RenderingSystem;
   private projectileSystem: ProjectileSystem;
   private gameStartTime: number;
+  private godModeEnabled: boolean = false;
 
   constructor(
     eventBus: EventBus,
@@ -78,10 +79,15 @@ export class Player extends Entity {
       }
     });
 
+    const unsubscribeGodMode = this.eventBus.on('debug:god-mode-toggle', (data: { enabled: boolean }) => {
+      this.godModeEnabled = data.enabled;
+    });
+
     this.addCleanupFunction(unsubscribeInput);
     this.addCleanupFunction(unsubscribeShot);
     this.addCleanupFunction(unsubscribeScore);
     this.addCleanupFunction(unsubscribeDamage);
+    this.addCleanupFunction(unsubscribeGodMode);
   }
 
   protected createVisual(): void {
@@ -91,6 +97,9 @@ export class Player extends Entity {
     playerShip.rotation.z = Math.PI / 2;
     
     this.object.add(playerShip);
+
+    // Create collision visualizer for player (using PLAYER_CONFIG radius)
+    this.createCollisionVisualizer(PLAYER_CONFIG.radius);
 
     this.renderingSystem.addToScene(this.object);
   }
@@ -104,6 +113,11 @@ export class Player extends Entity {
 
     this.handleMovement(deltaTime);
     this.constrainToScreen();
+    
+    // Update shot cooldown timer
+    if (this.shotTimer > 0) {
+      this.shotTimer -= deltaTime;
+    }
   }
 
   private handleMovement(deltaTime: number): void {
@@ -130,9 +144,8 @@ export class Player extends Entity {
   }
 
   private tryShoot(): void {
-    const currentTime = Date.now();
-    if (currentTime - this.lastShotTime < this.shotCooldown) {
-      return;
+    if (this.shotTimer > 0) {
+      return; // Still on cooldown
     }
 
     if (this.stats.ammo <= 0) {
@@ -140,7 +153,7 @@ export class Player extends Entity {
       return;
     }
 
-    this.lastShotTime = currentTime;
+    this.shotTimer = this.shotCooldown; // Reset cooldown timer
     this.stats.ammo--;
     this.stats.shotsFired++;
     
@@ -159,6 +172,11 @@ export class Player extends Entity {
   }
 
   public takeDamage(damage: number): boolean {
+    // God mode prevents damage
+    if (this.godModeEnabled) {
+      return false;
+    }
+    
     this.stats.health = Math.max(0, this.stats.health - damage);
     this.updateUI();
     
@@ -222,7 +240,7 @@ export class Player extends Entity {
     
     this.setPosition({ x: 0, y: 0 });
     this.setVelocity({ x: 0, y: 0 });
-    this.lastShotTime = 0;
+    this.shotTimer = 0;
     this.inputState = {};
     this.gameStartTime = Date.now();
     

@@ -9,6 +9,7 @@ import { EntitySystem } from '../systems/EntitySystem';
 import { RenderingSystem } from '../systems/RenderingSystem';
 import { ParticleSystem } from '../systems/ParticleSystem';
 import { BackgroundSystem } from '../systems/BackgroundSystem';
+import { DebugSystem } from '../systems/DebugSystem';
 
 /**
  * Game - Core game class that manages all systems and lifecycle
@@ -35,6 +36,7 @@ export class Game {
   private gameStateManager!: GameStateManager;
   private entitySystem!: EntitySystem;
   private backgroundSystem!: BackgroundSystem;
+  private debugSystem!: DebugSystem;
 
   constructor() {
     this.eventBus = new EventBus();
@@ -115,6 +117,7 @@ export class Game {
     if (this.uiSystem) this.uiSystem.dispose();
     if (this.inputSystem) this.inputSystem.dispose();
     if (this.backgroundSystem) this.backgroundSystem.dispose();
+    if (this.debugSystem) this.debugSystem.dispose();
     
     assetManager.dispose();
     
@@ -128,6 +131,7 @@ export class Game {
   public getEntitySystem(): EntitySystem { return this.entitySystem; }
   public getGameStateManager(): GameStateManager { return this.gameStateManager; }
   public getEventBus(): EventBus { return this.eventBus; }
+  public getDebugSystem(): DebugSystem { return this.debugSystem; }
 
   // Private methods
 
@@ -148,6 +152,7 @@ export class Game {
     this.menuSystem = new MenuSystem(this.eventBus);
     this.gameStateManager = new GameStateManager(this.eventBus);
     this.backgroundSystem = new BackgroundSystem(this.eventBus);
+    this.debugSystem = new DebugSystem(this.eventBus);
     
     // EntitySystem needs RenderingSystem for direct scene manipulation
     this.entitySystem = new EntitySystem(this.eventBus, this.renderingSystem);
@@ -182,8 +187,12 @@ export class Game {
     if (!this.isRunning) return;
 
     const currentTime = performance.now();
-    const deltaTime = (currentTime - this.lastFrameTime) / 1000;
+    let deltaTime = ((currentTime - this.lastFrameTime) / 1000);
     this.lastFrameTime = currentTime;
+
+    // Apply debug time scale
+    const timeScale = this.debugSystem.getTimeScale();
+    deltaTime *= timeScale;
 
     // Update systems directly - no events needed for core game loop
     if (this.gameStateManager.isPlaying()) {

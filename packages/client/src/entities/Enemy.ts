@@ -60,6 +60,11 @@ export class Enemy extends Entity {
     mesh.receiveShadow = true;
     
     this.object.add(mesh);
+    
+    // Create collision visualizer for enemy
+    const radius = this.config.radius || (this.config.size || 0.3);
+    this.createCollisionVisualizer(radius);
+    
     this.eventBus.emit('scene:add-object', { object: this.object });
   }
 
