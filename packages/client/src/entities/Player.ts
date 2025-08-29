@@ -270,8 +270,8 @@ export class Player extends Entity {
     this.updateUI();
     
     const projectilePosition = {
-      x: this.position.x,
-      y: this.position.y + 1
+      x: this.position.x - 0.05,
+      y: this.position.y + 0.60
     };
     
     this.projectileSystem.createProjectile('player', projectilePosition, { x: 0, y: 15 });
