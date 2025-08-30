@@ -175,6 +175,7 @@ export class MenuSystem {
         align-items: center;
         z-index: 1000;
         font-family: 'Courier New', monospace;
+        box-sizing: border-box;
       }
 
       .menu-screen {
@@ -188,7 +189,13 @@ export class MenuSystem {
         border-radius: 10px;
         padding: 40px;
         min-width: 400px;
+        max-width: 90vw;
+        max-height: 95vh;
         box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
       }
 
       .game-title {
@@ -297,27 +304,186 @@ export class MenuSystem {
         color: #cccccc;
       }
 
-      @media (max-width: 600px) {
+      /* Mobile landscape and small tablets */
+      @media (max-width: 768px) and (min-height: 500px) {
         .menu-content {
-          min-width: 90%;
-          padding: 20px;
+          min-width: 85%;
+          max-width: 500px;
+          padding: 25px;
         }
         
-        .game-title {
-          font-size: 2em;
+        .game-title, .game-over-title, .pause-title {
+          font-size: 2.2em;
+          margin-bottom: 25px;
         }
         
         .menu-button {
           font-size: 1.1em;
           padding: 18px 25px;
-          min-height: 50px; /* Larger touch target */
+          min-height: 50px;
           display: flex;
           align-items: center;
           justify-content: center;
         }
         
         .menu-buttons {
-          gap: 20px; /* More space between buttons on mobile */
+          gap: 18px;
+        }
+      }
+
+      /* Mobile portrait - compact layout */
+      @media (max-width: 600px) and (max-height: 900px) {
+        #menu-container {
+          padding: 10px;
+          overflow-y: auto;
+        }
+        
+        .menu-content {
+          min-width: 95%;
+          max-width: none;
+          padding: 15px;
+          margin: auto;
+          max-height: 90vh;
+          overflow-y: auto;
+        }
+        
+        .game-title, .game-over-title, .pause-title {
+          font-size: 1.8em;
+          margin: 0 0 20px 0;
+          line-height: 1.2;
+        }
+        
+        .menu-button {
+          font-size: 1em;
+          padding: 15px 20px;
+          min-height: 48px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        
+        .menu-buttons {
+          gap: 15px;
+          margin-top: 20px;
+        }
+        
+        .stats-container {
+          margin: 15px 0;
+        }
+        
+        .stat-item {
+          margin: 8px 0;
+          padding: 6px 0;
+          font-size: 0.9em;
+        }
+        
+        .controls-info {
+          margin-top: 15px;
+          padding: 15px;
+          font-size: 0.9em;
+        }
+        
+        .controls-info p {
+          margin: 6px 0;
+        }
+      }
+
+      /* Portrait orientation specific */
+      @media (orientation: portrait) and (max-width: 600px) {
+        #menu-container {
+          align-items: flex-start;
+          padding-top: 5vh;
+        }
+        
+        .menu-content {
+          min-width: 95%;
+          padding: 20px 15px;
+          margin: 0 auto;
+          justify-content: flex-start;
+        }
+        
+        .game-title, .game-over-title, .pause-title {
+          font-size: 1.8em;
+          margin: 10px 0 20px 0;
+        }
+      }
+
+      /* Very small portrait screens */
+      @media (max-width: 400px), (max-height: 600px) {
+        #menu-container {
+          padding: 5px;
+          align-items: flex-start;
+          padding-top: 2vh;
+        }
+        
+        .menu-content {
+          padding: 15px 10px;
+          min-width: 98%;
+          border-radius: 8px;
+          margin: 0;
+        }
+        
+        .game-title, .game-over-title, .pause-title {
+          font-size: 1.4em;
+          margin: 5px 0 15px 0;
+          line-height: 1.1;
+        }
+        
+        .menu-button {
+          font-size: 0.9em;
+          padding: 12px 16px;
+          min-height: 42px;
+          border-radius: 4px;
+        }
+        
+        .menu-buttons {
+          gap: 10px;
+          margin-top: 15px;
+        }
+        
+        .stat-item {
+          font-size: 0.8em;
+          margin: 5px 0;
+          padding: 3px 0;
+        }
+        
+        .stats-container {
+          margin: 10px 0;
+        }
+        
+        .controls-info {
+          padding: 10px;
+          margin-top: 10px;
+          font-size: 0.8em;
+        }
+        
+        .controls-info p {
+          margin: 4px 0;
+        }
+      }
+      
+      /* Extra small screens or very short screens */
+      @media (max-height: 500px), (max-width: 350px) {
+        .menu-content {
+          padding: 8px;
+          max-height: 98vh;
+          overflow-y: auto;
+        }
+        
+        .game-title, .game-over-title, .pause-title {
+          font-size: 1.2em;
+          margin: 5px 0 10px 0;
+        }
+        
+        .menu-button {
+          font-size: 0.85em;
+          padding: 10px 12px;
+          min-height: 38px;
+        }
+        
+        .menu-buttons {
+          gap: 8px;
+          margin-top: 10px;
         }
       }
     `;
