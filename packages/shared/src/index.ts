@@ -49,7 +49,8 @@ export type SkillType =
   | 'attack_speed'      // Aumentar velocidade de ataque
   | 'multi_shot'        // Multi ataque (único nível)
   | 'health_regeneration' // Recuperar vida aleatória
-  | 'max_health_boost';  // Aumento de vida permanente
+  | 'max_health_boost'  // Aumento de vida permanente
+  | 'move_speed';       // Aumentar velocidade de movimento
 
 /**
  * Informações de uma skill individual
@@ -256,7 +257,7 @@ export const PROJECTILE_CONFIG = {
 export const ENEMY_CONFIG = {
   basic: {
     health: 20,             // 2 hits para destruir
-    speed: 0.8,             // Velocidade moderada
+    speed: 0.6,             // Velocidade moderada
     size: 0.3,              // Tamanho visual
     radius: 0.25,           // Raio da hitbox
     color: 0xff4444,        // Vermelho
@@ -265,7 +266,7 @@ export const ENEMY_CONFIG = {
   },
   fast: {
     health: 10,             // 1 hit para destruir
-    speed: 1.1,             // Mais rápido
+    speed: 0.8,             // Mais rápido
     size: 0.2,              // Tamanho visual
     radius: 0.175,            // Raio da hitbox (menor)
     color: 0xff8800,        // Laranja
@@ -274,7 +275,7 @@ export const ENEMY_CONFIG = {
   },
   heavy: {
     health: 50,             // 5 hits para destruir
-    speed: 0.4,             // Mais lento
+    speed: 0.1,             // Mais lento
     size: 0.5,              // Tamanho visual
     radius: 0.4,           // Raio da hitbox (maior)
     color: 0x8844ff,        // Roxo
@@ -387,55 +388,55 @@ export interface Observer {
  */
 export const LEVEL_XP_TABLE: Record<number, number> = {
   1: 0,      // Nível 1 não precisa de XP
-  2: 20,    // 20 XP para nível 2
-  3: 70,    // 250 XP para nível 3
-  4: 200,    // 450 XP para nível 4
-  5: 500,    // 700 XP para nível 5
-  6: 750,   // 1000 XP para nível 6
-  7: 1350,   // 1350 XP para nível 7
-  8: 1800,   // 1750 XP para nível 8
-  9: 2200,   // 2200 XP para nível 9
-  10: 2700,  // 2700 XP para nível 10
-  11: 3250,  // 3250 XP para nível 11
-  12: 3850,  // 3850 XP para nível 12
-  13: 4500,  // 4500 XP para nível 13
-  14: 5200,  // 5200 XP para nível 14
-  15: 5950,  // 5950 XP para nível 15
-  16: 6750,  // 6750 XP para nível 16
-  17: 7600,  // 7600 XP para nível 17
-  18: 8500,  // 8500 XP para nível 18
-  19: 9450,  // 9450 XP para nível 19
-  20: 10450, // 10450 XP para nível 20
-  21: 11500, // 11500 XP para nível 21
-  22: 12600, // 12600 XP para nível 22
-  23: 13750, // 13750 XP para nível 23
-  24: 14950, // 14950 XP para nível 24
-  25: 16200, // 16200 XP para nível 25
-  26: 17500, // 17500 XP para nível 26
-  27: 18850, // 18850 XP para nível 27
-  28: 20250, // 20250 XP para nível 28
-  29: 21700, // 21700 XP para nível 29
-  30: 23200, // 23200 XP para nível 30
-  31: 24750, // 24750 XP para nível 31
-  32: 26350, // 26350 XP para nível 32
-  33: 28000, // 28000 XP para nível 33
-  34: 29700, // 29700 XP para nível 34
-  35: 31450, // 31450 XP para nível 35
-  36: 33250, // 33250 XP para nível 36
-  37: 35100, // 35100 XP para nível 37
-  38: 37000, // 37000 XP para nível 38
-  39: 38950, // 38950 XP para nível 39
-  40: 40950, // 40950 XP para nível 40
-  41: 43000, // 43000 XP para nível 41
-  42: 45100, // 45100 XP para nível 42
-  43: 47250, // 47250 XP para nível 43
-  44: 49450, // 49450 XP para nível 44
-  45: 51700, // 51700 XP para nível 45
-  46: 54000, // 54000 XP para nível 46
-  47: 56350, // 56350 XP para nível 47
-  48: 58750, // 58750 XP para nível 48
-  49: 61200, // 61200 XP para nível 49
-  50: 63700  // 63700 XP para nível 50 (máximo)
+  2: 10,     // 10 XP para nível 2
+  3: 25,     // 25 XP para nível 3
+  4: 45,     // 45 XP para nível 4
+  5: 70,     // 70 XP para nível 5
+  6: 100,    // 100 XP para nível 6
+  7: 135,    // 135 XP para nível 7
+  8: 175,    // 175 XP para nível 8
+  9: 220,    // 220 XP para nível 9
+  10: 270,   // 270 XP para nível 10
+  11: 325,   // 325 XP para nível 11
+  12: 385,   // 385 XP para nível 12
+  13: 450,   // 450 XP para nível 13
+  14: 520,   // 520 XP para nível 14
+  15: 595,   // 595 XP para nível 15
+  16: 675,   // 675 XP para nível 16
+  17: 760,   // 760 XP para nível 17
+  18: 850,   // 850 XP para nível 18
+  19: 945,   // 945 XP para nível 19
+  20: 1045,  // 1045 XP para nível 20
+  21: 1150,  // 1150 XP para nível 21
+  22: 1260,  // 1260 XP para nível 22
+  23: 1375,  // 1375 XP para nível 23
+  24: 1495,  // 1495 XP para nível 24
+  25: 1620,  // 1620 XP para nível 25
+  26: 1750,  // 1750 XP para nível 26
+  27: 1885,  // 1885 XP para nível 27
+  28: 2025,  // 2025 XP para nível 28
+  29: 2170,  // 2170 XP para nível 29
+  30: 2320,  // 2320 XP para nível 30
+  31: 2475,  // 2475 XP para nível 31
+  32: 2635,  // 2635 XP para nível 32
+  33: 2800,  // 2800 XP para nível 33
+  34: 2970,  // 2970 XP para nível 34
+  35: 3145,  // 3145 XP para nível 35
+  36: 3325,  // 3325 XP para nível 36
+  37: 3510,  // 3510 XP para nível 37
+  38: 3700,  // 3700 XP para nível 38
+  39: 3895,  // 3895 XP para nível 39
+  40: 4095,  // 4095 XP para nível 40
+  41: 4300,  // 4300 XP para nível 41
+  42: 4510,  // 4510 XP para nível 42
+  43: 4725,  // 4725 XP para nível 43
+  44: 4945,  // 4945 XP para nível 44
+  45: 5170,  // 5170 XP para nível 45
+  46: 5400,  // 5400 XP para nível 46
+  47: 5635,  // 5635 XP para nível 47
+  48: 5875,  // 5875 XP para nível 48
+  49: 6120,  // 6120 XP para nível 49
+  50: 6370   // 6370 XP para nível 50 (máximo)
 };
 
 /**
@@ -516,64 +517,114 @@ export const SKILLS_CONFIG: Record<SkillType, SkillConfig> = {
     id: 'damage_boost',
     name: 'Dano Aumentado',
     description: 'Aumenta o dano dos seus projéteis',
-    maxLevel: 5,
+    maxLevel: 10,
     icon: '💥',
     effects: {
       1: { value: 1.2, description: '+20% de dano' },
       2: { value: 1.4, description: '+40% de dano' },
       3: { value: 1.6, description: '+60% de dano' },
       4: { value: 1.8, description: '+80% de dano' },
-      5: { value: 2.0, description: '+100% de dano' }
+      5: { value: 2.0, description: '+100% de dano' },
+      6: { value: 2.3, description: '+130% de dano' },
+      7: { value: 2.6, description: '+160% de dano' },
+      8: { value: 3.0, description: '+200% de dano' },
+      9: { value: 3.5, description: '+250% de dano' },
+      10: { value: 4.0, description: '+300% de dano' }
     }
   },
   attack_speed: {
     id: 'attack_speed',
     name: 'Tiro Rápido',
     description: 'Diminui o tempo entre disparos',
-    maxLevel: 5,
+    maxLevel: 10,
     icon: '🔥',
     effects: {
       1: { value: 0.8, description: '-20% cooldown de tiro' },
       2: { value: 0.65, description: '-35% cooldown de tiro' },
       3: { value: 0.5, description: '-50% cooldown de tiro' },
       4: { value: 0.4, description: '-60% cooldown de tiro' },
-      5: { value: 0.3, description: '-70% cooldown de tiro' }
+      5: { value: 0.3, description: '-70% cooldown de tiro' },
+      6: { value: 0.25, description: '-75% cooldown de tiro' },
+      7: { value: 0.2, description: '-80% cooldown de tiro' },
+      8: { value: 0.15, description: '-85% cooldown de tiro' },
+      9: { value: 0.1, description: '-90% cooldown de tiro' },
+      10: { value: 0.05, description: '-95% cooldown de tiro' }
     }
   },
   multi_shot: {
     id: 'multi_shot',
-    name: 'Tiro Duplo',
-    description: 'Atira duas vezes seguidas com uma bala só',
-    maxLevel: 1,
+    name: 'Tiro Múltiplo',
+    description: 'Atira múltiplos projéteis simultaneamente',
+    maxLevel: 10,
     icon: '🔫',
     effects: {
-      1: { value: 2, description: 'Atira 2 projéteis por disparo' }
+      1: { value: 2, description: 'Atira 2 projéteis por disparo' },
+      2: { value: 3, description: 'Atira 3 projéteis por disparo' },
+      3: { value: 4, description: 'Atira 4 projéteis por disparo' },
+      4: { value: 5, description: 'Atira 5 projéteis por disparo' },
+      5: { value: 6, description: 'Atira 6 projéteis por disparo' },
+      6: { value: 7, description: 'Atira 7 projéteis por disparo' },
+      7: { value: 8, description: 'Atira 8 projéteis por disparo' },
+      8: { value: 9, description: 'Atira 9 projéteis por disparo' },
+      9: { value: 10, description: 'Atira 10 projéteis por disparo' },
+      10: { value: 12, description: 'Atira 12 projéteis por disparo' }
     }
   },
   health_regeneration: {
     id: 'health_regeneration',
     name: 'Regeneração',
     description: 'Recupera vida periodicamente',
-    maxLevel: 3,
+    maxLevel: 10,
     icon: '💚',
     effects: {
       1: { value: 5, description: 'Regenera 5 HP a cada 10s' },
       2: { value: 8, description: 'Regenera 8 HP a cada 8s' },
-      3: { value: 12, description: 'Regenera 12 HP a cada 6s' }
+      3: { value: 12, description: 'Regenera 12 HP a cada 6s' },
+      4: { value: 15, description: 'Regenera 15 HP a cada 5s' },
+      5: { value: 20, description: 'Regenera 20 HP a cada 4s' },
+      6: { value: 25, description: 'Regenera 25 HP a cada 3.5s' },
+      7: { value: 30, description: 'Regenera 30 HP a cada 3s' },
+      8: { value: 40, description: 'Regenera 40 HP a cada 2.5s' },
+      9: { value: 50, description: 'Regenera 50 HP a cada 2s' },
+      10: { value: 75, description: 'Regenera 75 HP a cada 1.5s' }
     }
   },
   max_health_boost: {
     id: 'max_health_boost',
     name: 'Vitalidade',
     description: 'Aumenta sua vida máxima permanentemente',
-    maxLevel: 5,
+    maxLevel: 10,
     icon: '❤️',
     effects: {
       1: { value: 20, description: '+20 HP máximo' },
       2: { value: 40, description: '+40 HP máximo' },
       3: { value: 60, description: '+60 HP máximo' },
       4: { value: 80, description: '+80 HP máximo' },
-      5: { value: 100, description: '+100 HP máximo' }
+      5: { value: 100, description: '+100 HP máximo' },
+      6: { value: 130, description: '+130 HP máximo' },
+      7: { value: 160, description: '+160 HP máximo' },
+      8: { value: 200, description: '+200 HP máximo' },
+      9: { value: 250, description: '+250 HP máximo' },
+      10: { value: 300, description: '+300 HP máximo' }
+    }
+  },
+  move_speed: {
+    id: 'move_speed',
+    name: 'Velocidade',
+    description: 'Aumenta sua velocidade de movimento',
+    maxLevel: 10,
+    icon: '🚀',
+    effects: {
+      1: { value: 1.2, description: '+20% velocidade de movimento' },
+      2: { value: 1.4, description: '+40% velocidade de movimento' },
+      3: { value: 1.6, description: '+60% velocidade de movimento' },
+      4: { value: 1.8, description: '+80% velocidade de movimento' },
+      5: { value: 2.0, description: '+100% velocidade de movimento' },
+      6: { value: 2.3, description: '+130% velocidade de movimento' },
+      7: { value: 2.6, description: '+160% velocidade de movimento' },
+      8: { value: 3.0, description: '+200% velocidade de movimento' },
+      9: { value: 3.5, description: '+250% velocidade de movimento' },
+      10: { value: 4.0, description: '+300% velocidade de movimento' }
     }
   }
 };
@@ -644,10 +695,21 @@ export function calculateAttackSpeedMultiplier(skills: PlayerSkill[]): number {
 }
 
 /**
- * Verifica se o player tem a skill de tiro duplo
+ * Retorna o número de projéteis por disparo baseado na skill multi_shot
+ */
+export function getMultiShotCount(skills: PlayerSkill[]): number {
+  const multiShotSkill = skills.find(skill => skill.type === 'multi_shot');
+  if (!multiShotSkill) return 1;
+  
+  const effect = SKILLS_CONFIG.multi_shot.effects[multiShotSkill.level];
+  return effect ? effect.value : 1;
+}
+
+/**
+ * Verifica se o player tem a skill de tiro duplo (para compatibilidade)
  */
 export function hasMultiShot(skills: PlayerSkill[]): boolean {
-  return skills.some(skill => skill.type === 'multi_shot' && skill.level > 0);
+  return getMultiShotCount(skills) > 1;
 }
 
 /**
@@ -659,4 +721,15 @@ export function calculateMaxHealthBonus(skills: PlayerSkill[]): number {
   
   const effect = SKILLS_CONFIG.max_health_boost.effects[healthSkill.level];
   return effect ? effect.value : 0;
+}
+
+/**
+ * Calcula o multiplicador de velocidade de movimento baseado nas skills do player
+ */
+export function calculateMoveSpeedMultiplier(skills: PlayerSkill[]): number {
+  const speedSkill = skills.find(skill => skill.type === 'move_speed');
+  if (!speedSkill) return 1.0;
+  
+  const effect = SKILLS_CONFIG.move_speed.effects[speedSkill.level];
+  return effect ? effect.value : 1.0;
 }
