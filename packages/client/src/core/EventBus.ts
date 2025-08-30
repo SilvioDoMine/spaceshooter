@@ -1,5 +1,6 @@
 import { GameStats } from "../systems/GameStateManager";
 import { InputState } from "../systems/InputSystem";
+import { JoystickInput } from "../systems/VirtualJoystickSystem";
 
 export type GameEventMap = {
   // ========== STARTUP EVENTS ==========
@@ -107,6 +108,10 @@ export type GameEventMap = {
   // Emitido em: InputSystem.ts:117,132 a cada tecla pressionada/solta
   // Motivo: Comunica ações do jogador para sistemas que precisam reagir
   'input:action': { action: keyof InputState; pressed: boolean };
+  
+  // Emitido em: VirtualJoystickSystem.ts durante interação com joystick virtual
+  // Motivo: Permite controle de movimento em dispositivos móveis
+  'joystick:input': JoystickInput;
 
   // ========== MENU EVENTS ==========
   // Emitido em: MenuSystem.ts:336,349,369,379,398,408 quando botão é clicado
@@ -178,6 +183,10 @@ export type GameEventMap = {
   // Emitido em: DebugSystem.ts quando visibilidade do debug muda
   // Motivo: Outros sistemas podem reagir ao debug sendo ligado/desligado
   'debug:toggled': { visible: boolean };
+  
+  // Emitido em: DebugSystem.ts para mostrar/ocultar joystick virtual
+  // Motivo: Permite debugar joystick no desktop
+  'debug:joystick-toggle': { visible: boolean };
 
   // Emitido em: shared config quando tamanho do player muda
   // Motivo: Player precisa ajustar seu tamanho dinamicamente

@@ -1,4 +1,5 @@
 import { EventBus } from "../core/EventBus";
+import { JoystickInput } from "./VirtualJoystickSystem";
 
 export interface InputState {
   up: boolean;
@@ -88,6 +89,11 @@ export class InputSystem {
     this.eventBus.on('renderer:ready', () => {
       this.eventBus.emit('input:ready', {});
     });
+
+    // Listen for virtual joystick input
+    this.eventBus.on('joystick:input', (input: JoystickInput) => {
+      this.handleJoystickInput(input);
+    });
   }
 
   private init(): void {
@@ -143,6 +149,30 @@ export class InputSystem {
       this.eventBus.emit('input:action', { action, pressed: false });
       
       event.preventDefault();
+    }
+  }
+
+  private handleJoystickInput(input: JoystickInput): void {
+    const threshold = 0.3; // Threshold for considering input as "pressed"
+    
+    // Map joystick input to movement directions
+    const newUp = input.y < -threshold;
+    const newDown = input.y > threshold;
+    const newLeft = input.x < -threshold;
+    const newRight = input.x > threshold;
+
+    // Check for state changes and emit events
+    this.updateJoystickAction('up', newUp);
+    this.updateJoystickAction('down', newDown);
+    this.updateJoystickAction('left', newLeft);
+    this.updateJoystickAction('right', newRight);
+  }
+
+  private updateJoystickAction(action: keyof InputState, pressed: boolean): void {
+    if (this.inputState[action] !== pressed) {
+      this.inputState[action] = pressed;
+      this.eventBus.emit('input:action', { action, pressed });
+      this.callbacks.forEach(callback => callback(action, pressed));
     }
   }
 

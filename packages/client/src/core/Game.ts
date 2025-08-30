@@ -10,6 +10,7 @@ import { RenderingSystem } from '../systems/RenderingSystem';
 import { ParticleSystem } from '../systems/ParticleSystem';
 import { BackgroundSystem } from '../systems/BackgroundSystem';
 import { DebugSystem } from '../systems/DebugSystem';
+import { VirtualJoystickSystem } from '../systems/VirtualJoystickSystem';
 import { UIManager } from '../managers/UIManager';
 
 /**
@@ -38,6 +39,7 @@ export class Game {
   private entitySystem!: EntitySystem;
   private backgroundSystem!: BackgroundSystem;
   private debugSystem!: DebugSystem;
+  private virtualJoystickSystem!: VirtualJoystickSystem;
   private uiManager!: UIManager;
 
   constructor() {
@@ -120,6 +122,7 @@ export class Game {
     if (this.inputSystem) this.inputSystem.dispose();
     if (this.backgroundSystem) this.backgroundSystem.dispose();
     if (this.debugSystem) this.debugSystem.dispose();
+    if (this.virtualJoystickSystem) this.virtualJoystickSystem.dispose();
     
     assetManager.dispose();
     
@@ -156,6 +159,7 @@ export class Game {
     this.gameStateManager = new GameStateManager(this.eventBus);
     this.backgroundSystem = new BackgroundSystem(this.eventBus);
     this.debugSystem = new DebugSystem(this.eventBus);
+    this.virtualJoystickSystem = new VirtualJoystickSystem(this.eventBus);
     
     // EntitySystem needs RenderingSystem for direct scene manipulation
     this.entitySystem = new EntitySystem(this.eventBus, this.renderingSystem);

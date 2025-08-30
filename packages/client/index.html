@@ -182,10 +182,63 @@
                 font-size: 8px;
             }
         }
+
+        /* Virtual Joystick */
+        #virtual-joystick {
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            touch-action: none;
+            user-select: none;
+            display: none;
+            z-index: 999;
+            /* No transition on the container - instant teleport */
+        }
+
+
+        #virtual-joystick.visible {
+            display: block;
+        }
+
+        #joystick-knob {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 40px;
+            height: 40px;
+            background: rgba(0, 255, 0, 0.8);
+            border: 2px solid rgba(0, 255, 0, 1);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: background 0.1s ease, transform 0.1s ease;
+        }
+
+        #joystick-knob.active {
+            background: rgba(0, 255, 0, 1);
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+        }
+
+        /* Show joystick on mobile by default */
+        @media (max-width: 768px) {
+            #virtual-joystick {
+                display: block;
+            }
+        }
     </style>
 </head>
 <body>
     <div id="game-container"></div>
+
+    <!-- Virtual Joystick -->
+    <div id="virtual-joystick">
+        <div id="joystick-knob"></div>
+    </div>
     
     <div id="debug-panel">
         <h3>DEBUG (Click OPEN/CLOSE - U toggle)</h3>
@@ -271,6 +324,10 @@
             <div class="debug-checkbox">
                 <input type="checkbox" id="debug-show-collisions">
                 <label for="debug-show-collisions">Show Collision Boxes</label>
+            </div>
+            <div class="debug-checkbox">
+                <input type="checkbox" id="debug-show-joystick">
+                <label for="debug-show-joystick">Show Virtual Joystick</label>
             </div>
         </div>
         
