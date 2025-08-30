@@ -30,7 +30,7 @@ interface DebugSettings {
 export class DebugSystem {
   private eventBus: EventBus;
   private debugPanel: HTMLElement | null = null;
-  private isVisible: boolean = false;
+  private isVisible: boolean = true;
   
   private fpsHistory: number[] = [];
   private lastTime: number = 0;
@@ -48,7 +48,7 @@ export class DebugSystem {
     isPaused: false,
     playerSize: PLAYER_CONFIG.size,
     position: { x: 10, y: 10 },
-    isCollapsed: false
+    isCollapsed: true
   };
   
   // Debug states
@@ -64,7 +64,7 @@ export class DebugSystem {
   private panelPosition: { x: number; y: number } = { x: 10, y: 10 };
   
   // Collapse functionality
-  private isCollapsed: boolean = false;
+  private isCollapsed: boolean = true;
   private clickTimeout: number | null = null;
 
   constructor(eventBus: EventBus) {
@@ -193,6 +193,9 @@ export class DebugSystem {
       console.warn('Debug panel not found in DOM');
       return;
     }
+
+    // Show panel by default
+    this.debugPanel.classList.add('visible');
 
     // Add keyboard listener for U key
     document.addEventListener('keydown', (event) => {
