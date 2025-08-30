@@ -379,8 +379,9 @@ export class GameStateManager implements Subject {
         }
         break;
       default:
-        console.warn(`Unknown input action: ${data.action}`);
-        return;
+        // Other input actions are handled by specific entities (Player, Enemy, etc.)
+        // GameStateManager only handles global game actions
+        break;
       }
   }
 
