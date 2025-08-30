@@ -45,7 +45,7 @@ export class DebugSystem {
   private static readonly DEFAULT_SETTINGS: DebugSettings = {
     godModeEnabled: false,
     showCollisions: false,
-    showJoystick: true, // Show by default for debugging
+    showJoystick: false, // Hidden by default
     timeScale: 1.0,
     isPaused: false,
     playerSize: PLAYER_CONFIG.size,
@@ -56,7 +56,7 @@ export class DebugSystem {
   // Debug states
   private godModeEnabled: boolean = false;
   private showCollisions: boolean = false;
-  private showJoystick: boolean = true;
+  private showJoystick: boolean = false;
   private timeScale: number = 1.0;
   private isPaused: boolean = false;
   private playerSize: number = PLAYER_CONFIG.size;
