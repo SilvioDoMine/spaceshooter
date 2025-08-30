@@ -21,8 +21,10 @@ export class AssetManager {
   // Pre-loaded materials
   private materials: Map<string, THREE.Material> = new Map();
   
-  // Pre-loaded models
+  // Pre-loaded models and animations
   private models: Map<string, THREE.Group> = new Map();
+  private animations: Map<string, THREE.AnimationClip[]> = new Map();
+  private mixers: Map<string, THREE.AnimationMixer> = new Map();
   
   constructor() {
     this.assetLoader = new AssetLoader();
@@ -117,11 +119,23 @@ export class AssetManager {
     for (const ship of shipModels) {
       try {
         console.log(`🚀 AssetManager: Trying to load ${ship.name} from ${ship.path}`);
+        
+        // First load the model (this caches it and animations)
         const playerShip = await this.assetLoader.loadModel(ship.name, ship.path);
+        
+        // Now try to get the model with animations from cache
+        const shipData = this.assetLoader.getModelWithAnimations(ship.name);
+        
         this.models.set('player_ship', playerShip);
-        this.models.set(ship.name, playerShip); // Store with original name too
+        this.models.set(ship.name, playerShip);
+        
+        if (shipData && shipData.animations.length > 0) {
+          this.animations.set('player_ship', shipData.animations);
+          this.animations.set(ship.name, shipData.animations);
+        }
+        
         console.log(`✅ AssetManager: Player ship loaded successfully (${ship.name})`);
-        console.log(`📊 AssetManager: Ship has ${playerShip.children.length} children`);
+        console.log(`📊 AssetManager: Ship has ${this.models.get('player_ship')?.children.length} children`);
         loadedShip = true;
         break;
       } catch (error) {
@@ -166,15 +180,24 @@ export class AssetManager {
   }
   
   /**
-   * Get player ship model (with fallback)
+   * Get player ship model with animation support
    */
-  getPlayerShip(): THREE.Group {
+  getPlayerShip(): { model: THREE.Group; mixer?: THREE.AnimationMixer; animations?: THREE.AnimationClip[] } {
     this.ensureInitialized();
     
     // Try to get pre-loaded model first
     const preloadedShip = this.models.get('player_ship');
+    
     if (preloadedShip) {
-      return preloadedShip.clone();
+      const clonedShip = preloadedShip.clone();
+      const animations = this.animations.get('player_ship');
+      
+      if (animations && animations.length > 0) {
+        const mixer = new THREE.AnimationMixer(clonedShip);
+        return { model: clonedShip, mixer, animations };
+      }
+      
+      return { model: clonedShip };
     }
 
     // Fallback: create cube
@@ -189,7 +212,66 @@ export class AssetManager {
     const shipGroup = new THREE.Group();
     shipGroup.add(cube);
     
-    return shipGroup;
+    return { model: shipGroup };
+  }
+
+  /**
+   * Create an animation controller for a ship model
+   */
+  createShipAnimationController(shipName: string = 'player_ship'): {
+    mixer: THREE.AnimationMixer | null;
+    actions: Map<string, THREE.AnimationAction>;
+    playAnimation: (name: string, loop?: boolean) => void;
+    stopAnimation: (name: string) => void;
+    update: (deltaTime: number) => void;
+  } {
+    const model = this.models.get(shipName);
+    const animations = this.animations.get(shipName);
+    
+    if (!model || !animations || animations.length === 0) {
+      return {
+        mixer: null,
+        actions: new Map(),
+        playAnimation: () => {},
+        stopAnimation: () => {},
+        update: () => {}
+      };
+    }
+
+    const mixer = new THREE.AnimationMixer(model);
+    const actions = new Map<string, THREE.AnimationAction>();
+    
+    // Criar ações para todas as animações
+    animations.forEach(clip => {
+      const action = mixer.clipAction(clip);
+      actions.set(clip.name, action);
+      console.log(`🎬 AssetManager: Created action for animation '${clip.name}'`);
+    });
+
+    return {
+      mixer,
+      actions,
+      playAnimation: (name: string, loop: boolean = true) => {
+        const action = actions.get(name);
+        if (action) {
+          action.setLoop(loop ? THREE.LoopRepeat : THREE.LoopOnce, loop ? Infinity : 1);
+          action.reset().play();
+          console.log(`▶️ AssetManager: Playing animation '${name}' (loop: ${loop})`);
+        } else {
+          console.warn(`⚠️ AssetManager: Animation '${name}' not found`);
+        }
+      },
+      stopAnimation: (name: string) => {
+        const action = actions.get(name);
+        if (action) {
+          action.stop();
+          console.log(`⏹️ AssetManager: Stopped animation '${name}'`);
+        }
+      },
+      update: (deltaTime: number) => {
+        mixer.update(deltaTime);
+      }
+    };
   }
   
   /**
@@ -231,6 +313,14 @@ export class AssetManager {
     }
     return ships;
   }
+
+  /**
+   * Get animations for a specific model
+   */
+  getModelAnimations(modelName: string): string[] {
+    const animations = this.animations.get(modelName);
+    return animations ? animations.map(clip => clip.name) : [];
+  }
   
   /**
    * Check if AssetManager has been initialized
@@ -267,6 +357,13 @@ export class AssetManager {
       });
     });
     this.models.clear();
+    
+    // Dispose all mixers
+    this.mixers.forEach(mixer => mixer.stopAllAction());
+    this.mixers.clear();
+    
+    // Clear animations
+    this.animations.clear();
     
     // Dispose asset loader
     this.assetLoader.dispose();

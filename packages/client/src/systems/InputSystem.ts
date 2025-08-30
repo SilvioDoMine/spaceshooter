@@ -107,10 +107,16 @@ export class InputSystem {
   }
 
   private onKeyDown(event: KeyboardEvent): void {
+    // Prevent key repeat
+    if (this.keysPressed.has(event.code)) {
+      return;
+    }
+    
+    this.keysPressed.add(event.code);
+    
     const action = this.keyMap.get(event.code);
     
-    if (action && !this.keysPressed.has(event.code)) {
-      this.keysPressed.add(event.code);
+    if (action) {
       this.inputState[action] = true;
       
       // Notificar callbacks
@@ -122,10 +128,15 @@ export class InputSystem {
   }
 
   private onKeyUp(event: KeyboardEvent): void {
+    if (!this.keysPressed.has(event.code)) {
+      return;
+    }
+    
+    this.keysPressed.delete(event.code);
+    
     const action = this.keyMap.get(event.code);
     
-    if (action && this.keysPressed.has(event.code)) {
-      this.keysPressed.delete(event.code);
+    if (action) {
       this.inputState[action] = false;
       
       // Notificar callbacks

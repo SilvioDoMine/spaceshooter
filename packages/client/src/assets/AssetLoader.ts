@@ -65,6 +65,7 @@ export class AssetLoader {
   
   private textureCache: Map<string, THREE.Texture> = new Map();
   private modelCache: Map<string, THREE.Group> = new Map();
+  private animationsCache: Map<string, THREE.AnimationClip[]> = new Map();
   private loadingPromises: Map<string, Promise<any>> = new Map();
 
   public onProgress: ((progress: number) => void) | null = null;
@@ -159,6 +160,15 @@ export class AssetLoader {
             }
           });
 
+          // Armazenar animações separadamente
+          if (gltf.animations && gltf.animations.length > 0) {
+            this.animationsCache.set(name, gltf.animations);
+            console.log(`🎬 AssetLoader: Found ${gltf.animations.length} animations for ${name}:`);
+            gltf.animations.forEach((anim, i) => {
+              console.log(`  ${i + 1}. "${anim.name}" (duration: ${anim.duration}s, tracks: ${anim.tracks.length})`);
+            });
+          }
+
           this.modelCache.set(name, model);
           this.loadingPromises.delete(name);
           resolve(model.clone());
@@ -198,6 +208,22 @@ export class AssetLoader {
   public getModel(name: string): THREE.Group | null {
     const cached = this.modelCache.get(name);
     return cached ? cached.clone() : null;
+  }
+
+  public getAnimations(name: string): THREE.AnimationClip[] | null {
+    return this.animationsCache.get(name) || null;
+  }
+
+  public getModelWithAnimations(name: string): { model: THREE.Group; animations: THREE.AnimationClip[] } | null {
+    const model = this.getModel(name);
+    const animations = this.getAnimations(name);
+    
+    if (!model) return null;
+    
+    return {
+      model,
+      animations: animations || []
+    };
   }
 
   public createMaterial(options: {
@@ -245,6 +271,9 @@ export class AssetLoader {
       });
     });
     this.modelCache.clear();
+
+    // Limpar animações
+    this.animationsCache.clear();
 
     this.loadingPromises.clear();
   }

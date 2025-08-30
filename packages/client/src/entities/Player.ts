@@ -34,6 +34,9 @@ export class Player extends Entity {
   private playerShipModel?: THREE.Group;
   private collisionShape: CompoundCollisionShape;
   private collisionVisualizers: THREE.LineLoop[] = [];
+  private animationController?: ReturnType<typeof assetManager.createShipAnimationController>;
+  private isMoving: boolean = false;
+  private thrusterAnimationName?: string;
 
   constructor(
     eventBus: EventBus,
@@ -105,13 +108,50 @@ export class Player extends Entity {
   }
 
   protected createVisual(): void {
-    const playerShip = assetManager.getPlayerShip();
+    const shipData = assetManager.getPlayerShip();
+    const playerShip = shipData.model;
     playerShip.scale.setScalar(PLAYER_CONFIG.size);
     playerShip.rotation.x = -Math.PI / 2;
     playerShip.rotation.z = Math.PI / 2;
     
     this.playerShipModel = playerShip;
     this.object.add(playerShip);
+
+    // Setup animation controller if animations are available
+    if (shipData.animations && shipData.animations.length > 0) {
+      const mixer = new THREE.AnimationMixer(playerShip);
+      const actions = new Map<string, THREE.AnimationAction>();
+      
+      // Create actions for all animations
+      shipData.animations.forEach(clip => {
+        const action = mixer.clipAction(clip);
+        actions.set(clip.name, action);
+      });
+
+      // Store the first animation as thruster animation
+      this.thrusterAnimationName = shipData.animations[0]?.name;
+
+      this.animationController = {
+        mixer,
+        actions,
+        playAnimation: (name: string, loop: boolean = true) => {
+          const action = actions.get(name);
+          if (action) {
+            action.setLoop(loop ? THREE.LoopRepeat : THREE.LoopOnce, loop ? Infinity : 1);
+            action.reset().play();
+          }
+        },
+        stopAnimation: (name: string) => {
+          const action = actions.get(name);
+          if (action) {
+            action.stop();
+          }
+        },
+        update: (deltaTime: number) => {
+          mixer.update(deltaTime);
+        }
+      };
+    }
 
     // Create collision visualizers for compound shape
     this.createCompoundCollisionVisualizers();
@@ -260,22 +300,56 @@ export class Player extends Entity {
     if (this.shotTimer > 0) {
       this.shotTimer -= deltaTime;
     }
+    
+    // Update animations if available
+    if (this.animationController) {
+      this.animationController.update(deltaTime);
+    }
   }
 
   private handleMovement(deltaTime: number): void {
     const moveDistance = this.speed * deltaTime;
+    let currentlyMoving = false;
     
     if (this.inputState.left) {
       this.position.x -= moveDistance;
+      currentlyMoving = true;
     }
     if (this.inputState.right) {
       this.position.x += moveDistance;
+      currentlyMoving = true;
     }
     if (this.inputState.up) {
       this.position.y += moveDistance;
+      currentlyMoving = true;
     }
     if (this.inputState.down) {
       this.position.y -= moveDistance;
+      currentlyMoving = true;
+    }
+
+    // Handle thruster animation based on movement
+    this.updateThrusterAnimation(currentlyMoving);
+
+    // Update Three.js object position
+    this.object.position.x = this.position.x;
+    this.object.position.y = this.position.y;
+  }
+
+  private updateThrusterAnimation(currentlyMoving: boolean): void {
+    if (!this.animationController || !this.thrusterAnimationName) return;
+
+    // If movement state changed
+    if (currentlyMoving !== this.isMoving) {
+      this.isMoving = currentlyMoving;
+      
+      if (this.isMoving) {
+        // Start thruster animation
+        this.animationController.playAnimation(this.thrusterAnimationName, true);
+      } else {
+        // Stop thruster animation
+        this.animationController.stopAnimation(this.thrusterAnimationName);
+      }
     }
   }
 
