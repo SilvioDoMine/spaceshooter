@@ -27,8 +27,18 @@
         #game-container {
             width: 100vw;
             height: 100vh;
+            /* Fix for mobile viewport issues */
+            height: 100dvh; /* Dynamic viewport height when available */
             position: relative;
             touch-action: manipulation;
+        }
+        
+        /* Fallback for older browsers */
+        @supports not (height: 100dvh) {
+            #game-container {
+                height: 100vh;
+                min-height: -webkit-fill-available;
+            }
         }
         
         #game-container canvas {
