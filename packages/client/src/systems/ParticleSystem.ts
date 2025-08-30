@@ -312,6 +312,15 @@ export class ParticleSystem {
     particlesToRemove.forEach(particle => {
       this.returnParticleToPool(particle);
     });
+    
+    // Update debug info
+    this.updateDebugInfo();
+  }
+  
+  private updateDebugInfo(): void {
+    this.eventBus.emit('debug:update', {
+      particles: this.activeParticles.size.toString()
+    });
   }
 
   /**

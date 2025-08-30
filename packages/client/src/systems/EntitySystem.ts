@@ -268,6 +268,9 @@ export class EntitySystem {
     
     this.trySpawnEnemy(deltaTime);
     this.trySpawnPowerUp(deltaTime);
+    
+    // Update debug system with entity counts
+    this.updateDebugInfo();
   }
 
   private trySpawnEnemy(deltaTime: number): void {
@@ -328,6 +331,19 @@ export class EntitySystem {
 
   public getProjectileSystem(): ProjectileSystem {
     return this.projectileSystem;
+  }
+
+  private updateDebugInfo(): void {
+    const totalEntities = 1 + this.enemies.size + this.powerUps.size; // 1 for player
+    const projectileCount = this.projectileSystem.getProjectileCount();
+    
+    this.eventBus.emit('debug:update', {
+      entities: totalEntities.toString(),
+      enemies: this.enemies.size.toString(),
+      powerups: this.powerUps.size.toString(),
+      projectiles: projectileCount.toString(),
+      // particles: ParticleSystem provides this separately
+    });
   }
 
   public resetPlayer(): void {

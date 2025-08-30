@@ -199,6 +199,9 @@ export class DebugSystem {
         case 'enemies':
           elementId = 'debug-enemies';
           break;
+        case 'powerups':
+          elementId = 'debug-powerups';
+          break;
         case 'projectiles':
           elementId = 'debug-projectiles';
           break;
@@ -228,6 +231,7 @@ export class DebugSystem {
     this.updateDebugValue('debug-level', '1');
     this.updateDebugValue('debug-entities', '0');
     this.updateDebugValue('debug-enemies', '0');
+    this.updateDebugValue('debug-powerups', '0');
     this.updateDebugValue('debug-projectiles', '0');
     this.updateDebugValue('debug-particles', '0');
     this.updateDebugValue('debug-player-pos', '(0, 0, 0)');
