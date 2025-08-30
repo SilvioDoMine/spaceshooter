@@ -17,6 +17,14 @@ interface DebugData {
   playerAmmo?: string;
 }
 
+interface DebugSettings {
+  godModeEnabled: boolean;
+  showCollisions: boolean;
+  timeScale: number;
+  isPaused: boolean;
+  playerSize: number;
+}
+
 export class DebugSystem {
   private eventBus: EventBus;
   private debugPanel: HTMLElement | null = null;
@@ -27,6 +35,18 @@ export class DebugSystem {
   private updateInterval: number = 500; // Update every 500ms
   private lastUpdate: number = 0;
   
+  // localStorage key for debug settings
+  private static readonly STORAGE_KEY = 'spaceshooter_debug_settings';
+  
+  // Default debug settings
+  private static readonly DEFAULT_SETTINGS: DebugSettings = {
+    godModeEnabled: false,
+    showCollisions: false,
+    timeScale: 1.0,
+    isPaused: false,
+    playerSize: PLAYER_CONFIG.size
+  };
+  
   // Debug states
   private godModeEnabled: boolean = false;
   private showCollisions: boolean = false;
@@ -36,8 +56,109 @@ export class DebugSystem {
 
   constructor(eventBus: EventBus) {
     this.eventBus = eventBus;
+    this.loadSettings();
     this.initialize();
     this.setupEventListeners();
+  }
+
+  private loadSettings(): void {
+    try {
+      const savedSettings = localStorage.getItem(DebugSystem.STORAGE_KEY);
+      if (savedSettings) {
+        const settings: DebugSettings = JSON.parse(savedSettings);
+        this.godModeEnabled = settings.godModeEnabled;
+        this.showCollisions = settings.showCollisions;
+        this.timeScale = settings.timeScale;
+        this.isPaused = settings.isPaused;
+        this.playerSize = settings.playerSize;
+        console.log('🔧 Debug settings loaded from localStorage:', settings);
+      } else {
+        this.resetToDefaults();
+      }
+    } catch (error) {
+      console.warn('❌ Failed to load debug settings from localStorage:', error);
+      this.resetToDefaults();
+    }
+  }
+
+  private saveSettings(): void {
+    try {
+      const settings: DebugSettings = {
+        godModeEnabled: this.godModeEnabled,
+        showCollisions: this.showCollisions,
+        timeScale: this.timeScale,
+        isPaused: this.isPaused,
+        playerSize: this.playerSize
+      };
+      localStorage.setItem(DebugSystem.STORAGE_KEY, JSON.stringify(settings));
+    } catch (error) {
+      console.warn('❌ Failed to save debug settings to localStorage:', error);
+    }
+  }
+
+  private resetToDefaults(): void {
+    this.godModeEnabled = DebugSystem.DEFAULT_SETTINGS.godModeEnabled;
+    this.showCollisions = DebugSystem.DEFAULT_SETTINGS.showCollisions;
+    this.timeScale = DebugSystem.DEFAULT_SETTINGS.timeScale;
+    this.isPaused = DebugSystem.DEFAULT_SETTINGS.isPaused;
+    this.playerSize = DebugSystem.DEFAULT_SETTINGS.playerSize;
+  }
+
+  public resetAllSettings(): void {
+    this.resetToDefaults();
+    this.saveSettings();
+    this.updateUIFromSettings();
+    console.log('🔧 Debug settings reset to defaults');
+  }
+
+  private updateUIFromSettings(): void {
+    // Update checkboxes
+    const godModeCheckbox = document.getElementById('debug-god-mode') as HTMLInputElement;
+    if (godModeCheckbox) {
+      godModeCheckbox.checked = this.godModeEnabled;
+    }
+
+    const collisionCheckbox = document.getElementById('debug-show-collisions') as HTMLInputElement;
+    if (collisionCheckbox) {
+      collisionCheckbox.checked = this.showCollisions;
+    }
+
+    // Update time slider
+    const timeSlider = document.getElementById('debug-time-slider') as HTMLInputElement;
+    if (timeSlider) {
+      timeSlider.value = (this.timeScale * 100).toString();
+    }
+
+    // Update pause button
+    const pauseButton = document.getElementById('debug-pause') as HTMLButtonElement;
+    if (pauseButton) {
+      pauseButton.textContent = this.isPaused ? 'Resume' : 'Pause';
+    }
+
+    // Update size slider
+    const sizeSlider = document.getElementById('debug-size-slider') as HTMLInputElement;
+    if (sizeSlider) {
+      sizeSlider.value = (this.playerSize * 100).toString();
+    }
+
+    // Update displays
+    this.updateTimeScaleDisplay();
+    this.updateSizeDisplay();
+
+    // Apply player size to shared config
+    updatePlayerSize(this.playerSize);
+
+    // Don't emit events here - they'll be emitted when game starts
+  }
+
+  private applyLoadedSettings(): void {
+    // Delay event emission to ensure all entities are created first
+    setTimeout(() => {
+      this.eventBus.emit('debug:god-mode-toggle', { enabled: this.godModeEnabled });
+      this.eventBus.emit('debug:collision-visibility-toggle', { visible: this.showCollisions });
+      this.eventBus.emit('debug:time-scale-change', { timeScale: this.getTimeScale() });
+      console.log('🔧 Applied loaded debug settings to game systems');
+    }, 100); // Small delay to let entities initialize
   }
 
   private initialize(): void {
@@ -59,11 +180,19 @@ export class DebugSystem {
     // Setup checkbox listeners
     this.setupCheckboxListeners();
 
+    // Apply loaded settings to UI
+    this.updateUIFromSettings();
+
     // Start performance monitoring
     this.startPerformanceMonitoring();
   }
 
   private setupEventListeners(): void {
+    // Listen for game start to apply loaded settings
+    this.eventBus.on('game:started', () => {
+      this.applyLoadedSettings();
+    });
+
     // Listen for game data updates
     this.eventBus.on('ui:update-score', (data: { score: number }) => {
       this.updateDebugValue('debug-score', data.score.toString());
@@ -265,6 +394,7 @@ export class DebugSystem {
     this.playerSize = newSize;
     updatePlayerSize(newSize); // Update the shared config
     this.updateSizeDisplay();
+    this.saveSettings();
   }
 
   private updateSizeDisplay(): void {
@@ -292,6 +422,7 @@ export class DebugSystem {
       godModeCheckbox.addEventListener('change', (event) => {
         const target = event.target as HTMLInputElement;
         this.godModeEnabled = target.checked;
+        this.saveSettings();
         this.eventBus.emit('debug:god-mode-toggle', { enabled: this.godModeEnabled });
       });
     }
@@ -302,6 +433,7 @@ export class DebugSystem {
       collisionCheckbox.addEventListener('change', (event) => {
         const target = event.target as HTMLInputElement;
         this.showCollisions = target.checked;
+        this.saveSettings();
         this.eventBus.emit('debug:collision-visibility-toggle', { visible: this.showCollisions });
       });
     }
@@ -313,6 +445,7 @@ export class DebugSystem {
         const target = event.target as HTMLInputElement;
         this.timeScale = parseInt(target.value) / 100; // 0-2.0x range
         this.updateTimeScaleDisplay();
+        this.saveSettings();
         this.eventBus.emit('debug:time-scale-change', { timeScale: this.getTimeScale() });
       });
     }
@@ -323,6 +456,7 @@ export class DebugSystem {
       pauseButton.addEventListener('click', () => {
         this.isPaused = !this.isPaused;
         pauseButton.textContent = this.isPaused ? 'Resume' : 'Pause';
+        this.saveSettings();
         this.eventBus.emit('debug:time-scale-change', { timeScale: this.getTimeScale() });
       });
     }
@@ -376,13 +510,19 @@ export class DebugSystem {
         if (sizeSlider) sizeSlider.value = '150';
       });
     }
+
+    // Reset All Settings button
+    const resetAllButton = document.getElementById('debug-reset-all') as HTMLButtonElement;
+    if (resetAllButton) {
+      resetAllButton.addEventListener('click', () => {
+        this.resetAllSettings();
+      });
+    }
   }
 
   public dispose(): void {
-    // Remove event listeners if needed
-    this.eventBus.off('ui:update-score');
-    this.eventBus.off('ui:update-health');
-    this.eventBus.off('ui:update-ammo');
-    this.eventBus.off('debug:update');
+    // Clear localStorage on dispose if needed
+    // Note: we don't clear settings here as they should persist
+    // Individual event listeners will be cleaned up automatically
   }
 }
