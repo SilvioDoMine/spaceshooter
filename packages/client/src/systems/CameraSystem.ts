@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { EventBus } from '../core/EventBus';
-import { WorldBounds, CameraConfig, DEFAULT_WORLD_BOUNDS, DEFAULT_CAMERA_CONFIG, clamp } from '@spaceshooter/shared';
+import { WorldBounds, CameraConfig, DEFAULT_WORLD_BOUNDS, DEFAULT_CAMERA_CONFIG, getAdaptiveWorldBounds, clamp } from '@spaceshooter/shared';
 
 /**
  * Sistema de Câmera com seguimento do jogador e limites de mundo
@@ -30,7 +30,8 @@ export class CameraSystem {
   constructor(eventBus: EventBus, camera: THREE.PerspectiveCamera) {
     this.eventBus = eventBus;
     this.camera = camera;
-    this.worldBounds = { ...DEFAULT_WORLD_BOUNDS };
+    // Use adaptive world bounds based on initial aspect ratio
+    this.worldBounds = getAdaptiveWorldBounds(this.camera.aspect);
     this.cameraConfig = { ...DEFAULT_CAMERA_CONFIG };
     
     // Posição inicial da câmera
@@ -62,8 +63,20 @@ export class CameraSystem {
       }
     });
 
-    // Escutar mudanças no resize da janela
-    window.addEventListener('resize', () => {
+    // Escutar mudanças no resize da janela via evento
+    this.eventBus.on('renderer:resize', (data) => {
+      console.log('📷 Camera received resize event:', data);
+      
+      // Update world bounds based on new aspect ratio
+      const newWorldBounds = getAdaptiveWorldBounds(data.aspect);
+      if (JSON.stringify(newWorldBounds) !== JSON.stringify(this.worldBounds)) {
+        this.worldBounds = newWorldBounds;
+        console.log('📷 World bounds adapted for new aspect ratio:', {
+          aspect: data.aspect,
+          newBounds: this.worldBounds
+        });
+      }
+      
       this.viewportSize = this.calculateViewportSize();
     });
   }
@@ -75,7 +88,16 @@ export class CameraSystem {
     const height = 2 * Math.tan(vFOV / 2) * distance;
     const width = height * this.camera.aspect;
     
-    return { width, height };
+    const viewport = { width, height };
+    console.log('📷 Viewport calculated:', {
+      distance,
+      fov: this.camera.fov,
+      aspect: this.camera.aspect,
+      viewport,
+      windowSize: { width: window.innerWidth, height: window.innerHeight }
+    });
+    
+    return viewport;
   }
 
   /**
@@ -97,6 +119,17 @@ export class CameraSystem {
     const maxCameraX = this.worldBounds.maxX - halfViewWidth;
     const minCameraY = this.worldBounds.minY + halfViewHeight;
     const maxCameraY = this.worldBounds.maxY - halfViewHeight;
+
+    // Debug info for camera constraints
+    if (Math.random() < 0.01) { // Only log occasionally to avoid spam
+      console.log('📷 Camera constraint debug:', {
+        playerPos: this.playerPosition,
+        worldBounds: this.worldBounds,
+        viewport: this.viewportSize,
+        cameraLimits: { minCameraX, maxCameraX, minCameraY, maxCameraY },
+        beforeConstraint: { idealCameraX, idealCameraY }
+      });
+    }
 
     // Se o mundo é menor que o viewport, centralizar a câmera no mundo
     if (this.worldBounds.width <= this.viewportSize.width) {

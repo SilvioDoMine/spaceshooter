@@ -166,6 +166,9 @@ export class Game {
     this.virtualJoystickSystem = new VirtualJoystickSystem(this.eventBus);
     this.cameraSystem = new CameraSystem(this.eventBus, this.renderingSystem.camera);
     
+    // Setup world bounds synchronization
+    this.setupWorldBoundsSynchronization();
+    
     // EntitySystem needs RenderingSystem for direct scene manipulation
     this.entitySystem = new EntitySystem(this.eventBus, this.renderingSystem);
     
@@ -220,6 +223,25 @@ export class Game {
     // Schedule next frame
     this.animationId = requestAnimationFrame(this.gameLoop);
   };
+
+  private setupWorldBoundsSynchronization(): void {
+    // When renderer resizes, sync world bounds across systems
+    this.eventBus.on('renderer:resize', () => {
+      // Get updated world bounds from camera system
+      const worldBounds = this.cameraSystem.getWorldBounds();
+      
+      // Sync with background system
+      this.backgroundSystem.setWorldBounds(worldBounds);
+      
+      // Sync with player when it exists
+      const player = this.entitySystem.getPlayer();
+      if (player) {
+        player.setWorldBounds(worldBounds);
+      }
+      
+      console.log('🌍 World bounds synchronized across systems:', worldBounds);
+    });
+  }
 
   private setupGlobalErrorHandling(): void {
     window.addEventListener('error', (event) => {

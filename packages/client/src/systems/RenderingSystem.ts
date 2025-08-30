@@ -121,7 +121,8 @@ export class RenderingSystem {
   }
 
   public onWindowResize(): void {
-    this.camera.aspect = window.innerWidth / window.innerHeight;
+    const newAspect = window.innerWidth / window.innerHeight;
+    this.camera.aspect = newAspect;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.setPixelRatio(window.devicePixelRatio);
@@ -129,6 +130,19 @@ export class RenderingSystem {
     // Garantir que o canvas ocupe toda a tela após resize
     this.renderer.domElement.style.width = '100%';
     this.renderer.domElement.style.height = '100%';
+    
+    console.log('🖥️ Window resized:', {
+      size: { width: window.innerWidth, height: window.innerHeight },
+      aspect: newAspect,
+      pixelRatio: window.devicePixelRatio
+    });
+    
+    // Notificar outros sistemas sobre o resize
+    this.eventBus.emit('renderer:resize', {
+      width: window.innerWidth,
+      height: window.innerHeight,
+      aspect: newAspect
+    });
   }
 
   public render(): void {

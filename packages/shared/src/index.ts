@@ -115,6 +115,29 @@ export const DEFAULT_WORLD_BOUNDS: WorldBounds = {
 };
 
 /**
+ * Calcula world bounds adaptados para diferentes aspect ratios
+ * Para mobile (aspect < 1), aumenta a altura do mundo
+ * Para desktop (aspect >= 1), mantém dimensões padrão
+ */
+export function getAdaptiveWorldBounds(aspectRatio: number): WorldBounds {
+  if (aspectRatio < 1) {
+    // Mobile portrait - aumentar altura do mundo
+    const extraHeight = (1 / aspectRatio - 1) * 5; // Adicionar altura baseado no aspect ratio
+    return {
+      minX: -10,
+      maxX: 10,
+      minY: -7.5 - extraHeight,
+      maxY: 7.5 + extraHeight,
+      width: 20,
+      height: 15 + (extraHeight * 2)
+    };
+  } else {
+    // Desktop/landscape - usar dimensões padrão
+    return { ...DEFAULT_WORLD_BOUNDS };
+  }
+}
+
+/**
  * Configuração padrão da câmera
  */
 export const DEFAULT_CAMERA_CONFIG: CameraConfig = {
