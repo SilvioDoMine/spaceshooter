@@ -36,6 +36,23 @@ export class UIManager {
       });
     });
 
+    this.eventBus.on('player:level-changed', (data: { level: number; currentXP: number; xpToNext: number; progress: number }) => {
+      this.eventBus.emit('ui:update-level', {
+        level: data.level,
+        currentXP: data.currentXP,
+        xpToNext: data.xpToNext,
+        progress: data.progress
+      });
+    });
+
+    this.eventBus.on('player:level-up', (data: { oldLevel: number; newLevel: number; currentXP: number }) => {
+      this.eventBus.emit('ui:level-up-effect', {
+        oldLevel: data.oldLevel,
+        newLevel: data.newLevel,
+        currentXP: data.currentXP
+      });
+    });
+
     // Listen to game state changes for UI updates
     this.eventBus.on('game:started', () => {
       // Reset UI to initial state

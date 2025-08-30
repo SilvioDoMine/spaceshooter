@@ -34,6 +34,9 @@ export class UISystem {
   private ammoText?: THREE.Sprite;
   private healthBar?: THREE.Mesh;
   private healthBarBg?: THREE.Mesh;
+  private levelText?: THREE.Sprite;
+  private xpBar?: THREE.Mesh;
+  private xpBarBg?: THREE.Mesh;
 
   // Canvas global não mais necessário - cada sprite tem seu próprio canvas
   
@@ -43,6 +46,10 @@ export class UISystem {
   private maxHealth: number = 100;
   private currentAmmo: number = 30;
   private maxAmmo: number = 30;
+  private currentLevel: number = 1;
+  private currentXP: number = 0;
+  private xpToNext: number = 100;
+  private xpProgress: number = 0;
 
   private eventBus: EventBus;
 
@@ -104,6 +111,14 @@ export class UISystem {
       this.updateScore(data.score);
     });
 
+    this.eventBus.on('ui:update-level', (data: { level: number; currentXP: number; xpToNext: number; progress: number }) => {
+      this.updateLevel(data.level, data.currentXP, data.xpToNext, data.progress);
+    });
+
+    this.eventBus.on('ui:level-up-effect', (data: { oldLevel: number; newLevel: number; currentXP: number }) => {
+      this.showLevelUpEffect(data.oldLevel, data.newLevel);
+    });
+
     this.eventBus.on('game:started', () => {
       this.resetUI();
     });
@@ -158,6 +173,35 @@ export class UISystem {
     this.ammoText.position.set(aspect * 0.9, 0.85, 0);
     this.ammoText.scale.setScalar(baseScale);
     this.hudGroup.add(this.ammoText);
+    
+    // Level text (below health bar)
+    this.levelText = this.createTextSprite(`Level ${this.currentLevel}`);
+    this.levelText.position.set(0, 0.45, 0);
+    this.levelText.scale.setScalar(baseScale);
+    this.hudGroup.add(this.levelText);
+    
+    // XP bar background (below level text)
+    const xpBarWidth = Math.min(aspect * 0.3, 0.5);
+    const xpBarBgGeometry = new THREE.PlaneGeometry(xpBarWidth, 0.03);
+    const xpBarBgMaterial = new THREE.MeshBasicMaterial({ 
+      color: 0x222244,
+      transparent: true,
+      opacity: 0.8
+    });
+    this.xpBarBg = new THREE.Mesh(xpBarBgGeometry, xpBarBgMaterial);
+    this.xpBarBg.position.set(0, 0.35, 0);
+    this.hudGroup.add(this.xpBarBg);
+    
+    // XP bar (foreground)
+    const xpBarGeometry = new THREE.PlaneGeometry(xpBarWidth, 0.03);
+    const xpBarMaterial = new THREE.MeshBasicMaterial({ 
+      color: 0x4444ff,
+      transparent: true,
+      opacity: 0.9
+    });
+    this.xpBar = new THREE.Mesh(xpBarGeometry, xpBarMaterial);
+    this.xpBar.position.set(0, 0.35, 0.001); // Slightly in front
+    this.hudGroup.add(this.xpBar);
   }
   
   private createTextSprite(text: string, color: string = '#ffffff'): THREE.Sprite {
@@ -295,6 +339,10 @@ export class UISystem {
     this.maxHealth = 100;
     this.currentAmmo = 30;
     this.maxAmmo = 30;
+    this.currentLevel = 1;
+    this.currentXP = 0;
+    this.xpToNext = 100;
+    this.xpProgress = 0;
     
     // Update all UI elements
     if (this.scoreText) {
@@ -314,10 +362,19 @@ export class UISystem {
       this.updateTextSprite(this.ammoText, `Ammo: ${this.currentAmmo}/${this.maxAmmo}`);
     }
     
+    if (this.levelText) {
+      this.updateTextSprite(this.levelText, `Level ${this.currentLevel}`, '#ffffff');
+    }
+    
     // Update health bar
     if (this.healthBar) {
       const healthBarScale = Math.max(0, this.currentHealth / this.maxHealth);
       this.healthBar.scale.setX(healthBarScale);
+    }
+    
+    // Update XP bar
+    if (this.xpBar) {
+      this.xpBar.scale.x = Math.max(0, this.xpProgress / 100);
     }
   }
   
@@ -404,6 +461,60 @@ export class UISystem {
       ammoColor
     );
   }
+  
+  public updateLevel(level: number, currentXP: number, xpToNext: number, progress: number): void {
+    this.currentLevel = level;
+    this.currentXP = currentXP;
+    this.xpToNext = xpToNext;
+    this.xpProgress = progress;
+    
+    // Update level text
+    if (this.levelText) {
+      this.updateTextSprite(this.levelText, `Level ${level}`, '#ffffff');
+    }
+    
+    // Update XP bar
+    if (this.xpBar) {
+      const xpBarScale = Math.max(0, progress / 100);
+      this.xpBar.scale.x = xpBarScale;
+      
+      // Update XP bar position to keep it left-aligned
+      const barWidth = Math.min(window.innerWidth / window.innerHeight * 0.3, 0.5);
+      this.xpBar.position.x = -barWidth * 0.5 * (1 - xpBarScale);
+    }
+  }
+  
+  public showLevelUpEffect(oldLevel: number, newLevel: number): void {
+    // Create a temporary level up text that fades out
+    const levelUpText = this.createTextSprite(`LEVEL UP! ${newLevel}`, '#ffff00');
+    levelUpText.position.set(0, 0.2, 0.1);
+    levelUpText.scale.setScalar(0.25);
+    this.hudGroup.add(levelUpText);
+    
+    // Animate the level up text
+    let opacity = 1.0;
+    let scale = 0.25;
+    const animate = () => {
+      opacity -= 0.02;
+      scale += 0.002;
+      
+      if (levelUpText.material && 'opacity' in levelUpText.material) {
+        (levelUpText.material as any).opacity = opacity;
+      }
+      levelUpText.scale.setScalar(scale);
+      
+      if (opacity > 0) {
+        requestAnimationFrame(animate);
+      } else {
+        this.hudGroup.remove(levelUpText);
+        // Dispose of the temporary text
+        if (levelUpText.material) {
+          (levelUpText.material as THREE.Material).dispose();
+        }
+      }
+    };
+    animate();
+  }
 
   private onWindowResize(): void {
     const aspect = window.innerWidth / window.innerHeight;
@@ -420,6 +531,9 @@ export class UISystem {
       || this.healthBar === undefined
       || this.healthBarBg === undefined
       || this.ammoText === undefined
+      || this.levelText === undefined
+      || this.xpBar === undefined
+      || this.xpBarBg === undefined
     ) {
       console.warn('One or more UI elements not initialized yet, skipping update');
       return;
@@ -434,12 +548,19 @@ export class UISystem {
     this.ammoText.position.x = aspect * 0.9;
     this.ammoText.scale.setScalar(baseScale);
     
+    this.levelText.scale.setScalar(baseScale);
+    
     // Update health bar width
     const barWidth = Math.min(aspect * 0.3, 0.5);
     const originalWidth = Math.min(window.innerWidth / window.innerHeight * 0.3, 0.5);
     this.healthBarBg.scale.x = barWidth / originalWidth;
     this.healthBar.scale.x = (barWidth / originalWidth) * (this.currentHealth / this.maxHealth);
     this.healthBar.position.x = -barWidth * 0.5 * (1 - (this.currentHealth / this.maxHealth));
+    
+    // Update XP bar width
+    this.xpBarBg.scale.x = barWidth / originalWidth;
+    this.xpBar.scale.x = (barWidth / originalWidth) * (this.xpProgress / 100);
+    this.xpBar.position.x = -barWidth * 0.5 * (1 - (this.xpProgress / 100));
   }
   
   

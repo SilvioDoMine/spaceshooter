@@ -49,6 +49,8 @@ export interface Player {
   position: Vector2D;
   velocity: Vector2D;
   health: number;
+  level: number;
+  currentXP: number;
 }
 
 /**
@@ -174,6 +176,8 @@ export const PLAYER_CONFIG = {
     maxY: 4
   },
   shotCooldown: 0.5,      // Cooldown entre tiros em segundos (500ms)
+  level: 1,               // Nível inicial
+  currentXP: 0,           // XP inicial
   // Compound collision shape em valores relativos (0-1 baseado no size)
   // Essas coordenadas são multiplicadas pelo 'size' para obter valores absolutos
   collisionShape: {
@@ -236,7 +240,8 @@ export const ENEMY_CONFIG = {
     size: 0.3,              // Tamanho visual
     radius: 0.25,           // Raio da hitbox
     color: 0xff4444,        // Vermelho
-    spawnRate: 1000         // A cada 2 segundos
+    spawnRate: 1000,        // A cada 2 segundos
+    xpDrop: 10              // XP dado quando morto
   },
   fast: {
     health: 10,             // 1 hit para destruir
@@ -244,7 +249,8 @@ export const ENEMY_CONFIG = {
     size: 0.2,              // Tamanho visual
     radius: 0.175,            // Raio da hitbox (menor)
     color: 0xff8800,        // Laranja
-    spawnRate: 1500         // A cada 3 segundos
+    spawnRate: 1500,        // A cada 3 segundos
+    xpDrop: 8               // XP dado quando morto
   },
   heavy: {
     health: 50,             // 5 hits para destruir
@@ -252,7 +258,8 @@ export const ENEMY_CONFIG = {
     size: 0.5,              // Tamanho visual
     radius: 0.4,           // Raio da hitbox (maior)
     color: 0x8844ff,        // Roxo
-    spawnRate: 2500         // A cada 5 segundos
+    spawnRate: 2500,        // A cada 5 segundos
+    xpDrop: 25              // XP dado quando morto
   }
 };
 
@@ -352,4 +359,114 @@ export interface Subject {
 
 export interface Observer {
   update(subject: Subject): void;
+}
+
+/**
+ * Tabela de XP necessário para cada nível (1-50)
+ * Fórmula: baseXP * (level^1.5)
+ */
+export const LEVEL_XP_TABLE: Record<number, number> = {
+  1: 0,      // Nível 1 não precisa de XP
+  2: 50,    // 20 XP para nível 2
+  3: 250,    // 250 XP para nível 3
+  4: 450,    // 450 XP para nível 4
+  5: 700,    // 700 XP para nível 5
+  6: 1000,   // 1000 XP para nível 6
+  7: 1350,   // 1350 XP para nível 7
+  8: 1750,   // 1750 XP para nível 8
+  9: 2200,   // 2200 XP para nível 9
+  10: 2700,  // 2700 XP para nível 10
+  11: 3250,  // 3250 XP para nível 11
+  12: 3850,  // 3850 XP para nível 12
+  13: 4500,  // 4500 XP para nível 13
+  14: 5200,  // 5200 XP para nível 14
+  15: 5950,  // 5950 XP para nível 15
+  16: 6750,  // 6750 XP para nível 16
+  17: 7600,  // 7600 XP para nível 17
+  18: 8500,  // 8500 XP para nível 18
+  19: 9450,  // 9450 XP para nível 19
+  20: 10450, // 10450 XP para nível 20
+  21: 11500, // 11500 XP para nível 21
+  22: 12600, // 12600 XP para nível 22
+  23: 13750, // 13750 XP para nível 23
+  24: 14950, // 14950 XP para nível 24
+  25: 16200, // 16200 XP para nível 25
+  26: 17500, // 17500 XP para nível 26
+  27: 18850, // 18850 XP para nível 27
+  28: 20250, // 20250 XP para nível 28
+  29: 21700, // 21700 XP para nível 29
+  30: 23200, // 23200 XP para nível 30
+  31: 24750, // 24750 XP para nível 31
+  32: 26350, // 26350 XP para nível 32
+  33: 28000, // 28000 XP para nível 33
+  34: 29700, // 29700 XP para nível 34
+  35: 31450, // 31450 XP para nível 35
+  36: 33250, // 33250 XP para nível 36
+  37: 35100, // 35100 XP para nível 37
+  38: 37000, // 37000 XP para nível 38
+  39: 38950, // 38950 XP para nível 39
+  40: 40950, // 40950 XP para nível 40
+  41: 43000, // 43000 XP para nível 41
+  42: 45100, // 45100 XP para nível 42
+  43: 47250, // 47250 XP para nível 43
+  44: 49450, // 49450 XP para nível 44
+  45: 51700, // 51700 XP para nível 45
+  46: 54000, // 54000 XP para nível 46
+  47: 56350, // 56350 XP para nível 47
+  48: 58750, // 58750 XP para nível 48
+  49: 61200, // 61200 XP para nível 49
+  50: 63700  // 63700 XP para nível 50 (máximo)
+};
+
+/**
+ * Configuração do sistema de níveis
+ */
+export const LEVEL_CONFIG = {
+  maxLevel: 50,
+  baseXP: 100
+};
+
+/**
+ * Calcula o XP necessário para atingir um nível específico
+ */
+export function getXPRequiredForLevel(level: number): number {
+  if (level <= 1) return 0;
+  if (level > LEVEL_CONFIG.maxLevel) return LEVEL_XP_TABLE[LEVEL_CONFIG.maxLevel];
+  return LEVEL_XP_TABLE[level] || 0;
+}
+
+/**
+ * Calcula o nível baseado no XP atual
+ */
+export function calculateLevelFromXP(currentXP: number): number {
+  for (let level = LEVEL_CONFIG.maxLevel; level >= 1; level--) {
+    if (currentXP >= getXPRequiredForLevel(level)) {
+      return level;
+    }
+  }
+  return 1;
+}
+
+/**
+ * Calcula quanto XP falta para o próximo nível
+ */
+export function getXPToNextLevel(currentXP: number, currentLevel: number): number {
+  if (currentLevel >= LEVEL_CONFIG.maxLevel) return 0;
+  
+  const nextLevelXP = getXPRequiredForLevel(currentLevel + 1);
+  return Math.max(0, nextLevelXP - currentXP);
+}
+
+/**
+ * Calcula o progresso percentual para o próximo nível (0-100)
+ */
+export function getLevelProgress(currentXP: number, currentLevel: number): number {
+  if (currentLevel >= LEVEL_CONFIG.maxLevel) return 100;
+  
+  const currentLevelXP = getXPRequiredForLevel(currentLevel);
+  const nextLevelXP = getXPRequiredForLevel(currentLevel + 1);
+  const xpInCurrentLevel = currentXP - currentLevelXP;
+  const xpNeededForNextLevel = nextLevelXP - currentLevelXP;
+  
+  return Math.min(100, Math.max(0, (xpInCurrentLevel / xpNeededForNextLevel) * 100));
 }

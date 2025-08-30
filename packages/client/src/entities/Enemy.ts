@@ -178,10 +178,12 @@ export class Enemy extends Entity {
 
   private onDeath(): void {
     const scorePoints = this.getScoreValue();
+    const xpReward = this.config.xpDrop;
     
     // Emit enemy death event - other systems will handle score/rewards
     this.eventBus.emit('enemy:destroyed', { 
       points: scorePoints,
+      xp: xpReward,
       enemyType: this.enemyType,
       enemyId: this.id
     });

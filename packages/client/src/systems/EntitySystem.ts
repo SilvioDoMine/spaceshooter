@@ -135,10 +135,15 @@ export class EntitySystem {
     this.enemies.delete(data.enemyId);
   }
 
-  private handleEnemyDestroyed(data: { points: number; enemyType: string; enemyId: string }): void {
+  private handleEnemyDestroyed(data: { points: number; xp: number; enemyType: string; enemyId: string }): void {
     // Emit score event for Player to handle
     this.eventBus.emit('player:score', { 
       points: data.points 
+    });
+    
+    // Emit XP gain event for Player to handle
+    this.eventBus.emit('player:xp-gain', {
+      xp: data.xp
     });
     
     // Enemy is already destroyed, just clean up references

@@ -70,6 +70,10 @@ export type GameEventMap = {
   // Motivo: Player precisa processar pontos ganhos
   'player:score': { points: number };
   
+  // Emitido em: EntitySystem quando jogador ganha XP (via enemy destruction)
+  // Motivo: Player precisa processar XP ganho
+  'player:xp-gain': { xp: number };
+  
   // Emitido em: Player.ts quando vida do jogador muda
   // Motivo: UIManager atualizar barra de vida
   'player:health-changed': { current: number; max: number };
@@ -81,6 +85,14 @@ export type GameEventMap = {
   // Emitido em: Player.ts quando pontuação do jogador muda
   // Motivo: UIManager atualizar pontuação na tela
   'player:score-changed': { score: number };
+  
+  // Emitido em: Player.ts quando nível/XP do jogador muda
+  // Motivo: UIManager atualizar barra de XP e nível na tela
+  'player:level-changed': { level: number; currentXP: number; xpToNext: number; progress: number };
+  
+  // Emitido em: Player.ts quando jogador sobe de nível
+  // Motivo: Criar efeitos especiais e tocar som de level up
+  'player:level-up': { oldLevel: number; newLevel: number; currentXP: number };
 
   // ========== ENEMY EVENTS ==========
   // Emitido em: Enemy.ts quando inimigo escapa
@@ -88,8 +100,8 @@ export type GameEventMap = {
   'enemy:escaped': { damage: number; enemyType: string; enemyId: string };
   
   // Emitido em: Enemy.ts quando inimigo é destruído
-  // Motivo: EntitySystem dar pontos ao jogador
-  'enemy:destroyed': { points: number; enemyType: string; enemyId: string };
+  // Motivo: EntitySystem dar pontos e XP ao jogador
+  'enemy:destroyed': { points: number; xp: number; enemyType: string; enemyId: string };
 
   // ========== COLLISION EVENTS ==========
   // Emitido em: Enemy.ts:117 para verificar colisão de inimigo
@@ -99,6 +111,10 @@ export type GameEventMap = {
   // Emitido em: ProjectileSystem.ts:133 quando projétil pode colidir com inimigo
   // Motivo: Sistema de colisão verificar impacto entre projétil e inimigos
   'collision:projectile-enemy': { projectileId: string; position: { x: number; y: number }; damage: number; radius: number };
+  
+  // Emitido em: ProjectileSystem quando projétil acerta um alvo
+  // Motivo: Alvo precisa processar dano recebido
+  'projectile:hit': { targetId: string; damage: number };
   
   // Emitido em: PowerUp.ts:120 quando power-up pode colidir com jogador
   // Motivo: Sistema de colisão verificar se jogador coletou power-up
@@ -134,6 +150,22 @@ export type GameEventMap = {
   // Emitido em: Player.ts:236, main2.ts:70,144,211,956 para atualizar munição
   // Motivo: Manter contador de munição na tela sincronizado
   'ui:update-ammo': { current: number; max: number };
+  
+  // Emitido em: UIManager quando nível/XP do jogador muda
+  // Motivo: Atualizar barra de XP e nível na tela
+  'ui:update-level': { level: number; currentXP: number; xpToNext: number; progress: number };
+  
+  // Emitido em: UIManager quando jogador sobe de nível
+  // Motivo: Executar efeito visual de level up
+  'ui:level-up-effect': { oldLevel: number; newLevel: number; currentXP: number };
+  
+  // Emitido em: UIManager no reset do jogo
+  // Motivo: Resetar toda a UI para estado inicial
+  'ui:reset': {};
+  
+  // Emitido em: UIManager quando jogo termina
+  // Motivo: Exibir tela de game over com estatísticas
+  'ui:game-over': { finalScore: number; stats: any };
   
   // ========== AUDIO EVENTS ==========
   // Emitido em: Player.ts:154,163, Enemy.ts:94,163, main2.ts:256,613,747,833,929, EntitySystem.ts:217
@@ -217,6 +249,7 @@ export class EventBus {
     'player:health-changed',
     'player:ammo-changed',
     'player:score-changed',
+    'player:level-changed',
   ]);
 
   /**

@@ -4,7 +4,7 @@ import { EventBus } from '../core/EventBus';
 import { RenderingSystem } from '../systems/RenderingSystem';
 import { assetManager } from '../services/AssetManager';
 import { ProjectileSystem } from '../systems/ProjectileSystem';
-import { PLAYER_CONFIG, DEFAULT_WORLD_BOUNDS, WorldBounds, PROJECTILE_CONFIG } from '@spaceshooter/shared';
+import { PLAYER_CONFIG, DEFAULT_WORLD_BOUNDS, WorldBounds, PROJECTILE_CONFIG, calculateLevelFromXP, getXPToNextLevel, getLevelProgress } from '@spaceshooter/shared';
 import { CompoundCollisionShape, CollisionUtils } from '../utils/CollisionUtils';
 
 export interface PlayerStats {
@@ -18,6 +18,8 @@ export interface PlayerStats {
   enemiesEscaped: number;
   timeAlive: number;
   accuracy: number;
+  level: number;
+  currentXP: number;
 }
 
 export class Player extends Entity {
@@ -57,7 +59,9 @@ export class Player extends Entity {
       enemiesDestroyed: 0,
       enemiesEscaped: 0,
       timeAlive: 0,
-      accuracy: 0
+      accuracy: 0,
+      level: PLAYER_CONFIG.level,
+      currentXP: PLAYER_CONFIG.currentXP
     }
   ) {
     super(eventBus, 'player', initialPosition);
@@ -86,6 +90,10 @@ export class Player extends Entity {
       this.updateAccuracy();
     });
 
+    const unsubscribeXPGain = this.eventBus.on('player:xp-gain', (data) => {
+      this.gainXP(data.xp);
+    });
+
     const unsubscribeDamage = this.eventBus.on('player:damage', (data) => {
       console.log(`💥 Player: Received damage event:`, data);
       this.takeDamage(data.damage);
@@ -106,6 +114,7 @@ export class Player extends Entity {
 
     this.addCleanupFunction(unsubscribeInput);
     this.addCleanupFunction(unsubscribeScore);
+    this.addCleanupFunction(unsubscribeXPGain);
     this.addCleanupFunction(unsubscribeDamage);
     this.addCleanupFunction(unsubscribeGodMode);
     this.addCleanupFunction(unsubscribeSizeChange);
@@ -587,6 +596,39 @@ export class Player extends Entity {
     this.updateUI();
   }
 
+  public gainXP(xpAmount: number): void {
+    const oldLevel = this.stats.level;
+    this.stats.currentXP += xpAmount;
+    
+    // Recalcular nível baseado no XP total
+    const newLevel = calculateLevelFromXP(this.stats.currentXP);
+    
+    if (newLevel > oldLevel) {
+      this.stats.level = newLevel;
+      console.log(`🎉 Level Up! Nível ${oldLevel} → ${newLevel}`);
+      
+      this.eventBus.emit('player:level-up', {
+        oldLevel,
+        newLevel: this.stats.level,
+        currentXP: this.stats.currentXP
+      });
+      
+      this.eventBus.emit('audio:play', { soundId: 'level-up', options: { volume: 0.7 } });
+    }
+    
+    console.log(`💎 Gained ${xpAmount} XP! Total: ${this.stats.currentXP} (Level ${this.stats.level})`);
+    this.updateUI();
+  }
+
+  public getLevelInfo(): { level: number, currentXP: number, xpToNext: number, progress: number } {
+    return {
+      level: this.stats.level,
+      currentXP: this.stats.currentXP,
+      xpToNext: getXPToNextLevel(this.stats.currentXP, this.stats.level),
+      progress: getLevelProgress(this.stats.currentXP, this.stats.level)
+    };
+  }
+
   private updateAccuracy(): void {
     if (this.stats.shotsFired > 0) {
       this.stats.accuracy = Math.round((this.stats.enemiesDestroyed / this.stats.shotsFired) * 100);
@@ -611,7 +653,9 @@ export class Player extends Entity {
       enemiesDestroyed: 0,
       enemiesEscaped: 0,
       timeAlive: 0,
-      accuracy: 0
+      accuracy: 0,
+      level: PLAYER_CONFIG.level,
+      currentXP: PLAYER_CONFIG.currentXP
     };
     
     this.setPosition({ x: 0, y: 0 });
@@ -636,6 +680,12 @@ export class Player extends Entity {
     });
     this.eventBus.emit('player:score-changed', { 
       score: this.stats.score 
+    });
+    this.eventBus.emit('player:level-changed', {
+      level: this.stats.level,
+      currentXP: this.stats.currentXP,
+      xpToNext: getXPToNextLevel(this.stats.currentXP, this.stats.level),
+      progress: getLevelProgress(this.stats.currentXP, this.stats.level)
     });
   }
 
