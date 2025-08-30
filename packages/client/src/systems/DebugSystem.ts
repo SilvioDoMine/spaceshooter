@@ -23,6 +23,8 @@ interface DebugSettings {
   timeScale: number;
   isPaused: boolean;
   playerSize: number;
+  position?: { x: number; y: number };
+  isCollapsed?: boolean;
 }
 
 export class DebugSystem {
@@ -44,7 +46,9 @@ export class DebugSystem {
     showCollisions: false,
     timeScale: 1.0,
     isPaused: false,
-    playerSize: PLAYER_CONFIG.size
+    playerSize: PLAYER_CONFIG.size,
+    position: { x: 10, y: 10 },
+    isCollapsed: false
   };
   
   // Debug states
@@ -53,6 +57,15 @@ export class DebugSystem {
   private timeScale: number = 1.0;
   private isPaused: boolean = false;
   private playerSize: number = PLAYER_CONFIG.size;
+  
+  // Drag functionality
+  private isDragging: boolean = false;
+  private dragOffset: { x: number; y: number } = { x: 0, y: 0 };
+  private panelPosition: { x: number; y: number } = { x: 10, y: 10 };
+  
+  // Collapse functionality
+  private isCollapsed: boolean = false;
+  private clickTimeout: number | null = null;
 
   constructor(eventBus: EventBus) {
     this.eventBus = eventBus;
@@ -71,6 +84,8 @@ export class DebugSystem {
         this.timeScale = settings.timeScale;
         this.isPaused = settings.isPaused;
         this.playerSize = settings.playerSize;
+        this.panelPosition = settings.position || DebugSystem.DEFAULT_SETTINGS.position!;
+        this.isCollapsed = settings.isCollapsed || false;
         console.log('🔧 Debug settings loaded from localStorage:', settings);
       } else {
         this.resetToDefaults();
@@ -88,7 +103,9 @@ export class DebugSystem {
         showCollisions: this.showCollisions,
         timeScale: this.timeScale,
         isPaused: this.isPaused,
-        playerSize: this.playerSize
+        playerSize: this.playerSize,
+        position: this.panelPosition,
+        isCollapsed: this.isCollapsed
       };
       localStorage.setItem(DebugSystem.STORAGE_KEY, JSON.stringify(settings));
     } catch (error) {
@@ -102,6 +119,8 @@ export class DebugSystem {
     this.timeScale = DebugSystem.DEFAULT_SETTINGS.timeScale;
     this.isPaused = DebugSystem.DEFAULT_SETTINGS.isPaused;
     this.playerSize = DebugSystem.DEFAULT_SETTINGS.playerSize;
+    this.panelPosition = DebugSystem.DEFAULT_SETTINGS.position!;
+    this.isCollapsed = DebugSystem.DEFAULT_SETTINGS.isCollapsed!;
   }
 
   public resetAllSettings(): void {
@@ -148,6 +167,12 @@ export class DebugSystem {
     // Apply player size to shared config
     updatePlayerSize(this.playerSize);
 
+    // Apply position to panel
+    this.applyPanelPosition();
+
+    // Apply collapsed state
+    this.applyCollapsedState();
+
     // Don't emit events here - they'll be emitted when game starts
   }
 
@@ -182,6 +207,9 @@ export class DebugSystem {
 
     // Apply loaded settings to UI
     this.updateUIFromSettings();
+
+    // Setup drag functionality
+    this.setupDragFunctionality();
 
     // Start performance monitoring
     this.startPerformanceMonitoring();
@@ -518,6 +546,156 @@ export class DebugSystem {
         this.resetAllSettings();
       });
     }
+  }
+
+  private setupDragFunctionality(): void {
+    const dragHandle = document.querySelector('#debug-panel h3') as HTMLElement;
+    if (!dragHandle || !this.debugPanel) return;
+
+    dragHandle.addEventListener('mousedown', (e) => {
+      this.handleMouseDown(e);
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (this.isDragging) {
+        this.handleDragging(e);
+      }
+    });
+
+    document.addEventListener('mouseup', () => {
+      this.stopDragging();
+    });
+
+    // Touch events for mobile
+    dragHandle.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      const touch = e.touches[0];
+      this.handleTouchStart(touch);
+    });
+
+    document.addEventListener('touchmove', (e) => {
+      if (this.isDragging) {
+        e.preventDefault();
+        const touch = e.touches[0];
+        this.handleDragging(touch);
+      }
+    });
+
+    document.addEventListener('touchend', () => {
+      this.stopDragging();
+    });
+  }
+
+  private handleMouseDown(event: MouseEvent): void {
+    this.clickTimeout = window.setTimeout(() => {
+      this.startDragging(event);
+    }, 150); // 150ms delay to distinguish click from drag
+  }
+
+  private handleTouchStart(touch: Touch): void {
+    this.clickTimeout = window.setTimeout(() => {
+      this.startDragging(touch);
+    }, 150);
+  }
+
+  private startDragging(event: MouseEvent | Touch): void {
+    if (!this.debugPanel) return;
+
+    this.isDragging = true;
+    this.debugPanel.classList.add('dragging');
+
+    const rect = this.debugPanel.getBoundingClientRect();
+    this.dragOffset = {
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top
+    };
+  }
+
+  private handleDragging(event: MouseEvent | Touch): void {
+    if (!this.isDragging || !this.debugPanel) return;
+
+    let newX = event.clientX - this.dragOffset.x;
+    let newY = event.clientY - this.dragOffset.y;
+
+    // Simple bounds - keep panel completely inside viewport
+    const panelRect = this.debugPanel.getBoundingClientRect();
+    const maxX = window.innerWidth - panelRect.width;
+    const maxY = window.innerHeight - panelRect.height;
+
+    newX = Math.max(0, Math.min(maxX, newX));
+    newY = Math.max(0, Math.min(maxY, newY));
+
+    this.panelPosition = { x: newX, y: newY };
+    this.applyPanelPosition();
+  }
+
+  private stopDragging(): void {
+    if (this.clickTimeout) {
+      // If timeout is still active, this was a quick click
+      clearTimeout(this.clickTimeout);
+      this.clickTimeout = null;
+      if (!this.isDragging) {
+        this.toggleCollapse();
+        return;
+      }
+    }
+
+    if (this.isDragging) {
+      this.isDragging = false;
+      if (this.debugPanel) {
+        this.debugPanel.classList.remove('dragging');
+      }
+      this.saveSettings(); // Save position
+    }
+  }
+
+  private applyPanelPosition(): void {
+    if (this.debugPanel) {
+      this.debugPanel.style.left = `${this.panelPosition.x}px`;
+      this.debugPanel.style.top = `${this.panelPosition.y}px`;
+      this.debugPanel.style.right = 'auto'; // Remove right positioning
+    }
+  }
+
+  private toggleCollapse(): void {
+    this.isCollapsed = !this.isCollapsed;
+    this.applyCollapsedState();
+    
+    if (!this.isCollapsed) {
+      // When expanding, check if panel is at bottom edge and adjust
+      this.checkBottomEdgeAndAdjust();
+    }
+    
+    this.saveSettings();
+  }
+
+  private applyCollapsedState(): void {
+    if (this.debugPanel) {
+      if (this.isCollapsed) {
+        this.debugPanel.classList.add('collapsed');
+      } else {
+        this.debugPanel.classList.remove('collapsed');
+      }
+    }
+  }
+
+  private checkBottomEdgeAndAdjust(): void {
+    if (!this.debugPanel) return;
+
+    // Get panel dimensions after expanding
+    setTimeout(() => {
+      if (!this.debugPanel) return;
+      
+      const rect = this.debugPanel.getBoundingClientRect();
+      const bottomOverflow = (rect.bottom) - window.innerHeight;
+      
+      if (bottomOverflow > 0) {
+        // Panel extends beyond bottom, move it up
+        this.panelPosition.y = Math.max(0, this.panelPosition.y - bottomOverflow);
+        this.applyPanelPosition();
+        this.saveSettings();
+      }
+    }, 10); // Small delay to let CSS apply
   }
 
   public dispose(): void {

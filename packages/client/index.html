@@ -65,6 +65,33 @@
             font-size: 11px;
             border-bottom: 1px solid #00ff00;
             padding-bottom: 2px;
+            cursor: move;
+            user-select: none;
+            background: rgba(0, 255, 0, 0.1);
+            margin: -8px -8px 6px -8px;
+            padding: 4px 8px 2px 8px;
+        }
+
+        #debug-panel.dragging {
+            opacity: 0.8;
+            z-index: 1001;
+        }
+
+        #debug-panel h3:hover {
+            background: rgba(0, 255, 0, 0.2);
+        }
+
+        #debug-panel.collapsed {
+            height: auto;
+        }
+
+        #debug-panel.collapsed .debug-content {
+            display: none;
+        }
+
+        #debug-panel.collapsed h3 {
+            margin-bottom: -8px;
+            border-bottom: none;
         }
         
         .debug-section {
@@ -161,8 +188,8 @@
     <div id="game-container"></div>
     
     <div id="debug-panel">
-        <h3>DEBUG INFO (Press U to toggle)</h3>
-        
+        <h3>DEBUG (U toggle - Click OPEN/CLOSE)</h3>
+        <div class="debug-content">
         <div class="debug-section">
             <h4>Performance</h4>
             <div class="debug-item">
@@ -283,6 +310,7 @@
             <div style="text-align: center; margin-top: 2px;">
                 <button id="debug-reset-all" style="color: #ff4444; border-color: #ff4444; font-weight: bold;">Reset All</button>
             </div>
+        </div>
         </div>
     </div>
     
