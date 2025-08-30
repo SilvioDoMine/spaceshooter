@@ -198,7 +198,7 @@
             user-select: none;
             display: none;
             z-index: 999;
-            transition: all 0.2s ease-out;
+            /* No transition on the container - instant teleport */
         }
 
 
@@ -216,7 +216,7 @@
             border: 2px solid rgba(0, 255, 0, 1);
             border-radius: 50%;
             transform: translate(-50%, -50%);
-            transition: background 0.1s ease;
+            transition: background 0.1s ease, transform 0.1s ease;
         }
 
         #joystick-knob.active {

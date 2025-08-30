@@ -12,14 +12,12 @@ export class VirtualJoystickSystem {
   private joystickContainer: HTMLElement | null = null;
   private joystickKnob: HTMLElement | null = null;
   
-  private isActive: boolean = false;
   private isDragging: boolean = false;
   private centerX: number = 0;
   private centerY: number = 0;
   private maxRadius: number = 40; // Distance from center to edge
   
   // Floating joystick
-  private originalPosition: { x: number; y: number } = { x: 0, y: 0 };
   private isFloating: boolean = false;
   
   private currentInput: JoystickInput = {
@@ -61,9 +59,6 @@ export class VirtualJoystickSystem {
     // Calculate center and max radius
     this.updateDimensions();
 
-    // Store original position for floating functionality
-    this.storeOriginalPosition();
-
     // Setup touch/mouse events
     this.setupJoystickEvents();
 
@@ -96,15 +91,6 @@ export class VirtualJoystickSystem {
     this.maxRadius = Math.min(rect.width, rect.height) / 2 - 20; // Leave some margin
   }
 
-  private storeOriginalPosition(): void {
-    if (!this.joystickContainer) return;
-
-    const rect = this.joystickContainer.getBoundingClientRect();
-    this.originalPosition = {
-      x: rect.left + rect.width / 2,
-      y: rect.top + rect.height / 2
-    };
-  }
 
   private setupEventListeners(): void {
     // Listen for debug events
@@ -116,7 +102,6 @@ export class VirtualJoystickSystem {
     // Handle window resize
     window.addEventListener('resize', () => {
       this.updateDimensions();
-      this.storeOriginalPosition();
     });
   }
 
