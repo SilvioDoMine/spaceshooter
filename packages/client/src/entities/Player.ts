@@ -4,7 +4,7 @@ import { EventBus } from '../core/EventBus';
 import { RenderingSystem } from '../systems/RenderingSystem';
 import { assetManager } from '../services/AssetManager';
 import { ProjectileSystem } from '../systems/ProjectileSystem';
-import { PLAYER_CONFIG, DEFAULT_WORLD_BOUNDS, WorldBounds } from '@spaceshooter/shared';
+import { PLAYER_CONFIG, DEFAULT_WORLD_BOUNDS, WorldBounds, PROJECTILE_CONFIG } from '@spaceshooter/shared';
 import { CompoundCollisionShape, CollisionUtils } from '../utils/CollisionUtils';
 
 export interface PlayerStats {
@@ -533,8 +533,8 @@ export class Player extends Entity {
       y: this.position.y + rotatedOffsetY
     };
     
-    // Calculate projectile velocity based on player rotation
-    const projectileSpeed = 15;
+    // Calculate projectile velocity baseado no PROJECTILE_CONFIG
+    const projectileSpeed = PROJECTILE_CONFIG.speed;
     const projectileVelocity = {
       x: -sin * projectileSpeed, // Negative because we want to move in the direction the ship is facing
       y: cos * projectileSpeed

@@ -234,7 +234,7 @@ export const ENEMY_CONFIG = {
     health: 20,             // 2 hits para destruir
     speed: 1.5,             // Velocidade moderada
     size: 0.3,              // Tamanho visual
-    radius: 0.15,           // Raio da hitbox
+    radius: 0.25,           // Raio da hitbox
     color: 0xff4444,        // Vermelho
     spawnRate: 1000         // A cada 2 segundos
   },
@@ -242,7 +242,7 @@ export const ENEMY_CONFIG = {
     health: 10,             // 1 hit para destruir
     speed: 2.5,             // Mais rápido
     size: 0.2,              // Tamanho visual
-    radius: 0.1,            // Raio da hitbox (menor)
+    radius: 0.175,            // Raio da hitbox (menor)
     color: 0xff8800,        // Laranja
     spawnRate: 1500         // A cada 3 segundos
   },
@@ -250,7 +250,7 @@ export const ENEMY_CONFIG = {
     health: 50,             // 5 hits para destruir
     speed: 0.8,             // Mais lento
     size: 0.5,              // Tamanho visual
-    radius: 0.25,           // Raio da hitbox (maior)
+    radius: 0.4,           // Raio da hitbox (maior)
     color: 0x8844ff,        // Roxo
     spawnRate: 2500         // A cada 5 segundos
   }
