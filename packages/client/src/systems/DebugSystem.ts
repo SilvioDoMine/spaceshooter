@@ -20,6 +20,7 @@ interface DebugData {
 interface DebugSettings {
   godModeEnabled: boolean;
   showCollisions: boolean;
+  showJoystick: boolean;
   timeScale: number;
   isPaused: boolean;
   playerSize: number;
@@ -44,6 +45,7 @@ export class DebugSystem {
   private static readonly DEFAULT_SETTINGS: DebugSettings = {
     godModeEnabled: false,
     showCollisions: false,
+    showJoystick: true, // Show by default for debugging
     timeScale: 1.0,
     isPaused: false,
     playerSize: PLAYER_CONFIG.size,
@@ -54,6 +56,7 @@ export class DebugSystem {
   // Debug states
   private godModeEnabled: boolean = false;
   private showCollisions: boolean = false;
+  private showJoystick: boolean = true;
   private timeScale: number = 1.0;
   private isPaused: boolean = false;
   private playerSize: number = PLAYER_CONFIG.size;
@@ -81,6 +84,7 @@ export class DebugSystem {
         const settings: DebugSettings = JSON.parse(savedSettings);
         this.godModeEnabled = settings.godModeEnabled;
         this.showCollisions = settings.showCollisions;
+        this.showJoystick = settings.showJoystick !== undefined ? settings.showJoystick : true;
         this.timeScale = settings.timeScale;
         this.isPaused = settings.isPaused;
         this.playerSize = settings.playerSize;
@@ -101,6 +105,7 @@ export class DebugSystem {
       const settings: DebugSettings = {
         godModeEnabled: this.godModeEnabled,
         showCollisions: this.showCollisions,
+        showJoystick: this.showJoystick,
         timeScale: this.timeScale,
         isPaused: this.isPaused,
         playerSize: this.playerSize,
@@ -116,6 +121,7 @@ export class DebugSystem {
   private resetToDefaults(): void {
     this.godModeEnabled = DebugSystem.DEFAULT_SETTINGS.godModeEnabled;
     this.showCollisions = DebugSystem.DEFAULT_SETTINGS.showCollisions;
+    this.showJoystick = DebugSystem.DEFAULT_SETTINGS.showJoystick;
     this.timeScale = DebugSystem.DEFAULT_SETTINGS.timeScale;
     this.isPaused = DebugSystem.DEFAULT_SETTINGS.isPaused;
     this.playerSize = DebugSystem.DEFAULT_SETTINGS.playerSize;
@@ -140,6 +146,11 @@ export class DebugSystem {
     const collisionCheckbox = document.getElementById('debug-show-collisions') as HTMLInputElement;
     if (collisionCheckbox) {
       collisionCheckbox.checked = this.showCollisions;
+    }
+
+    const joystickCheckbox = document.getElementById('debug-show-joystick') as HTMLInputElement;
+    if (joystickCheckbox) {
+      joystickCheckbox.checked = this.showJoystick;
     }
 
     // Update time slider
@@ -181,6 +192,7 @@ export class DebugSystem {
     setTimeout(() => {
       this.eventBus.emit('debug:god-mode-toggle', { enabled: this.godModeEnabled });
       this.eventBus.emit('debug:collision-visibility-toggle', { visible: this.showCollisions });
+      this.eventBus.emit('debug:joystick-toggle', { visible: this.showJoystick });
       this.eventBus.emit('debug:time-scale-change', { timeScale: this.getTimeScale() });
       console.log('🔧 Applied loaded debug settings to game systems');
     }, 100); // Small delay to let entities initialize
@@ -466,6 +478,17 @@ export class DebugSystem {
         this.showCollisions = target.checked;
         this.saveSettings();
         this.eventBus.emit('debug:collision-visibility-toggle', { visible: this.showCollisions });
+      });
+    }
+
+    // Virtual joystick visibility checkbox
+    const joystickCheckbox = document.getElementById('debug-show-joystick') as HTMLInputElement;
+    if (joystickCheckbox) {
+      joystickCheckbox.addEventListener('change', (event) => {
+        const target = event.target as HTMLInputElement;
+        this.showJoystick = target.checked;
+        this.saveSettings();
+        this.eventBus.emit('debug:joystick-toggle', { visible: this.showJoystick });
       });
     }
 
