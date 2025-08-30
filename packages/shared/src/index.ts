@@ -205,7 +205,7 @@ export const PLAYER_CONFIG = {
  * - radius: Raio da hitbox para colisões
  */
 export const PROJECTILE_CONFIG = {
-  speed: 15,                // Unidades por segundo
+  speed: 30,                // Unidades por segundo
   damage: 10,               // Dano por hit
   lifetime: 3000,           // 3 segundos em milliseconds
   size: 0.1,                // Raio visual

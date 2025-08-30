@@ -321,12 +321,51 @@ export class Player extends Entity {
 
     this.handleMovement(deltaTime);
     this.constrainToWorld();
-    
+
     // Update shot cooldown timer
     if (this.shotTimer > 0) {
       this.shotTimer -= deltaTime;
     }
-    
+
+    // TIRO AUTOMÁTICO AO PARAR
+    if (!this.isMoving && this.stats.ammo > 0 && this.shotTimer <= 0) {
+      // Tenta acessar o sistema de entidades pelo window.game
+      const game = (window as any).game;
+      if (game && typeof game.getEntitySystem === 'function') {
+        const entitySystem = game.getEntitySystem();
+        if (entitySystem && typeof entitySystem.getEnemies === 'function') {
+          const enemiesMap = entitySystem.getEnemies();
+          let closestEnemy: any = null;
+          let minDist = Infinity;
+          const playerPos = this.getPosition();
+          enemiesMap.forEach((enemy: any) => {
+            if (!enemy.isEntityActive || !enemy.isEntityActive()) return;
+            const enemyPos = enemy.getPosition();
+            const dx = enemyPos.x - playerPos.x;
+            const dy = enemyPos.y - playerPos.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < minDist) {
+              minDist = dist;
+              closestEnemy = enemy;
+            }
+          });
+          if (closestEnemy && typeof closestEnemy.getPosition === 'function') {
+            // Rotaciona para o inimigo mais próximo
+            const enemyPos = closestEnemy.getPosition();
+            const dx = enemyPos.x - playerPos.x;
+            const dy = enemyPos.y - playerPos.y;
+            // Calcula o ângulo para mirar
+            this.targetRotation = Math.atan2(-dx, dy);
+            this.currentRotation = this.targetRotation; // Garante mira instantânea
+            this.object.rotation.z = this.currentRotation;
+            this.updateCollisionVisualizersRotation();
+            // Atira
+            this.tryShoot();
+          }
+        }
+      }
+    }
+
     // Update animations if available
     if (this.animationController) {
       this.animationController.update(deltaTime);
