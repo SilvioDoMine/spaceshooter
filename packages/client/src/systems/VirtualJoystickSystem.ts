@@ -18,6 +18,10 @@ export class VirtualJoystickSystem {
   private centerY: number = 0;
   private maxRadius: number = 40; // Distance from center to edge
   
+  // Floating joystick
+  private originalPosition: { x: number; y: number } = { x: 0, y: 0 };
+  private isFloating: boolean = false;
+  
   private currentInput: JoystickInput = {
     x: 0,
     y: 0,
@@ -57,8 +61,14 @@ export class VirtualJoystickSystem {
     // Calculate center and max radius
     this.updateDimensions();
 
+    // Store original position for floating functionality
+    this.storeOriginalPosition();
+
     // Setup touch/mouse events
     this.setupJoystickEvents();
+
+    // Setup global touch listeners for floating joystick
+    this.setupGlobalTouchListeners();
 
     console.log('🕹️ Virtual joystick initialized');
   }
@@ -70,6 +80,8 @@ export class VirtualJoystickSystem {
     
     if (shouldShow) {
       this.joystickContainer.classList.add('visible');
+      // Re-setup global listeners when becoming visible
+      this.setupGlobalTouchListeners();
     } else {
       this.joystickContainer.classList.remove('visible');
     }
@@ -84,6 +96,16 @@ export class VirtualJoystickSystem {
     this.maxRadius = Math.min(rect.width, rect.height) / 2 - 20; // Leave some margin
   }
 
+  private storeOriginalPosition(): void {
+    if (!this.joystickContainer) return;
+
+    const rect = this.joystickContainer.getBoundingClientRect();
+    this.originalPosition = {
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2
+    };
+  }
+
   private setupEventListeners(): void {
     // Listen for debug events
     this.eventBus.on('debug:joystick-toggle', (data: { visible: boolean }) => {
@@ -94,7 +116,34 @@ export class VirtualJoystickSystem {
     // Handle window resize
     window.addEventListener('resize', () => {
       this.updateDimensions();
+      this.storeOriginalPosition();
     });
+  }
+
+  private setupGlobalTouchListeners(): void {
+    // Only add global listeners on mobile or when debug is enabled
+    if (!this.isMobile && !this.showOnDesktop) return;
+
+    // Listen for touches anywhere on the screen
+    document.addEventListener('touchstart', (e) => {
+      if (!this.isVisible() || this.isDragging) return;
+      
+      const touch = e.touches[0];
+      const targetElement = e.target as Element;
+      
+      // Don't interfere with other UI elements
+      if (targetElement && (
+        targetElement.closest('#debug-panel') ||
+        targetElement.closest('#virtual-joystick')
+      )) {
+        return;
+      }
+
+      // Move joystick to touch position and start interaction
+      this.moveJoystickToPosition(touch.clientX, touch.clientY);
+      this.startInteraction(touch);
+      e.preventDefault();
+    }, { passive: false });
   }
 
   private setupJoystickEvents(): void {
@@ -131,6 +180,50 @@ export class VirtualJoystickSystem {
     document.addEventListener('touchend', () => {
       this.endInteraction();
     });
+  }
+
+  private moveJoystickToPosition(x: number, y: number): void {
+    if (!this.joystickContainer) return;
+
+    this.isFloating = true;
+    this.joystickContainer.classList.add('floating');
+
+    // Position joystick at touch point (center the joystick on the touch)
+    const joystickRect = this.joystickContainer.getBoundingClientRect();
+    const newX = x - joystickRect.width / 2;
+    const newY = y - joystickRect.height / 2;
+
+    // Ensure joystick doesn't go off-screen
+    const maxX = window.innerWidth - joystickRect.width;
+    const maxY = window.innerHeight - joystickRect.height;
+
+    const constrainedX = Math.max(0, Math.min(maxX, newX));
+    const constrainedY = Math.max(0, Math.min(maxY, newY));
+
+    this.joystickContainer.style.left = `${constrainedX}px`;
+    this.joystickContainer.style.top = `${constrainedY}px`;
+    this.joystickContainer.style.bottom = 'auto';
+    this.joystickContainer.style.transform = 'none';
+
+    // Update center position for interaction calculations
+    this.centerX = joystickRect.width / 2;
+    this.centerY = joystickRect.height / 2;
+  }
+
+  private returnToOriginalPosition(): void {
+    if (!this.joystickContainer || !this.isFloating) return;
+
+    this.isFloating = false;
+    this.joystickContainer.classList.remove('floating');
+
+    // Reset to original CSS positioning
+    this.joystickContainer.style.left = '50%';
+    this.joystickContainer.style.top = 'auto';
+    this.joystickContainer.style.bottom = '50px';
+    this.joystickContainer.style.transform = 'translateX(-50%)';
+
+    // Update center position
+    this.updateDimensions();
   }
 
   private startInteraction(event: MouseEvent | Touch): void {
@@ -181,6 +274,9 @@ export class VirtualJoystickSystem {
 
     // Reset knob to center
     this.joystickKnob.style.transform = 'translate(-50%, -50%)';
+
+    // Return joystick to original position if it was floating
+    this.returnToOriginalPosition();
 
     // Reset input
     this.currentInput = {
