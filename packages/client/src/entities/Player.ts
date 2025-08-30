@@ -38,6 +38,9 @@ export class Player extends Entity {
   private isMoving: boolean = false;
   private thrusterAnimationName?: string;
   private worldBounds: WorldBounds;
+  private targetRotation: number = 0;
+  private currentRotation: number = 0;
+  private rotationSmoothness: number = 8.0; // Higher = faster rotation
 
   constructor(
     eventBus: EventBus,
@@ -220,7 +223,7 @@ export class Player extends Entity {
   }
 
   public getAbsoluteCollisionCircles() {
-    return CollisionUtils.getAbsoluteCollisionCircles(this.position, this.collisionShape);
+    return CollisionUtils.getAbsoluteCollisionCircles(this.position, this.collisionShape, this.currentRotation);
   }
 
   /**
@@ -287,6 +290,23 @@ export class Player extends Entity {
     }
   }
 
+  private updateCollisionVisualizersRotation(): void {
+    // Get the rotated collision circles and update the visualizer positions
+    const rotatedCircles = CollisionUtils.getAbsoluteCollisionCircles(
+      { x: 0, y: 0 }, // Use origin since visualizers are children of player object
+      this.collisionShape, 
+      this.currentRotation
+    );
+    
+    this.collisionVisualizers.forEach((visualizer, index) => {
+      if (index < rotatedCircles.length) {
+        const circle = rotatedCircles[index];
+        visualizer.position.x = circle.pos.x;
+        visualizer.position.y = circle.pos.y;
+      }
+    });
+  }
+
   private handleInputAction(action: string, pressed: boolean): void {
     this.inputState[action] = pressed;
     
@@ -316,23 +336,31 @@ export class Player extends Entity {
   private handleMovement(deltaTime: number): void {
     const moveDistance = this.speed * deltaTime;
     let currentlyMoving = false;
+    let movementVector = { x: 0, y: 0 };
     
     if (this.inputState.left) {
       this.position.x -= moveDistance;
+      movementVector.x -= 1;
       currentlyMoving = true;
     }
     if (this.inputState.right) {
       this.position.x += moveDistance;
+      movementVector.x += 1;
       currentlyMoving = true;
     }
     if (this.inputState.up) {
       this.position.y += moveDistance;
+      movementVector.y += 1;
       currentlyMoving = true;
     }
     if (this.inputState.down) {
       this.position.y -= moveDistance;
+      movementVector.y -= 1;
       currentlyMoving = true;
     }
+
+    // Update rotation based on movement direction
+    this.updateRotation(movementVector, deltaTime);
 
     // Handle thruster animation based on movement
     this.updateThrusterAnimation(currentlyMoving);
@@ -362,6 +390,42 @@ export class Player extends Entity {
         this.animationController.stopAnimation(this.thrusterAnimationName);
       }
     }
+  }
+
+  private updateRotation(movementVector: { x: number, y: number }, deltaTime: number): void {
+    // Only update rotation if there's movement
+    if (movementVector.x !== 0 || movementVector.y !== 0) {
+      // Calculate the angle based on movement direction
+      // Inverting X to fix left/right orientation
+      this.targetRotation = Math.atan2(-movementVector.x, movementVector.y);
+    }
+    
+    // Smoothly interpolate current rotation towards target rotation
+    const rotationDifference = this.targetRotation - this.currentRotation;
+    
+    // Handle angle wrapping (shortest rotation path)
+    let adjustedDifference = rotationDifference;
+    if (adjustedDifference > Math.PI) {
+      adjustedDifference -= 2 * Math.PI;
+    } else if (adjustedDifference < -Math.PI) {
+      adjustedDifference += 2 * Math.PI;
+    }
+    
+    // Apply smooth rotation
+    this.currentRotation += adjustedDifference * this.rotationSmoothness * deltaTime;
+    
+    // Normalize current rotation to [-PI, PI] range
+    if (this.currentRotation > Math.PI) {
+      this.currentRotation -= 2 * Math.PI;
+    } else if (this.currentRotation < -Math.PI) {
+      this.currentRotation += 2 * Math.PI;
+    }
+    
+    // Apply rotation to the Three.js object
+    this.object.rotation.z = this.currentRotation;
+    
+    // Update collision visualizers rotation
+    this.updateCollisionVisualizersRotation();
   }
 
   private constrainToWorld(): void {
@@ -399,14 +463,30 @@ export class Player extends Entity {
     
     this.updateUI();
     
-    // Calculate projectile spawn position based on ship scale
+    // Calculate projectile spawn position based on ship scale and rotation
     const shipScale = PLAYER_CONFIG.size;
+    const baseOffsetX = -0.17 * shipScale; // Offset from center of ship
+    const baseOffsetY = 2.0 * shipScale;   // Spawn in front of nose
+    
+    // Apply rotation to the spawn offset
+    const cos = Math.cos(this.currentRotation);
+    const sin = Math.sin(this.currentRotation);
+    const rotatedOffsetX = baseOffsetX * cos - baseOffsetY * sin;
+    const rotatedOffsetY = baseOffsetX * sin + baseOffsetY * cos;
+    
     const projectilePosition = {
-      x: this.position.x + (-0.17 * shipScale), // Offset from center of ship
-      y: this.position.y + (2.0 * shipScale)    // Spawn in front of nose
+      x: this.position.x + rotatedOffsetX,
+      y: this.position.y + rotatedOffsetY
     };
     
-    this.projectileSystem.createProjectile('player', projectilePosition, { x: 0, y: 15 });
+    // Calculate projectile velocity based on player rotation
+    const projectileSpeed = 15;
+    const projectileVelocity = {
+      x: -sin * projectileSpeed, // Negative because we want to move in the direction the ship is facing
+      y: cos * projectileSpeed
+    };
+    
+    this.projectileSystem.createProjectile('player', projectilePosition, projectileVelocity);
     
     this.eventBus.emit('audio:play', { soundId: 'shoot', options: { volume: 0.3 } });
     

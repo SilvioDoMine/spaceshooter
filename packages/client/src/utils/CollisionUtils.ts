@@ -245,15 +245,24 @@ export class CollisionUtils {
    */
   public static getAbsoluteCollisionCircles(
     compoundPos: Position,
-    compoundShape: CompoundCollisionShape
+    compoundShape: CompoundCollisionShape,
+    rotation: number = 0
   ): Array<{ pos: Position; radius: number; name?: string }> {
-    return compoundShape.circles.map(circle => ({
-      pos: {
-        x: compoundPos.x + circle.offset.x,
-        y: compoundPos.y + circle.offset.y
-      },
-      radius: circle.radius,
-      name: circle.name
-    }));
+    return compoundShape.circles.map(circle => {
+      // Apply rotation to the offset
+      const cos = Math.cos(rotation);
+      const sin = Math.sin(rotation);
+      const rotatedOffsetX = circle.offset.x * cos - circle.offset.y * sin;
+      const rotatedOffsetY = circle.offset.x * sin + circle.offset.y * cos;
+      
+      return {
+        pos: {
+          x: compoundPos.x + rotatedOffsetX,
+          y: compoundPos.y + rotatedOffsetY
+        },
+        radius: circle.radius,
+        name: circle.name
+      };
+    });
   }
 }
