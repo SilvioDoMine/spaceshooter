@@ -468,15 +468,16 @@ export class Player extends Entity {
   }
 
   private updateUI(): void {
-    this.eventBus.emit('ui:update-health', { 
+    // Emit player state changes - UIManager will handle UI updates
+    this.eventBus.emit('player:health-changed', { 
       current: this.stats.health, 
       max: this.stats.maxHealth 
     });
-    this.eventBus.emit('ui:update-ammo', { 
+    this.eventBus.emit('player:ammo-changed', { 
       current: this.stats.ammo, 
       max: this.stats.maxAmmo 
     });
-    this.eventBus.emit('ui:update-score', { 
+    this.eventBus.emit('player:score-changed', { 
       score: this.stats.score 
     });
   }

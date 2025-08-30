@@ -5,7 +5,7 @@ import { PowerUp } from '../entities/PowerUp';
 import { ProjectileSystem } from './ProjectileSystem';
 import { RenderingSystem } from './RenderingSystem';
 import { CollisionUtils } from '../utils/CollisionUtils';
-import { ENEMY_CONFIG, POWERUP_CONFIG, PLAYER_CONFIG, PROJECTILE_CONFIG } from '@spaceshooter/shared';
+import { ENEMY_CONFIG, POWERUP_CONFIG } from '@spaceshooter/shared';
 
 export class EntitySystem {
   private eventBus: EventBus;
@@ -46,12 +46,13 @@ export class EntitySystem {
       this.isActive = true;
     });
 
-    this.eventBus.on('player:damage', (data) => {
-      this.handlePlayerDamage(data.damage);
+    // Listen to enemy events and forward to player
+    this.eventBus.on('enemy:escaped', (data) => {
+      this.handleEnemyEscape(data);
     });
 
-    this.eventBus.on('player:score', (data) => {
-      this.handlePlayerScore(data.points);
+    this.eventBus.on('enemy:destroyed', (data) => {
+      this.handleEnemyDestroyed(data);
     });
 
     this.eventBus.on('collision:check', (data) => {
@@ -120,21 +121,26 @@ export class EntitySystem {
     this.projectileSystem.setRenderingSystem(renderingSystem);
   }
 
-  private handlePlayerDamage(damage: number): void {
-    if (!this.player) return;
-
-    const isDead = this.player.takeDamage(damage);
-    if (isDead) {
-      console.log('💀 Player died, EntitySystem deactivating...');
-      this.isActive = false;
-      // Player.onDeath() will emit 'game:over' event
-      // GameStateManager will listen to that event and change state
-    }
+  private handleEnemyEscape(data: { damage: number; enemyType: string; enemyId: string }): void {
+    // Emit damage event for Player to handle
+    this.eventBus.emit('player:damage', { 
+      damage: data.damage,
+      reason: 'enemy_escape',
+      enemyType: data.enemyType 
+    });
+    
+    // Remove the escaped enemy
+    this.enemies.delete(data.enemyId);
   }
 
-  private handlePlayerScore(points: number): void {
-    if (!this.player) return;
-    this.player.addScore(points);
+  private handleEnemyDestroyed(data: { points: number; enemyType: string; enemyId: string }): void {
+    // Emit score event for Player to handle
+    this.eventBus.emit('player:score', { 
+      points: data.points 
+    });
+    
+    // Enemy is already destroyed, just clean up references
+    this.enemies.delete(data.enemyId);
   }
 
   private handleCollisionCheck(data: any): void {
@@ -152,7 +158,14 @@ export class EntitySystem {
     );
 
     if (hasCollision) {
-      this.handlePlayerDamage(data.damage);
+      // Apply damage directly to player
+      if (this.player) {
+        const isDead = this.player.takeDamage(data.damage);
+        if (isDead) {
+          console.log('💀 Player died from collision, EntitySystem deactivating...');
+          this.isActive = false;
+        }
+      }
       
       const enemy = this.enemies.get(data.entityId);
       if (enemy) {

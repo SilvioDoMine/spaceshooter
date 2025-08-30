@@ -90,10 +90,11 @@ export class Enemy extends Entity {
   private handleEscape(): void {
     const escapePenalty = this.getEscapePenalty();
     
-    this.eventBus.emit('player:damage', { 
+    // Emit enemy escape event - other systems will handle the consequences
+    this.eventBus.emit('enemy:escaped', { 
       damage: escapePenalty,
-      reason: 'enemy_escape',
-      enemyType: this.enemyType 
+      enemyType: this.enemyType,
+      enemyId: this.id
     });
 
     this.eventBus.emit('audio:play', { soundId: 'hit', options: { volume: 0.3 } });
@@ -161,7 +162,12 @@ export class Enemy extends Entity {
   private onDeath(): void {
     const scorePoints = this.getScoreValue();
     
-    this.eventBus.emit('player:score', { points: scorePoints });
+    // Emit enemy death event - other systems will handle score/rewards
+    this.eventBus.emit('enemy:destroyed', { 
+      points: scorePoints,
+      enemyType: this.enemyType,
+      enemyId: this.id
+    });
     
     this.eventBus.emit('audio:play', { soundId: 'explosion', options: { volume: 0.4 } });
     

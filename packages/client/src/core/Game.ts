@@ -10,6 +10,7 @@ import { RenderingSystem } from '../systems/RenderingSystem';
 import { ParticleSystem } from '../systems/ParticleSystem';
 import { BackgroundSystem } from '../systems/BackgroundSystem';
 import { DebugSystem } from '../systems/DebugSystem';
+import { UIManager } from '../managers/UIManager';
 
 /**
  * Game - Core game class that manages all systems and lifecycle
@@ -37,6 +38,7 @@ export class Game {
   private entitySystem!: EntitySystem;
   private backgroundSystem!: BackgroundSystem;
   private debugSystem!: DebugSystem;
+  private uiManager!: UIManager;
 
   constructor() {
     this.eventBus = new EventBus();
@@ -148,6 +150,7 @@ export class Game {
     this.inputSystem = new InputSystem(this.eventBus);
     this.audioSystem = new AudioSystem(this.eventBus);
     this.uiSystem = new UISystem(this.eventBus);
+    this.uiManager = new UIManager(this.eventBus);
     this.particleSystem = new ParticleSystem(this.eventBus);
     this.menuSystem = new MenuSystem(this.eventBus);
     this.gameStateManager = new GameStateManager(this.eventBus);

@@ -61,17 +61,34 @@ export type GameEventMap = {
   'game:main': {};
 
   // ========== PLAYER EVENTS ==========
-  // Emitido em: Enemy.ts:88 quando jogador recebe dano
-  // Motivo: UI precisa atualizar barra de vida e mostrar feedback visual
+  // Emitido em: EntitySystem quando jogador recebe dano (via enemy escape ou collision)
+  // Motivo: Player precisa processar dano recebido
   'player:damage': { damage: number; reason?: string; enemyType?: string };
   
-  // Emitido em: Enemy.ts:161 quando jogador destrói inimigo
-  // Motivo: UI precisa atualizar pontuação na tela
+  // Emitido em: EntitySystem quando jogador ganha pontos (via enemy destruction)  
+  // Motivo: Player precisa processar pontos ganhos
   'player:score': { points: number };
   
-  // Emitido em: GameStateManager.ts:377 quando jogador atira
-  // Motivo: Sistema de projéteis criar novo projétil
-  'player:shot': {};
+  // Emitido em: Player.ts quando vida do jogador muda
+  // Motivo: UIManager atualizar barra de vida
+  'player:health-changed': { current: number; max: number };
+  
+  // Emitido em: Player.ts quando munição do jogador muda  
+  // Motivo: UIManager atualizar contador de munição
+  'player:ammo-changed': { current: number; max: number };
+  
+  // Emitido em: Player.ts quando pontuação do jogador muda
+  // Motivo: UIManager atualizar pontuação na tela
+  'player:score-changed': { score: number };
+
+  // ========== ENEMY EVENTS ==========
+  // Emitido em: Enemy.ts quando inimigo escapa
+  // Motivo: EntitySystem aplicar penalidade ao jogador
+  'enemy:escaped': { damage: number; enemyType: string; enemyId: string };
+  
+  // Emitido em: Enemy.ts quando inimigo é destruído
+  // Motivo: EntitySystem dar pontos ao jogador
+  'enemy:destroyed': { points: number; enemyType: string; enemyId: string };
 
   // ========== COLLISION EVENTS ==========
   // Emitido em: Enemy.ts:117 para verificar colisão de inimigo
@@ -140,6 +157,31 @@ export type GameEventMap = {
   // Emitido em: UISystem.ts:81 para registrar cena de UI
   // Motivo: Sistema de UI precisa registrar sua cena separada para overlay
   'renderer:register-ui-scene': { scene: any; camera: any };
+
+  // ========== DEBUG EVENTS ==========
+  // Emitido em: DebugSystem.ts para alternar modo god
+  // Motivo: Player precisa saber quando god mode está ativo
+  'debug:god-mode-toggle': { enabled: boolean };
+  
+  // Emitido em: DebugSystem.ts para mostrar/ocultar colisões
+  // Motivo: Entidades precisam saber quando mostrar visualização de colisão
+  'debug:collision-visibility-toggle': { visible: boolean };
+  
+  // Emitido em: DebugSystem.ts para alterar escala de tempo
+  // Motivo: Game loop precisa saber qual multiplicador aplicar
+  'debug:time-scale-change': { timeScale: number };
+  
+  // Emitido em: DebugSystem.ts para atualizar dados debug
+  // Motivo: Sistema de debug atualizar display de informações
+  'debug:update': { [key: string]: any };
+  
+  // Emitido em: DebugSystem.ts quando visibilidade do debug muda
+  // Motivo: Outros sistemas podem reagir ao debug sendo ligado/desligado
+  'debug:toggled': { visible: boolean };
+
+  // Emitido em: shared config quando tamanho do player muda
+  // Motivo: Player precisa ajustar seu tamanho dinamicamente
+  'player:size-changed': { newSize: number };
 };
 
 export class EventBus {
@@ -155,10 +197,13 @@ export class EventBus {
     'scene:add-object',
     'scene:remove-object',
     'renderer:register-ui-scene',
-
     'collision:check',
     'collision:projectile-enemy',
     'collision:powerup-player',
+    'debug:update',
+    'player:health-changed',
+    'player:ammo-changed',
+    'player:score-changed',
   ]);
 
   /**
