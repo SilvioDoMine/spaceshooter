@@ -173,6 +173,7 @@ export const PLAYER_CONFIG = {
     minY: -4,
     maxY: 4
   },
+  shotCooldown: 0.5,      // Cooldown entre tiros em segundos (500ms)
   // Compound collision shape em valores relativos (0-1 baseado no size)
   // Essas coordenadas são multiplicadas pelo 'size' para obter valores absolutos
   collisionShape: {

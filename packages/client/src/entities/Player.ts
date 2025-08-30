@@ -24,7 +24,7 @@ export class Player extends Entity {
   private stats: PlayerStats;
   private inputState: any = {};
   private shotTimer: number = 0;
-  private shotCooldown: number = 0.2; // 200ms converted to seconds
+  private shotCooldown: number = PLAYER_CONFIG.shotCooldown; // Usar valor do shared
   private speed: number = PLAYER_CONFIG.speed;
   private renderingSystem: RenderingSystem;
   private projectileSystem: ProjectileSystem;
