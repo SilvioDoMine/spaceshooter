@@ -174,33 +174,33 @@ export class UISystem {
     this.ammoText.scale.setScalar(baseScale);
     this.hudGroup.add(this.ammoText);
     
-    // Level text (below health bar)
+    // Level text (below health bar) - tamanho menor
     this.levelText = this.createTextSprite(`Level ${this.currentLevel}`);
-    this.levelText.position.set(0, 0.45, 0);
-    this.levelText.scale.setScalar(baseScale);
+    this.levelText.position.set(0, 0.55, 0);
+    this.levelText.scale.setScalar(baseScale * 0.7); // 30% menor
     this.hudGroup.add(this.levelText);
     
-    // XP bar background (below level text)
+    // XP bar background (próximo da health bar)
     const xpBarWidth = Math.min(aspect * 0.3, 0.5);
-    const xpBarBgGeometry = new THREE.PlaneGeometry(xpBarWidth, 0.03);
+    const xpBarBgGeometry = new THREE.PlaneGeometry(xpBarWidth, 0.025);
     const xpBarBgMaterial = new THREE.MeshBasicMaterial({ 
       color: 0x222244,
       transparent: true,
       opacity: 0.8
     });
     this.xpBarBg = new THREE.Mesh(xpBarBgGeometry, xpBarBgMaterial);
-    this.xpBarBg.position.set(0, 0.35, 0);
+    this.xpBarBg.position.set(0, 0.45, 0);
     this.hudGroup.add(this.xpBarBg);
     
     // XP bar (foreground)
-    const xpBarGeometry = new THREE.PlaneGeometry(xpBarWidth, 0.03);
+    const xpBarGeometry = new THREE.PlaneGeometry(xpBarWidth, 0.025);
     const xpBarMaterial = new THREE.MeshBasicMaterial({ 
       color: 0x4444ff,
       transparent: true,
       opacity: 0.9
     });
     this.xpBar = new THREE.Mesh(xpBarGeometry, xpBarMaterial);
-    this.xpBar.position.set(0, 0.35, 0.001); // Slightly in front
+    this.xpBar.position.set(0, 0.45, 0.001); // Slightly in front
     this.hudGroup.add(this.xpBar);
   }
   
@@ -548,7 +548,7 @@ export class UISystem {
     this.ammoText.position.x = aspect * 0.9;
     this.ammoText.scale.setScalar(baseScale);
     
-    this.levelText.scale.setScalar(baseScale);
+    this.levelText.scale.setScalar(baseScale * 0.7); // Manter o tamanho menor
     
     // Update health bar width
     const barWidth = Math.min(aspect * 0.3, 0.5);
