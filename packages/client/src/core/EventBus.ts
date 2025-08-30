@@ -92,7 +92,11 @@ export type GameEventMap = {
   
   // Emitido em: Player.ts quando jogador sobe de nível
   // Motivo: Criar efeitos especiais e tocar som de level up
-  'player:level-up': { oldLevel: number; newLevel: number; currentXP: number };
+  'player:level-up': { oldLevel: number; newLevel: number; currentXP: number; skillOptions: any[] };
+  
+  // Emitido em: UISystem quando jogador seleciona uma skill
+  // Motivo: Player precisa aplicar a skill selecionada
+  'player:skill-selected': { skillType: string };
 
   // ========== ENEMY EVENTS ==========
   // Emitido em: Enemy.ts quando inimigo escapa
@@ -167,6 +171,34 @@ export type GameEventMap = {
   // Motivo: Exibir tela de game over com estatísticas
   'ui:game-over': { finalScore: number; stats: any };
   
+  // Emitido em: UIManager quando jogador precisa escolher skill
+  // Motivo: Mostrar modal de seleção de skills
+  'ui:show-skill-selection': { skillOptions: any[] };
+  
+  // Emitido em: UISystem quando skill é selecionada
+  // Motivo: Fechar modal e aplicar skill
+  'ui:skill-selected': { skillType: string };
+  
+  // Emitido em: Player quando level up inicia câmera lenta
+  // Motivo: Reduzir timeScale progressivamente até parar
+  'game:slow-motion': { duration: number; targetScale: number };
+  
+  // Emitido em: Game quando slow motion termina completamente
+  // Motivo: Sinalizar que é hora de mostrar o modal de skills
+  'game:slow-motion-complete': {};
+  
+  // Emitido em: UISystem quando modal de skills é exibido
+  // Motivo: Pausar completamente o jogo
+  'game:pause-for-skill-selection': {};
+  
+  // Emitido em: UISystem quando skill é selecionada
+  // Motivo: Despausar e ativar invulnerabilidade temporária
+  'game:resume-after-skill-selection': {};
+  
+  // Emitido em: Player quando precisa ficar invulnerável
+  // Motivo: Ativar proteção temporária
+  'player:set-invulnerable': { duration: number };
+  
   // ========== AUDIO EVENTS ==========
   // Emitido em: Player.ts:154,163, Enemy.ts:94,163, main2.ts:256,613,747,833,929, EntitySystem.ts:217
   // Motivo: Reproduzir efeitos sonoros sem acoplamento direto ao sistema de áudio
@@ -180,6 +212,14 @@ export type GameEventMap = {
   // Emitido em: Player.ts:165, Enemy.ts:96, main2.ts:616,836,920, EntitySystem.ts:213
   // Motivo: Criar efeito visual de impacto na posição especificada
   'particles:hit': { position: { x: number; y: number; z: number } };
+  
+  // Emitido em: Player quando sobe de nível
+  // Motivo: Criar efeito visual especial de level up
+  'particles:level-up': { position: { x: number; y: number; z: number } };
+  
+  // Emitido para limpar todas as partículas
+  // Motivo: Reset do sistema de partículas
+  'particles:clear': {};
   
   // ========== SCENE EVENTS ==========
   // Emitido por entidades para adicionar objetos 3D à cena
@@ -238,6 +278,7 @@ export class EventBus {
     'audio:play',
     'particles:explosion',
     'particles:hit',
+    'particles:level-up',
     'input:action',
     'scene:add-object',
     'scene:remove-object',

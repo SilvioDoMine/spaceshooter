@@ -28,6 +28,15 @@ export class Game {
   private isRunning: boolean = false;
   private lastFrameTime: number = 0;
   private animationId: number | null = null;
+  
+  // Slow motion and pause system
+  private baseTimeScale: number = 1.0;
+  private currentTimeScale: number = 1.0;
+  private targetTimeScale: number = 1.0;
+  private slowMotionTimer: number = 0;
+  private slowMotionDuration: number = 0;
+  private isSlowMotionActive: boolean = false;
+  private isPausedForSkillSelection: boolean = false;
 
   // Direct system references - no more Map lookup hell
   private renderingSystem!: RenderingSystem;
@@ -47,6 +56,7 @@ export class Game {
   constructor() {
     this.eventBus = new EventBus();
     this.setupGlobalErrorHandling();
+    this.setupSlowMotionAndPauseHandlers();
   }
 
   /**
@@ -205,9 +215,15 @@ export class Game {
     let deltaTime = ((currentTime - this.lastFrameTime) / 1000);
     this.lastFrameTime = currentTime;
 
-    // Apply debug time scale
-    const timeScale = this.debugSystem.getTimeScale();
-    deltaTime *= timeScale;
+    // Update slow motion
+    this.updateSlowMotion(deltaTime);
+
+    // Apply our time scale (includes slow motion and pause)
+    const finalTimeScale = this.isPausedForSkillSelection ? 0 : this.currentTimeScale;
+    
+    // Apply debug time scale as well
+    const debugTimeScale = this.debugSystem.getTimeScale();
+    deltaTime *= (finalTimeScale * debugTimeScale);
 
     // Update systems directly - no events needed for core game loop
     if (this.gameStateManager.isPlaying()) {
@@ -241,6 +257,59 @@ export class Game {
       
       console.log('🌍 World bounds synchronized across systems:', worldBounds);
     });
+  }
+
+  private setupSlowMotionAndPauseHandlers(): void {
+    this.eventBus.on('game:slow-motion', (data) => {
+      this.startSlowMotion(data.duration, data.targetScale);
+    });
+
+    this.eventBus.on('game:pause-for-skill-selection', () => {
+      this.pauseForSkillSelection();
+    });
+
+    this.eventBus.on('game:resume-after-skill-selection', () => {
+      this.resumeAfterSkillSelection();
+    });
+  }
+
+  private startSlowMotion(duration: number, targetScale: number): void {
+    console.log(`🐌 Starting slow motion: ${targetScale}x for ${duration}s`);
+    this.isSlowMotionActive = true;
+    this.slowMotionDuration = duration;
+    this.slowMotionTimer = 0;
+    this.targetTimeScale = targetScale;
+  }
+
+  private updateSlowMotion(rawDeltaTime: number): void {
+    if (!this.isSlowMotionActive) return;
+
+    this.slowMotionTimer += rawDeltaTime;
+    
+    // Linear interpolation from 1.0 to targetTimeScale over duration
+    const progress = Math.min(this.slowMotionTimer / this.slowMotionDuration, 1.0);
+    this.currentTimeScale = 1.0 - (progress * (1.0 - this.targetTimeScale));
+    
+    if (progress >= 1.0) {
+      this.currentTimeScale = this.targetTimeScale;
+      this.isSlowMotionActive = false;
+      console.log(`🐌 Slow motion complete. Final scale: ${this.currentTimeScale}`);
+      
+      // Emit event when slow motion is complete
+      this.eventBus.emit('game:slow-motion-complete');
+    }
+  }
+
+  private pauseForSkillSelection(): void {
+    console.log('⏸️ Game paused for skill selection');
+    this.isPausedForSkillSelection = true;
+  }
+
+  private resumeAfterSkillSelection(): void {
+    console.log('▶️ Game resumed after skill selection');
+    this.isPausedForSkillSelection = false;
+    this.currentTimeScale = 1.0; // Reset to normal speed
+    this.isSlowMotionActive = false; // Clear any slow motion
   }
 
   private setupGlobalErrorHandling(): void {

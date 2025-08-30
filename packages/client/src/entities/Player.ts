@@ -4,7 +4,7 @@ import { EventBus } from '../core/EventBus';
 import { RenderingSystem } from '../systems/RenderingSystem';
 import { assetManager } from '../services/AssetManager';
 import { ProjectileSystem } from '../systems/ProjectileSystem';
-import { PLAYER_CONFIG, DEFAULT_WORLD_BOUNDS, WorldBounds, PROJECTILE_CONFIG, calculateLevelFromXP, getXPToNextLevel, getLevelProgress } from '@spaceshooter/shared';
+import { PLAYER_CONFIG, DEFAULT_WORLD_BOUNDS, WorldBounds, PROJECTILE_CONFIG, calculateLevelFromXP, getXPToNextLevel, getLevelProgress, PlayerSkill, SkillType, generateSkillOptions, calculateDamageMultiplier, calculateAttackSpeedMultiplier, hasMultiShot, calculateMaxHealthBonus } from '@spaceshooter/shared';
 import { CompoundCollisionShape, CollisionUtils } from '../utils/CollisionUtils';
 
 export interface PlayerStats {
@@ -20,6 +20,7 @@ export interface PlayerStats {
   accuracy: number;
   level: number;
   currentXP: number;
+  skills: PlayerSkill[];
 }
 
 export class Player extends Entity {
@@ -43,6 +44,11 @@ export class Player extends Entity {
   private targetRotation: number = 0;
   private currentRotation: number = 0;
   private rotationSmoothness: number = 8.0; // Higher = faster rotation
+  private healthRegenTimer: number = 0;
+  private healthRegenInterval: number = 10; // Default 10 seconds
+  private invulnerabilityTimer: number = 0;
+  private isInvulnerable: boolean = false;
+  private pendingSkillOptions?: any[]; // Store skill options until slow motion ends
 
   constructor(
     eventBus: EventBus,
@@ -61,7 +67,8 @@ export class Player extends Entity {
       timeAlive: 0,
       accuracy: 0,
       level: PLAYER_CONFIG.level,
-      currentXP: PLAYER_CONFIG.currentXP
+      currentXP: PLAYER_CONFIG.currentXP,
+      skills: [...PLAYER_CONFIG.skills]
     }
   ) {
     super(eventBus, 'player', initialPosition);
@@ -76,6 +83,9 @@ export class Player extends Entity {
     
     // Create visual after all properties are set
     this.createVisual();
+    
+    // Apply initial skill effects
+    this.applySkillEffects();
   }
 
   protected setupEventHandlers(): void {
@@ -92,6 +102,10 @@ export class Player extends Entity {
 
     const unsubscribeXPGain = this.eventBus.on('player:xp-gain', (data) => {
       this.gainXP(data.xp);
+    });
+
+    const unsubscribeSkillSelected = this.eventBus.on('player:skill-selected', (data) => {
+      this.selectSkill(data.skillType as SkillType);
     });
 
     const unsubscribeDamage = this.eventBus.on('player:damage', (data) => {
@@ -112,12 +126,23 @@ export class Player extends Entity {
       this.handleSizeChange(data.newSize);
     });
 
+    const unsubscribeInvulnerability = this.eventBus.on('player:set-invulnerable', (data) => {
+      this.setInvulnerable(data.duration);
+    });
+
+    const unsubscribeSlowMotionComplete = this.eventBus.on('game:slow-motion-complete', () => {
+      this.onSlowMotionComplete();
+    });
+
     this.addCleanupFunction(unsubscribeInput);
     this.addCleanupFunction(unsubscribeScore);
     this.addCleanupFunction(unsubscribeXPGain);
+    this.addCleanupFunction(unsubscribeSkillSelected);
     this.addCleanupFunction(unsubscribeDamage);
     this.addCleanupFunction(unsubscribeGodMode);
     this.addCleanupFunction(unsubscribeSizeChange);
+    this.addCleanupFunction(unsubscribeInvulnerability);
+    this.addCleanupFunction(unsubscribeSlowMotionComplete);
   }
 
   protected createVisual(): void {
@@ -336,6 +361,22 @@ export class Player extends Entity {
       this.shotTimer -= deltaTime;
     }
 
+    // Update health regeneration timer
+    this.healthRegenTimer += deltaTime;
+    if (this.healthRegenTimer >= this.healthRegenInterval) {
+      this.processHealthRegeneration();
+      this.healthRegenTimer = 0;
+    }
+
+    // Update invulnerability timer
+    if (this.isInvulnerable) {
+      this.invulnerabilityTimer -= deltaTime;
+      if (this.invulnerabilityTimer <= 0) {
+        this.isInvulnerable = false;
+        console.log('🛡️ Invulnerability ended');
+      }
+    }
+
     // TIRO AUTOMÁTICO AO PARAR
     if (!this.isMoving && this.stats.ammo > 0 && this.shotTimer <= 0) {
       // Tenta acessar o sistema de entidades pelo window.game
@@ -549,7 +590,22 @@ export class Player extends Entity {
       y: cos * projectileSpeed
     };
     
-    this.projectileSystem.createProjectile('player', projectilePosition, projectileVelocity);
+    // Apply damage multiplier from skills
+    const damageMultiplier = calculateDamageMultiplier(this.stats.skills);
+    const projectileDamage = Math.round(PROJECTILE_CONFIG.damage * damageMultiplier);
+    
+    // Create main projectile
+    this.projectileSystem.createProjectile('player', projectilePosition, projectileVelocity, projectileDamage);
+    
+    // Check for multi-shot skill
+    if (hasMultiShot(this.stats.skills)) {
+      // Create second projectile with slight delay
+      setTimeout(() => {
+        if (this.isActive) {
+          this.projectileSystem.createProjectile('player', projectilePosition, projectileVelocity, projectileDamage);
+        }
+      }, 50); // 50ms delay for visual effect
+    }
     
     this.eventBus.emit('audio:play', { soundId: 'shoot', options: { volume: 0.3 } });
     
@@ -559,6 +615,12 @@ export class Player extends Entity {
   public takeDamage(damage: number): boolean {
     // God mode prevents damage
     if (this.godModeEnabled) {
+      return false;
+    }
+    
+    // Invulnerability prevents damage
+    if (this.isInvulnerable) {
+      console.log('🛡️ Damage blocked by invulnerability');
       return false;
     }
     
@@ -607,11 +669,21 @@ export class Player extends Entity {
       this.stats.level = newLevel;
       console.log(`🎉 Level Up! Nível ${oldLevel} → ${newLevel}`);
       
-      this.eventBus.emit('player:level-up', {
-        oldLevel,
-        newLevel: this.stats.level,
-        currentXP: this.stats.currentXP
+      // Create level up particle effect at player position
+      this.eventBus.emit('particles:level-up', {
+        position: { x: this.position.x, y: this.position.y, z: 0 }
       });
+      
+      // Start slow motion effect (1.5 seconds to reach 0 speed)
+      this.eventBus.emit('game:slow-motion', {
+        duration: 1.5,
+        targetScale: 0.0
+      });
+      
+      // Gerar opções de skills para escolha e armazenar
+      this.pendingSkillOptions = generateSkillOptions(this.stats.skills);
+      
+      console.log('🎯 Skill options generated, waiting for slow motion to complete...');
       
       this.eventBus.emit('audio:play', { soundId: 'level-up', options: { volume: 0.7 } });
     }
@@ -629,12 +701,122 @@ export class Player extends Entity {
     };
   }
 
+  public selectSkill(skillType: SkillType): void {
+    const existingSkillIndex = this.stats.skills.findIndex(skill => skill.type === skillType);
+    
+    if (existingSkillIndex >= 0) {
+      // Upgrade existing skill
+      this.stats.skills[existingSkillIndex].level++;
+    } else {
+      // Add new skill
+      this.stats.skills.push({
+        type: skillType,
+        level: 1
+      });
+    }
+    
+    console.log(`🎯 Skill selected: ${skillType} (Level ${this.getSkillLevel(skillType)})`);
+    
+    // Apply skill effects immediately
+    this.applySkillEffects();
+    
+    // Update UI
+    this.updateUI();
+  }
+
+  public getSkillLevel(skillType: SkillType): number {
+    const skill = this.stats.skills.find(s => s.type === skillType);
+    return skill ? skill.level : 0;
+  }
+
+  public getSkills(): PlayerSkill[] {
+    return [...this.stats.skills];
+  }
+
+  private applySkillEffects(): void {
+    // Apply max health bonus
+    const healthBonus = calculateMaxHealthBonus(this.stats.skills);
+    this.stats.maxHealth = PLAYER_CONFIG.maxHealth + healthBonus;
+    
+    // Ensure current health doesn't exceed new max
+    this.stats.health = Math.min(this.stats.health, this.stats.maxHealth);
+    
+    // Update shot cooldown based on attack speed
+    const attackSpeedMultiplier = calculateAttackSpeedMultiplier(this.stats.skills);
+    this.shotCooldown = PLAYER_CONFIG.shotCooldown * attackSpeedMultiplier;
+    
+    // Update health regeneration interval
+    this.updateHealthRegeneration();
+    
+    console.log(`🔧 Skills applied: MaxHP=${this.stats.maxHealth}, ShotCooldown=${this.shotCooldown.toFixed(2)}s`);
+  }
+
+  private processHealthRegeneration(): void {
+    const regenSkill = this.stats.skills.find(skill => skill.type === 'health_regeneration');
+    if (!regenSkill || this.stats.health >= this.stats.maxHealth) return;
+    
+    const regenAmount = this.getHealthRegenAmount(regenSkill.level);
+    this.heal(regenAmount);
+    
+    console.log(`💚 Health regenerated: +${regenAmount} HP`);
+  }
+
+  private getHealthRegenAmount(level: number): number {
+    switch (level) {
+      case 1: return 5;
+      case 2: return 8;
+      case 3: return 12;
+      default: return 0;
+    }
+  }
+
+  private updateHealthRegeneration(): void {
+    const regenSkill = this.stats.skills.find(skill => skill.type === 'health_regeneration');
+    if (!regenSkill) {
+      this.healthRegenInterval = 10; // Default
+      return;
+    }
+    
+    // Different intervals based on skill level
+    switch (regenSkill.level) {
+      case 1: this.healthRegenInterval = 10; break; // 10 seconds
+      case 2: this.healthRegenInterval = 8; break;  // 8 seconds
+      case 3: this.healthRegenInterval = 6; break;  // 6 seconds
+      default: this.healthRegenInterval = 10;
+    }
+  }
+
   private updateAccuracy(): void {
     if (this.stats.shotsFired > 0) {
       this.stats.accuracy = Math.round((this.stats.enemiesDestroyed / this.stats.shotsFired) * 100);
     } else {
       this.stats.accuracy = 0;
     }
+  }
+
+  private onSlowMotionComplete(): void {
+    console.log('🎯 Slow motion complete, showing skill selection modal');
+    
+    if (this.pendingSkillOptions) {
+      this.eventBus.emit('player:level-up', {
+        oldLevel: this.stats.level - 1, // Previous level
+        newLevel: this.stats.level,
+        currentXP: this.stats.currentXP,
+        skillOptions: this.pendingSkillOptions
+      });
+      
+      this.pendingSkillOptions = undefined; // Clear pending options
+    }
+  }
+
+  public setInvulnerable(duration: number): void {
+    this.isInvulnerable = true;
+    this.invulnerabilityTimer = duration;
+    console.log(`🛡️ Player is now invulnerable for ${duration}s`);
+  }
+
+  public isPlayerInvulnerable(): boolean {
+    return this.isInvulnerable;
   }
 
   public getStats(): PlayerStats {
@@ -655,7 +837,8 @@ export class Player extends Entity {
       timeAlive: 0,
       accuracy: 0,
       level: PLAYER_CONFIG.level,
-      currentXP: PLAYER_CONFIG.currentXP
+      currentXP: PLAYER_CONFIG.currentXP,
+      skills: [...PLAYER_CONFIG.skills]
     };
     
     this.setPosition({ x: 0, y: 0 });

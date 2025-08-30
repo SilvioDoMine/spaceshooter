@@ -42,6 +42,24 @@ export interface CameraConfig {
 }
 
 /**
+ * Tipos de skills disponíveis
+ */
+export type SkillType = 
+  | 'damage_boost'      // Aumentar dano
+  | 'attack_speed'      // Aumentar velocidade de ataque
+  | 'multi_shot'        // Multi ataque (único nível)
+  | 'health_regeneration' // Recuperar vida aleatória
+  | 'max_health_boost';  // Aumento de vida permanente
+
+/**
+ * Informações de uma skill individual
+ */
+export interface PlayerSkill {
+  type: SkillType;
+  level: number;
+}
+
+/**
  * Entidade do jogador
  */
 export interface Player {
@@ -51,6 +69,7 @@ export interface Player {
   health: number;
   level: number;
   currentXP: number;
+  skills: PlayerSkill[];
 }
 
 /**
@@ -178,6 +197,7 @@ export const PLAYER_CONFIG = {
   shotCooldown: 0.5,      // Cooldown entre tiros em segundos (500ms)
   level: 1,               // Nível inicial
   currentXP: 0,           // XP inicial
+  skills: [] as PlayerSkill[], // Skills iniciais vazias
   // Compound collision shape em valores relativos (0-1 baseado no size)
   // Essas coordenadas são multiplicadas pelo 'size' para obter valores absolutos
   collisionShape: {
@@ -367,13 +387,13 @@ export interface Observer {
  */
 export const LEVEL_XP_TABLE: Record<number, number> = {
   1: 0,      // Nível 1 não precisa de XP
-  2: 50,    // 20 XP para nível 2
-  3: 250,    // 250 XP para nível 3
-  4: 450,    // 450 XP para nível 4
-  5: 700,    // 700 XP para nível 5
-  6: 1000,   // 1000 XP para nível 6
+  2: 20,    // 20 XP para nível 2
+  3: 70,    // 250 XP para nível 3
+  4: 200,    // 450 XP para nível 4
+  5: 500,    // 700 XP para nível 5
+  6: 750,   // 1000 XP para nível 6
   7: 1350,   // 1350 XP para nível 7
-  8: 1750,   // 1750 XP para nível 8
+  8: 1800,   // 1750 XP para nível 8
   9: 2200,   // 2200 XP para nível 9
   10: 2700,  // 2700 XP para nível 10
   11: 3250,  // 3250 XP para nível 11
@@ -469,4 +489,174 @@ export function getLevelProgress(currentXP: number, currentLevel: number): numbe
   const xpNeededForNextLevel = nextLevelXP - currentLevelXP;
   
   return Math.min(100, Math.max(0, (xpInCurrentLevel / xpNeededForNextLevel) * 100));
+}
+
+/**
+ * Configuração das skills disponíveis
+ */
+export interface SkillConfig {
+  id: SkillType;
+  name: string;
+  description: string;
+  maxLevel: number;
+  icon?: string;
+  effects: {
+    [level: number]: {
+      value: number;
+      description: string;
+    };
+  };
+}
+
+/**
+ * Configurações de todas as skills do jogo
+ */
+export const SKILLS_CONFIG: Record<SkillType, SkillConfig> = {
+  damage_boost: {
+    id: 'damage_boost',
+    name: 'Dano Aumentado',
+    description: 'Aumenta o dano dos seus projéteis',
+    maxLevel: 5,
+    icon: '💥',
+    effects: {
+      1: { value: 1.2, description: '+20% de dano' },
+      2: { value: 1.4, description: '+40% de dano' },
+      3: { value: 1.6, description: '+60% de dano' },
+      4: { value: 1.8, description: '+80% de dano' },
+      5: { value: 2.0, description: '+100% de dano' }
+    }
+  },
+  attack_speed: {
+    id: 'attack_speed',
+    name: 'Tiro Rápido',
+    description: 'Diminui o tempo entre disparos',
+    maxLevel: 5,
+    icon: '🔥',
+    effects: {
+      1: { value: 0.8, description: '-20% cooldown de tiro' },
+      2: { value: 0.65, description: '-35% cooldown de tiro' },
+      3: { value: 0.5, description: '-50% cooldown de tiro' },
+      4: { value: 0.4, description: '-60% cooldown de tiro' },
+      5: { value: 0.3, description: '-70% cooldown de tiro' }
+    }
+  },
+  multi_shot: {
+    id: 'multi_shot',
+    name: 'Tiro Duplo',
+    description: 'Atira duas vezes seguidas com uma bala só',
+    maxLevel: 1,
+    icon: '🔫',
+    effects: {
+      1: { value: 2, description: 'Atira 2 projéteis por disparo' }
+    }
+  },
+  health_regeneration: {
+    id: 'health_regeneration',
+    name: 'Regeneração',
+    description: 'Recupera vida periodicamente',
+    maxLevel: 3,
+    icon: '💚',
+    effects: {
+      1: { value: 5, description: 'Regenera 5 HP a cada 10s' },
+      2: { value: 8, description: 'Regenera 8 HP a cada 8s' },
+      3: { value: 12, description: 'Regenera 12 HP a cada 6s' }
+    }
+  },
+  max_health_boost: {
+    id: 'max_health_boost',
+    name: 'Vitalidade',
+    description: 'Aumenta sua vida máxima permanentemente',
+    maxLevel: 5,
+    icon: '❤️',
+    effects: {
+      1: { value: 20, description: '+20 HP máximo' },
+      2: { value: 40, description: '+40 HP máximo' },
+      3: { value: 60, description: '+60 HP máximo' },
+      4: { value: 80, description: '+80 HP máximo' },
+      5: { value: 100, description: '+100 HP máximo' }
+    }
+  }
+};
+
+/**
+ * Opção de skill para seleção
+ */
+export interface SkillOption {
+  type: SkillType;
+  currentLevel: number;
+  nextLevel: number;
+  config: SkillConfig;
+}
+
+/**
+ * Gera 3 opções aleatórias de skills para o jogador escolher
+ */
+export function generateSkillOptions(playerSkills: PlayerSkill[]): SkillOption[] {
+  const availableSkills: SkillOption[] = [];
+  
+  // Criar mapa de skills do player para lookup rápido
+  const playerSkillsMap = new Map<SkillType, number>();
+  playerSkills.forEach(skill => {
+    playerSkillsMap.set(skill.type, skill.level);
+  });
+  
+  // Verificar todas as skills disponíveis
+  Object.values(SKILLS_CONFIG).forEach(config => {
+    const currentLevel = playerSkillsMap.get(config.id) || 0;
+    const nextLevel = currentLevel + 1;
+    
+    // Só adicionar se a skill ainda pode ser evoluída
+    if (nextLevel <= config.maxLevel) {
+      availableSkills.push({
+        type: config.id,
+        currentLevel,
+        nextLevel,
+        config
+      });
+    }
+  });
+  
+  // Embaralhar e pegar até 3 opções
+  const shuffled = availableSkills.sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, Math.min(3, shuffled.length));
+}
+
+/**
+ * Calcula o multiplicador de dano baseado nas skills do player
+ */
+export function calculateDamageMultiplier(skills: PlayerSkill[]): number {
+  const damageSkill = skills.find(skill => skill.type === 'damage_boost');
+  if (!damageSkill) return 1.0;
+  
+  const effect = SKILLS_CONFIG.damage_boost.effects[damageSkill.level];
+  return effect ? effect.value : 1.0;
+}
+
+/**
+ * Calcula o multiplicador de velocidade de ataque baseado nas skills do player
+ */
+export function calculateAttackSpeedMultiplier(skills: PlayerSkill[]): number {
+  const speedSkill = skills.find(skill => skill.type === 'attack_speed');
+  if (!speedSkill) return 1.0;
+  
+  const effect = SKILLS_CONFIG.attack_speed.effects[speedSkill.level];
+  return effect ? effect.value : 1.0;
+}
+
+/**
+ * Verifica se o player tem a skill de tiro duplo
+ */
+export function hasMultiShot(skills: PlayerSkill[]): boolean {
+  return skills.some(skill => skill.type === 'multi_shot' && skill.level > 0);
+}
+
+/**
+ * Calcula o HP máximo adicional baseado nas skills do player
+ */
+export function calculateMaxHealthBonus(skills: PlayerSkill[]): number {
+  const healthSkill = skills.find(skill => skill.type === 'max_health_boost');
+  if (!healthSkill) return 0;
+  
+  const effect = SKILLS_CONFIG.max_health_boost.effects[healthSkill.level];
+  return effect ? effect.value : 0;
 }

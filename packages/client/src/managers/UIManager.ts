@@ -45,11 +45,24 @@ export class UIManager {
       });
     });
 
-    this.eventBus.on('player:level-up', (data: { oldLevel: number; newLevel: number; currentXP: number }) => {
+    this.eventBus.on('player:level-up', (data: { oldLevel: number; newLevel: number; currentXP: number; skillOptions: any[] }) => {
       this.eventBus.emit('ui:level-up-effect', {
         oldLevel: data.oldLevel,
         newLevel: data.newLevel,
         currentXP: data.currentXP
+      });
+      
+      // Show skill selection if there are options available
+      if (data.skillOptions && data.skillOptions.length > 0) {
+        this.eventBus.emit('ui:show-skill-selection', {
+          skillOptions: data.skillOptions
+        });
+      }
+    });
+
+    this.eventBus.on('ui:skill-selected', (data: { skillType: string }) => {
+      this.eventBus.emit('player:skill-selected', {
+        skillType: data.skillType
       });
     });
 

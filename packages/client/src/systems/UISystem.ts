@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { EventBus } from '../core/EventBus';
+import { UISkillModal } from './UISkillModal';
 
 /**
  * Sistema de UI/HUD totalmente em Three.js
@@ -37,6 +38,10 @@ export class UISystem {
   private levelText?: THREE.Sprite;
   private xpBar?: THREE.Mesh;
   private xpBarBg?: THREE.Mesh;
+  private skillModal?: THREE.Group;
+  private skillOptions: any[] = [];
+  private skillModalKeyHandler: ((event: KeyboardEvent) => void) | null = null;
+  private htmlSkillModal: UISkillModal;
 
   // Canvas global não mais necessário - cada sprite tem seu próprio canvas
   
@@ -55,6 +60,7 @@ export class UISystem {
 
   constructor(eventBus: EventBus, renderingSystem?: THREE.Scene & THREE.WebGLRenderer) {
     this.eventBus = eventBus;
+    this.htmlSkillModal = new UISkillModal((skillType) => this.selectSkill(skillType));
     this.setupEventListeners();
   }
   
@@ -117,6 +123,10 @@ export class UISystem {
 
     this.eventBus.on('ui:level-up-effect', (data: { oldLevel: number; newLevel: number; currentXP: number }) => {
       this.showLevelUpEffect(data.oldLevel, data.newLevel);
+    });
+
+    this.eventBus.on('ui:show-skill-selection', (data: { skillOptions: any[] }) => {
+      this.showSkillSelectionModal(data.skillOptions);
     });
 
     this.eventBus.on('game:started', () => {
@@ -515,6 +525,33 @@ export class UISystem {
     };
     animate();
   }
+  
+  public showSkillSelectionModal(skillOptions: any[]): void {
+    this.skillOptions = skillOptions;
+    
+    // Pause the game completely while modal is open
+    this.eventBus.emit('game:pause-for-skill-selection');
+    console.log('⏸️ Game paused for skill selection');
+    
+    // Show HTML modal
+    this.htmlSkillModal.show(skillOptions);
+  }
+  
+  
+  private selectSkill(skillType: string): void {
+    // Emit skill selection event
+    this.eventBus.emit('ui:skill-selected', { skillType });
+    
+    this.skillOptions = [];
+    
+    // Resume game after skill selection
+    this.eventBus.emit('game:resume-after-skill-selection');
+    console.log('▶️ Game resumed after skill selection');
+    
+    // Grant 0.5 seconds of invulnerability
+    this.eventBus.emit('player:set-invulnerable', { duration: 0.5 });
+    console.log('🛡️ Player granted 0.5s invulnerability');
+  }
 
   private onWindowResize(): void {
     const aspect = window.innerWidth / window.innerHeight;
@@ -566,6 +603,9 @@ export class UISystem {
   
   public dispose(): void {
     window.removeEventListener('resize', this.onWindowResize.bind(this));
+    
+    // Dispose HTML skill modal
+    this.htmlSkillModal.dispose();
     
     // Dispose materials and geometries
     this.hudGroup.traverse((object) => {

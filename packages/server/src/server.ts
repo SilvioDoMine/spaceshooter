@@ -9,7 +9,8 @@ const player: Player = {
   velocity: { x: 0, y: 0 },
   health: PLAYER_CONFIG.health,
   level: PLAYER_CONFIG.level,
-  currentXP: PLAYER_CONFIG.currentXP
+  currentXP: PLAYER_CONFIG.currentXP,
+  skills: [...PLAYER_CONFIG.skills]
 };
 
 console.log('Player criado:', player);
