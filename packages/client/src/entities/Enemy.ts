@@ -90,6 +90,8 @@ export class Enemy extends Entity {
   private handleEscape(): void {
     const escapePenalty = this.getEscapePenalty();
     
+    console.log(`🏃 Enemy ${this.enemyType} escaping! Damage: ${escapePenalty}`);
+    
     // Emit enemy escape event - other systems will handle the consequences
     this.eventBus.emit('enemy:escaped', { 
       damage: escapePenalty,

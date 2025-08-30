@@ -122,6 +122,8 @@ export class EntitySystem {
   }
 
   private handleEnemyEscape(data: { damage: number; enemyType: string; enemyId: string }): void {
+    console.log(`🎯 EntitySystem: Enemy ${data.enemyType} escaped, emitting player:damage with ${data.damage} damage`);
+    
     // Emit damage event for Player to handle
     this.eventBus.emit('player:damage', { 
       damage: data.damage,

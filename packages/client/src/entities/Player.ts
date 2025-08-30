@@ -82,6 +82,9 @@ export class Player extends Entity {
     });
 
     const unsubscribeDamage = this.eventBus.on('player:damage', (data) => {
+      console.log(`💥 Player: Received damage event:`, data);
+      this.takeDamage(data.damage);
+      
       if (data.reason === 'enemy_escape') {
         this.stats.enemiesEscaped++;
       }
