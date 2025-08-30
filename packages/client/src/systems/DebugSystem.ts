@@ -45,7 +45,7 @@ export class DebugSystem {
   private static readonly DEFAULT_SETTINGS: DebugSettings = {
     godModeEnabled: false,
     showCollisions: false,
-    showJoystick: true, // Show by default for debugging
+    showJoystick: false, // Hidden by default
     timeScale: 1.0,
     isPaused: false,
     playerSize: PLAYER_CONFIG.size,
@@ -56,7 +56,7 @@ export class DebugSystem {
   // Debug states
   private godModeEnabled: boolean = false;
   private showCollisions: boolean = false;
-  private showJoystick: boolean = true;
+  private showJoystick: boolean = false;
   private timeScale: number = 1.0;
   private isPaused: boolean = false;
   private playerSize: number = PLAYER_CONFIG.size;
@@ -544,9 +544,13 @@ export class DebugSystem {
     const resetSizeButton = document.getElementById('debug-reset-size') as HTMLButtonElement;
     if (resetSizeButton) {
       resetSizeButton.addEventListener('click', () => {
-        this.updatePlayerSize(0.3); // Default size
-        if (sizeSlider) sizeSlider.value = '30';
+        const defaultSize = DebugSystem.DEFAULT_SETTINGS.playerSize;
+        console.log('🔧 Reset size button clicked, resetting to:', defaultSize);
+        this.updatePlayerSize(defaultSize); // Default size from settings
+        if (sizeSlider) sizeSlider.value = (defaultSize * 100).toString();
       });
+    } else {
+      console.warn('❌ Reset size button not found in DOM');
     }
 
     const tinyButton = document.getElementById('debug-size-tiny') as HTMLButtonElement;

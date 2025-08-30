@@ -381,6 +381,7 @@ export class GameStateManager implements Subject {
   }
 
   private handleMenuAction(data: { type: string; action?: string }): void {
+    console.log('🎮 GameStateManager received menu action:', data);
     switch (data.type) {
       case 'main':
         if (data.action === 'start') {

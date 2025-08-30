@@ -162,6 +162,10 @@ export type GameEventMap = {
   // Emitido em: UISystem.ts:81 para registrar cena de UI
   // Motivo: Sistema de UI precisa registrar sua cena separada para overlay
   'renderer:register-ui-scene': { scene: any; camera: any };
+  
+  // Emitido em: RenderingSystem.ts quando janela é redimensionada
+  // Motivo: Outros sistemas precisam reagir a mudanças de viewport
+  'renderer:resize': { width: number; height: number; aspect: number };
 
   // ========== DEBUG EVENTS ==========
   // Emitido em: DebugSystem.ts para alternar modo god
