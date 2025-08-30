@@ -18,20 +18,16 @@ export class Enemy extends Entity {
     initialPosition: Position
   ) {
     const config = ENEMY_CONFIG[enemyType];
-    
     if (!config) {
       console.error(`❌ Enemy config not found for type: ${enemyType}`);
       throw new Error(`Enemy config not found for type: ${enemyType}`);
     }
-    
-    super(eventBus, id, initialPosition, { x: 0, y: -config.speed });
-    
+    // Inicializa com velocidade zero, será calculada no update
+    super(eventBus, id, initialPosition, { x: 0, y: 0 });
     this.enemyType = enemyType;
     this.config = config;
     this.health = config.health;
     this.maxHealth = config.health;
-    
-    // Now create visual after all properties are set
     this.createVisual();
   }
 
@@ -71,19 +67,38 @@ export class Enemy extends Entity {
   protected onUpdate(deltaTime: number): void {
     if (!this.isActive) return;
 
-    this.checkBoundsAndDestroy();
+    // Persegue o jogador
+    const game = (window as any).game;
+    if (game && typeof game.getEntitySystem === 'function') {
+      const entitySystem = game.getEntitySystem();
+      if (entitySystem && typeof entitySystem.getPlayer === 'function') {
+        const player = entitySystem.getPlayer();
+        if (player && typeof player.getPosition === 'function') {
+          const playerPos = player.getPosition();
+          const dx = playerPos.x - this.position.x;
+          const dy = playerPos.y - this.position.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist > 0.01) {
+            this.velocity.x = (dx / dist) * this.config.speed;
+            this.velocity.y = (dy / dist) * this.config.speed;
+          }
+        }
+      }
+    }
+    // Move
+    this.setPosition({
+      x: this.position.x + this.velocity.x * deltaTime,
+      y: this.position.y + this.velocity.y * deltaTime
+    });
+
     this.checkPlayerCollision();
   }
 
   private checkBoundsAndDestroy(): void {
-    const bounds = { minX: -10, maxX: 10, minY: -6, maxY: 10 };
-    
+    // Remove inimigo se sair muito longe do mapa
+    const bounds = { minX: -15, maxX: 15, minY: -12, maxY: 12 };
     if (!this.checkBounds(bounds.minX, bounds.maxX, bounds.minY, bounds.maxY)) {
-      if (this.position.y < bounds.minY) {
-        this.handleEscape();
-      } else {
-        this.destroy();
-      }
+      this.destroy();
     }
   }
 
@@ -198,7 +213,6 @@ export class Enemy extends Entity {
   public static spawnEnemy(eventBus: EventBus): Enemy {
     const currentTime = Date.now();
     const enemyId = `enemy_${currentTime}_${Math.random()}`;
-    
     const rand = Math.random();
     let enemyType: EnemyData['type'];
     if (rand < 0.7) {
@@ -208,16 +222,26 @@ export class Enemy extends Entity {
     } else {
       enemyType = 'heavy';
     }
-    
-    const spawnPosition: Position = {
-      x: (Math.random() - 0.5) * 8, // Random X between -4 and 4
-      y: 6  // Top of screen
-    };
-    
+    // Spawn em uma borda aleatória do mapa
+    const edge = Math.floor(Math.random() * 4); // 0:top, 1:bottom, 2:left, 3:right
+    let x = 0, y = 0;
+    const bounds = { minX: -10, maxX: 10, minY: -7.5, maxY: 7.5 };
+    if (edge === 0) { // topo
+      x = bounds.minX + Math.random() * (bounds.maxX - bounds.minX);
+      y = bounds.maxY;
+    } else if (edge === 1) { // baixo
+      x = bounds.minX + Math.random() * (bounds.maxX - bounds.minX);
+      y = bounds.minY;
+    } else if (edge === 2) { // esquerda
+      x = bounds.minX;
+      y = bounds.minY + Math.random() * (bounds.maxY - bounds.minY);
+    } else { // direita
+      x = bounds.maxX;
+      y = bounds.minY + Math.random() * (bounds.maxY - bounds.minY);
+    }
+    const spawnPosition: Position = { x, y };
     const enemy = new Enemy(eventBus, enemyId, enemyType, spawnPosition);
-    
-    console.log(`Enemy spawned: ${enemyType} at (${spawnPosition.x.toFixed(1)}, ${spawnPosition.y})`);
-    
+    console.log(`Enemy spawned: ${enemyType} at (${spawnPosition.x.toFixed(1)}, ${spawnPosition.y.toFixed(1)})`);
     return enemy;
   }
 }

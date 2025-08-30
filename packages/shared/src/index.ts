@@ -232,7 +232,7 @@ export const PROJECTILE_CONFIG = {
 export const ENEMY_CONFIG = {
   basic: {
     health: 20,             // 2 hits para destruir
-    speed: 1.5,             // Velocidade moderada
+    speed: 0.8,             // Velocidade moderada
     size: 0.3,              // Tamanho visual
     radius: 0.25,           // Raio da hitbox
     color: 0xff4444,        // Vermelho
@@ -240,7 +240,7 @@ export const ENEMY_CONFIG = {
   },
   fast: {
     health: 10,             // 1 hit para destruir
-    speed: 2.5,             // Mais rápido
+    speed: 1.1,             // Mais rápido
     size: 0.2,              // Tamanho visual
     radius: 0.175,            // Raio da hitbox (menor)
     color: 0xff8800,        // Laranja
@@ -248,7 +248,7 @@ export const ENEMY_CONFIG = {
   },
   heavy: {
     health: 50,             // 5 hits para destruir
-    speed: 0.8,             // Mais lento
+    speed: 0.4,             // Mais lento
     size: 0.5,              // Tamanho visual
     radius: 0.4,           // Raio da hitbox (maior)
     color: 0x8844ff,        // Roxo

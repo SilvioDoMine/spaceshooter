@@ -291,7 +291,12 @@ export class EntitySystem {
   private trySpawnPowerUp(deltaTime: number): void {
     this.powerUpSpawnTimer += deltaTime;
     const spawnRate = POWERUP_CONFIG.ammo.spawnRate / 1000; // Convert milliseconds to seconds
-    
+
+    // Limite de 5 power-ups ativos
+    if (this.powerUps.size >= 5) {
+      return;
+    }
+
     if (this.powerUpSpawnTimer >= spawnRate) {
       try {
         const powerUp = PowerUp.spawnPowerUp(this.eventBus);
