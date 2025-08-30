@@ -350,17 +350,32 @@ export class Player extends Entity {
             }
           });
           if (closestEnemy && typeof closestEnemy.getPosition === 'function') {
-            // Rotaciona para o inimigo mais próximo
+            // Rotaciona para o inimigo mais próximo de forma suave
             const enemyPos = closestEnemy.getPosition();
             const dx = enemyPos.x - playerPos.x;
             const dy = enemyPos.y - playerPos.y;
             // Calcula o ângulo para mirar
-            this.targetRotation = Math.atan2(-dx, dy);
-            this.currentRotation = this.targetRotation; // Garante mira instantânea
+            const desiredRotation = Math.atan2(-dx, dy);
+            // Suaviza a rotação usando o mesmo método do updateRotation
+            let rotationDifference = desiredRotation - this.currentRotation;
+            if (rotationDifference > Math.PI) {
+              rotationDifference -= 2 * Math.PI;
+            } else if (rotationDifference < -Math.PI) {
+              rotationDifference += 2 * Math.PI;
+            }
+            this.currentRotation += rotationDifference * this.rotationSmoothness * deltaTime;
+            if (this.currentRotation > Math.PI) {
+              this.currentRotation -= 2 * Math.PI;
+            } else if (this.currentRotation < -Math.PI) {
+              this.currentRotation += 2 * Math.PI;
+            }
+            this.targetRotation = desiredRotation;
             this.object.rotation.z = this.currentRotation;
             this.updateCollisionVisualizersRotation();
-            // Atira
-            this.tryShoot();
+            // Só atira se a rotação estiver próxima do alvo
+            if (Math.abs(rotationDifference) < 0.1) {
+              this.tryShoot();
+            }
           }
         }
       }
