@@ -57,9 +57,11 @@ export class RenderingSystem {
   }
 
   private createCamera(): THREE.PerspectiveCamera {
+    const aspect = window.innerWidth / window.innerHeight;
+    const fov = aspect < 1 ? 100 : 75;
     const camera = new THREE.PerspectiveCamera(
-      75, // field of view
-      window.innerWidth / window.innerHeight, // aspect ratio
+      fov, // field of view
+      aspect, // aspect ratio
       0.1, // near plane
       1000 // far plane
     );
@@ -122,21 +124,24 @@ export class RenderingSystem {
 
   public onWindowResize(): void {
     const newAspect = window.innerWidth / window.innerHeight;
+    // Ajusta FOV para zoom out no mobile em pé
+    this.camera.fov = newAspect < 1 ? 100 : 75;
     this.camera.aspect = newAspect;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.setPixelRatio(window.devicePixelRatio);
-    
+
     // Garantir que o canvas ocupe toda a tela após resize
     this.renderer.domElement.style.width = '100%';
     this.renderer.domElement.style.height = '100%';
-    
+
     console.log('🖥️ Window resized:', {
       size: { width: window.innerWidth, height: window.innerHeight },
       aspect: newAspect,
+      fov: this.camera.fov,
       pixelRatio: window.devicePixelRatio
     });
-    
+
     // Notificar outros sistemas sobre o resize
     this.eventBus.emit('renderer:resize', {
       width: window.innerWidth,
