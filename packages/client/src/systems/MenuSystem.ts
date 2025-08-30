@@ -234,9 +234,13 @@ export class MenuSystem {
         transition: all 0.3s ease;
         text-transform: uppercase;
         letter-spacing: 1px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-tap-highlight-color: transparent;
       }
 
-      .menu-button:hover {
+      .menu-button:hover, .menu-button:active {
         background: linear-gradient(45deg, #006699, #0099cc);
         box-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
         transform: translateY(-2px);
@@ -304,13 +308,48 @@ export class MenuSystem {
         }
         
         .menu-button {
-          font-size: 1em;
-          padding: 12px 20px;
+          font-size: 1.1em;
+          padding: 18px 25px;
+          min-height: 50px; /* Larger touch target */
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        
+        .menu-buttons {
+          gap: 20px; /* More space between buttons on mobile */
         }
       }
     `;
     
     document.head.appendChild(style);
+  }
+
+  /**
+   * Adiciona evento que funciona em mobile e desktop
+   */
+  private addButtonEvent(button: HTMLElement, callback: () => void): void {
+    // Prevenir multiple events
+    let eventFired = false;
+    
+    const fireEvent = () => {
+      if (eventFired) return;
+      eventFired = true;
+      callback();
+      // Reset after a short delay
+      setTimeout(() => {
+        eventFired = false;
+      }, 300);
+    };
+
+    // Desktop
+    button.addEventListener('click', fireEvent);
+    
+    // Mobile
+    button.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      fireEvent();
+    });
   }
 
   /**
@@ -322,7 +361,7 @@ export class MenuSystem {
     const controlsInfo = document.getElementById('controls-info');
 
     if (startButton) {
-      startButton.addEventListener('click', () => {
+      this.addButtonEvent(startButton, () => {
         this.hideAllMenus();
         this.eventBus.emit('menu:click', {
           type: 'main',
@@ -332,7 +371,7 @@ export class MenuSystem {
     }
 
     if (controlsButton && controlsInfo) {
-      controlsButton.addEventListener('click', () => {
+      this.addButtonEvent(controlsButton, () => {
         const isVisible = controlsInfo.style.display !== 'none';
         controlsInfo.style.display = isVisible ? 'none' : 'block';
         controlsButton.textContent = isVisible ? 'Controles' : 'Ocultar';
@@ -353,9 +392,8 @@ export class MenuSystem {
     const menuButton = document.getElementById('menu-button');
 
     if (restartButton) {
-      restartButton.addEventListener('click', () => {
-        // this.hideAllMenus();
-
+      this.addButtonEvent(restartButton, () => {
+        console.log('🔄 Restart button clicked/touched');
         this.eventBus.emit('menu:click', {
           type: 'gameOver',
           action: 'restart'
@@ -364,7 +402,8 @@ export class MenuSystem {
     }
 
     if (menuButton) {
-      menuButton.addEventListener('click', () => {
+      this.addButtonEvent(menuButton, () => {
+        console.log('🏠 Menu button clicked/touched');
         this.eventBus.emit('menu:click', {
           type: 'gameOver',
           action: 'exit'
@@ -381,7 +420,8 @@ export class MenuSystem {
     const menuButton = document.getElementById('menu-button');
 
     if (resumeButton) {
-      resumeButton.addEventListener('click', () => {
+      this.addButtonEvent(resumeButton, () => {
+        console.log('▶️ Resume button clicked/touched');
         this.hideAllMenus();
         this.eventBus.emit('menu:click', {
           type: 'pause',
@@ -391,7 +431,8 @@ export class MenuSystem {
     }
 
     if (menuButton) {
-      menuButton.addEventListener('click', () => {
+      this.addButtonEvent(menuButton, () => {
+        console.log('🏠 Pause menu button clicked/touched');
         this.eventBus.emit('menu:click', {
           type: 'pause',
           action: 'exit',
