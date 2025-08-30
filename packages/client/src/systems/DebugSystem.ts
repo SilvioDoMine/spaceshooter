@@ -544,9 +544,13 @@ export class DebugSystem {
     const resetSizeButton = document.getElementById('debug-reset-size') as HTMLButtonElement;
     if (resetSizeButton) {
       resetSizeButton.addEventListener('click', () => {
-        this.updatePlayerSize(0.3); // Default size
-        if (sizeSlider) sizeSlider.value = '30';
+        const defaultSize = DebugSystem.DEFAULT_SETTINGS.playerSize;
+        console.log('🔧 Reset size button clicked, resetting to:', defaultSize);
+        this.updatePlayerSize(defaultSize); // Default size from settings
+        if (sizeSlider) sizeSlider.value = (defaultSize * 100).toString();
       });
+    } else {
+      console.warn('❌ Reset size button not found in DOM');
     }
 
     const tinyButton = document.getElementById('debug-size-tiny') as HTMLButtonElement;
