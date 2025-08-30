@@ -18,6 +18,30 @@ export interface Vector2D {
 }
 
 /**
+ * Configuração do mundo/sala de jogo
+ */
+export interface WorldBounds {
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * Configuração da câmera
+ */
+export interface CameraConfig {
+  followPlayer: boolean;
+  smoothing: number; // 0-1, quão suave é o seguimento
+  deadZone: {
+    width: number;
+    height: number;
+  };
+}
+
+/**
  * Entidade do jogador
  */
 export interface Player {
@@ -76,6 +100,30 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
   width: 800,
   height: 600,
   playerSpeed: 5
+};
+
+/**
+ * Configuração padrão do mundo/sala
+ */
+export const DEFAULT_WORLD_BOUNDS: WorldBounds = {
+  minX: -10,
+  maxX: 10,
+  minY: -7.5,
+  maxY: 7.5,
+  width: 20,
+  height: 15
+};
+
+/**
+ * Configuração padrão da câmera
+ */
+export const DEFAULT_CAMERA_CONFIG: CameraConfig = {
+  followPlayer: true,
+  smoothing: 0.1,
+  deadZone: {
+    width: 2,
+    height: 1.5
+  }
 };
 
 /**

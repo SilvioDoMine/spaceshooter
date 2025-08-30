@@ -11,6 +11,7 @@ import { ParticleSystem } from '../systems/ParticleSystem';
 import { BackgroundSystem } from '../systems/BackgroundSystem';
 import { DebugSystem } from '../systems/DebugSystem';
 import { VirtualJoystickSystem } from '../systems/VirtualJoystickSystem';
+import { CameraSystem } from '../systems/CameraSystem';
 import { UIManager } from '../managers/UIManager';
 
 /**
@@ -40,6 +41,7 @@ export class Game {
   private backgroundSystem!: BackgroundSystem;
   private debugSystem!: DebugSystem;
   private virtualJoystickSystem!: VirtualJoystickSystem;
+  private cameraSystem!: CameraSystem;
   private uiManager!: UIManager;
 
   constructor() {
@@ -123,6 +125,7 @@ export class Game {
     if (this.backgroundSystem) this.backgroundSystem.dispose();
     if (this.debugSystem) this.debugSystem.dispose();
     if (this.virtualJoystickSystem) this.virtualJoystickSystem.dispose();
+    if (this.cameraSystem) this.cameraSystem.dispose();
     
     assetManager.dispose();
     
@@ -137,6 +140,7 @@ export class Game {
   public getGameStateManager(): GameStateManager { return this.gameStateManager; }
   public getEventBus(): EventBus { return this.eventBus; }
   public getDebugSystem(): DebugSystem { return this.debugSystem; }
+  public getCameraSystem(): CameraSystem { return this.cameraSystem; }
 
   // Private methods
 
@@ -160,6 +164,7 @@ export class Game {
     this.backgroundSystem = new BackgroundSystem(this.eventBus);
     this.debugSystem = new DebugSystem(this.eventBus);
     this.virtualJoystickSystem = new VirtualJoystickSystem(this.eventBus);
+    this.cameraSystem = new CameraSystem(this.eventBus, this.renderingSystem.camera);
     
     // EntitySystem needs RenderingSystem for direct scene manipulation
     this.entitySystem = new EntitySystem(this.eventBus, this.renderingSystem);
@@ -203,6 +208,7 @@ export class Game {
 
     // Update systems directly - no events needed for core game loop
     if (this.gameStateManager.isPlaying()) {
+      this.cameraSystem.update(deltaTime);
       this.backgroundSystem.update(deltaTime);
       this.entitySystem.update(deltaTime);
       this.particleSystem.update(deltaTime);

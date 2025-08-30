@@ -4,7 +4,7 @@ import { EventBus } from '../core/EventBus';
 import { RenderingSystem } from '../systems/RenderingSystem';
 import { assetManager } from '../services/AssetManager';
 import { ProjectileSystem } from '../systems/ProjectileSystem';
-import { PLAYER_CONFIG } from '@spaceshooter/shared';
+import { PLAYER_CONFIG, DEFAULT_WORLD_BOUNDS, WorldBounds } from '@spaceshooter/shared';
 import { CompoundCollisionShape, CollisionUtils } from '../utils/CollisionUtils';
 
 export interface PlayerStats {
@@ -37,6 +37,7 @@ export class Player extends Entity {
   private animationController?: ReturnType<typeof assetManager.createShipAnimationController>;
   private isMoving: boolean = false;
   private thrusterAnimationName?: string;
+  private worldBounds: WorldBounds;
 
   constructor(
     eventBus: EventBus,
@@ -61,6 +62,7 @@ export class Player extends Entity {
     this.renderingSystem = renderingSystem;
     this.projectileSystem = projectileSystem;
     this.gameStartTime = Date.now();
+    this.worldBounds = { ...DEFAULT_WORLD_BOUNDS };
     
     // Create collision shape from config, scaled by player size
     this.collisionShape = this.createScaledCollisionShape();
@@ -298,7 +300,7 @@ export class Player extends Entity {
     if (!this.isActive) return;
 
     this.handleMovement(deltaTime);
-    this.constrainToScreen();
+    this.constrainToWorld();
     
     // Update shot cooldown timer
     if (this.shotTimer > 0) {
@@ -362,10 +364,23 @@ export class Player extends Entity {
     }
   }
 
-  private constrainToScreen(): void {
-    const bounds = PLAYER_CONFIG.bounds;
-    this.position.x = Math.max(bounds.minX, Math.min(bounds.maxX, this.position.x));
-    this.position.y = Math.max(bounds.minY, Math.min(bounds.maxY, this.position.y));
+  private constrainToWorld(): void {
+    this.position.x = Math.max(this.worldBounds.minX, Math.min(this.worldBounds.maxX, this.position.x));
+    this.position.y = Math.max(this.worldBounds.minY, Math.min(this.worldBounds.maxY, this.position.y));
+  }
+
+  /**
+   * Atualiza os limites do mundo para o jogador
+   */
+  public setWorldBounds(bounds: WorldBounds): void {
+    this.worldBounds = { ...bounds };
+  }
+
+  /**
+   * Obtém os limites atuais do mundo
+   */
+  public getWorldBounds(): WorldBounds {
+    return { ...this.worldBounds };
   }
 
   private tryShoot(): void {
