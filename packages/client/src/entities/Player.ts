@@ -338,6 +338,11 @@ export class Player extends Entity {
     // Update Three.js object position
     this.object.position.x = this.position.x;
     this.object.position.y = this.position.y;
+
+    // Update debug system with current position
+    this.eventBus.emit('debug:update', { 
+      playerPos: `(${this.position.x.toFixed(1)}, ${this.position.y.toFixed(1)}, 0.0)`
+    });
   }
 
   private updateThrusterAnimation(currentlyMoving: boolean): void {
