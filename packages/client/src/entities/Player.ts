@@ -74,9 +74,6 @@ export class Player extends Entity {
       this.handleInputAction(data.action, data.pressed);
     });
 
-    const unsubscribeShot = this.eventBus.on('player:shot', () => {
-      this.tryShoot();
-    });
 
     const unsubscribeScore = this.eventBus.on('player:score', (data) => {
       this.addScore(data.points);
@@ -100,7 +97,6 @@ export class Player extends Entity {
     });
 
     this.addCleanupFunction(unsubscribeInput);
-    this.addCleanupFunction(unsubscribeShot);
     this.addCleanupFunction(unsubscribeScore);
     this.addCleanupFunction(unsubscribeDamage);
     this.addCleanupFunction(unsubscribeGodMode);
@@ -288,6 +284,11 @@ export class Player extends Entity {
 
   private handleInputAction(action: string, pressed: boolean): void {
     this.inputState[action] = pressed;
+    
+    // Handle shooting
+    if (action === 'shoot' && pressed) {
+      this.tryShoot();
+    }
   }
 
   protected onUpdate(deltaTime: number): void {

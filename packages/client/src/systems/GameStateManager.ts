@@ -364,11 +364,6 @@ export class GameStateManager implements Subject {
 
   private handleInputAction(data: { action: string; pressed: boolean }): void {
     switch (data.action) {
-      case 'shoot':
-        if (data.pressed && this.isPlaying()) {
-          this.eventBus.emit('player:shot', {});
-        }
-        break;
       case 'pause':
         if (data.pressed) {
           if (this.isPlaying()) {
@@ -380,7 +375,7 @@ export class GameStateManager implements Subject {
         break;
       default:
         // Other input actions are handled by specific entities (Player, Enemy, etc.)
-        // GameStateManager only handles global game actions
+        // GameStateManager only handles global game state actions
         break;
       }
   }
