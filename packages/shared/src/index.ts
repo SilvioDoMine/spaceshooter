@@ -94,7 +94,7 @@ export const PLAYER_CONFIG = {
   ammo: 30,
   maxAmmo: 50,
   speed: 5,
-  size: 0.3,              // Escala visual do modelo
+  size: 0.2,              // Escala visual do modelo
   radius: 0.15,            // Raio da hitbox (legacy - não usado com compound shapes)
   bounds: {               // Limites de movimento
     minX: -5,
