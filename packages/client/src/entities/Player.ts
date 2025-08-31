@@ -639,17 +639,39 @@ export class Player extends Entity {
       console.log(`🎯 Creating projectile with ricochet: ${maxRicochets} bounces (level ${ricochetLevel}, ${damagePercent}% dano)`);
     }
     
-    // Create main projectile (pass ricochet level for damage calculation)
-    this.projectileSystem.createProjectile('player', projectilePosition, projectileVelocity, projectileDamage, 0, maxRicochets, false, ricochetLevel);
-    
-    // Check for multi-shot skill
-    if (hasMultiShot(this.stats.skills)) {
-      // Create second projectile with slight delay
-      setTimeout(() => {
-        if (this.isActive) {
-          this.projectileSystem.createProjectile('player', projectilePosition, projectileVelocity, projectileDamage, 0, maxRicochets, false, ricochetLevel);
-        }
-      }, 50); // 50ms delay for visual effect
+
+    // Verifica se o player tem a skill de projéteis fantasmas
+    const hasGhost = this.stats.skills.some(skill => skill.type === 'ghost_projectiles');
+
+    // Se tiver, projétil atravessa inimigos e é translúcido
+    if (hasGhost) {
+      // Projétil principal
+      this.projectileSystem.createProjectile('player', projectilePosition, projectileVelocity, projectileDamage, 0, 0, false, 0, true);
+      // Multi-shot também é fantasma
+      if (hasMultiShot(this.stats.skills)) {
+        setTimeout(() => {
+          if (this.isActive) {
+            this.projectileSystem.createProjectile('player', projectilePosition, projectileVelocity, projectileDamage, 0, 0, false, 0, true);
+          }
+        }, 50);
+      }
+    } else {
+      // Projétil normal
+      this.projectileSystem.createProjectile('player', projectilePosition, projectileVelocity, projectileDamage, 0, maxRicochets, false, ricochetLevel);
+      // Multi-shot normal
+      if (hasMultiShot(this.stats.skills)) {
+        setTimeout(() => {
+          if (this.isActive) {
+            this.projectileSystem.createProjectile('player', projectilePosition, projectileVelocity, projectileDamage, 0, maxRicochets, false, ricochetLevel);
+          }
+        }, 50);
+      }
+    }
+    // Se tiver projéteis fantasmas, não há ricochet nem tri_shot
+    const ghostSkill = this.stats.skills.find(skill => skill.type === 'ghost_projectiles');
+    if (ghostSkill) {
+      // Nenhum efeito passivo, só afeta disparo
+      console.log('👻 Projéteis fantasmas ativos!');
     }
     
     this.eventBus.emit('audio:play', { soundId: 'shoot', options: { volume: 0.3 } });

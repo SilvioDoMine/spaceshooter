@@ -90,9 +90,17 @@ export class ProjectileSystem {
     };
 
     const geometry = new THREE.SphereGeometry(PROJECTILE_CONFIG.size);
-    const material = assetManager.getProjectileMaterial();
+
+    let material = assetManager.getProjectileMaterial();
+    // Se for projétil fantasma, deixar translúcido
+    if (noSkillTrigger) {
+      material = material.clone();
+      if ('opacity' in material) {
+        (material as any).transparent = true;
+        (material as any).opacity = 0.35;
+      }
+    }
     const projectileMesh = new THREE.Mesh(geometry, material);
-    
     projectileMesh.position.set(position.x, position.y, 0);
 
     // Create collision visualizer for projectile
@@ -234,6 +242,20 @@ export class ProjectileSystem {
         targetId,
         damage: projectile.data.damage
       });
+
+
+      // Se for projétil fantasma, só atravessa após o primeiro hit: triga skills, depois vira noSkillTrigger
+      if (projectile.data.noSkillTrigger && !projectile.data["_ghostFirstHitDone"]) {
+        // Primeira colisão: triga skills normalmente, depois marca para atravessar
+        projectile.data["_ghostFirstHitDone"] = true;
+        // Reemite o mesmo projétil, mas agora com noSkillTrigger true
+        // (mantém mesh e posição, só muda flag)
+        // Não remove, deixa seguir
+        return;
+      } else if (projectile.data.noSkillTrigger && projectile.data["_ghostFirstHitDone"]) {
+        // Após o primeiro hit, só atravessa
+        return;
+      }
 
       // Só ativa ricochete se não for ricochete nem tri_shot
       if (!projectile.data.noSkillTrigger && !projectile.isRicochet && projectile.maxRicochets && projectile.maxRicochets > 0 && (projectile.ricochetCount || 0) === 0) {

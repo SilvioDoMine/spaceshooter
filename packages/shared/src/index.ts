@@ -4,6 +4,21 @@
 export type SkillRarity = 'rara' | 'epica' | 'lendaria';
 
 /**
+ * Tipos de skills disponíveis
+ */
+export type SkillType = 
+  | 'damage_boost'      // Aumentar dano
+  | 'attack_speed'      // Aumentar velocidade de ataque
+  | 'multi_shot'        // Multi ataque (único nível)
+  | 'health_regeneration' // Recuperar vida aleatória
+  | 'max_health_boost'  // Aumento de vida permanente
+  | 'move_speed'        // Aumentar velocidade de movimento
+  | 'ricochet'          // Projéteis ricocheteiam para inimigos próximos
+  | 'ammo_capacity'     // Aumentar capacidade máxima de munição
+  | 'tri_shot'          // 20% chance de spawnar 3 projéteis em triângulo ao acertar inimigo
+  | 'ghost_projectiles'; // Projéteis atravessam inimigos (épica)
+
+/**
  * Mapeamento de raridade por skill
  */
 export const SKILL_RARITY_MAP: Record<SkillType, SkillRarity> = {
@@ -14,6 +29,7 @@ export const SKILL_RARITY_MAP: Record<SkillType, SkillRarity> = {
   move_speed: 'rara',
   ammo_capacity: 'rara',
   tri_shot: 'epica',
+  ghost_projectiles: 'epica',
   multi_shot: 'lendaria',
   ricochet: 'lendaria'
 };
@@ -60,19 +76,6 @@ export interface CameraConfig {
   };
 }
 
-/**
- * Tipos de skills disponíveis
- */
-export type SkillType = 
-  | 'damage_boost'      // Aumentar dano
-  | 'attack_speed'      // Aumentar velocidade de ataque
-  | 'multi_shot'        // Multi ataque (único nível)
-  | 'health_regeneration' // Recuperar vida aleatória
-  | 'max_health_boost'  // Aumento de vida permanente
-  | 'move_speed'        // Aumentar velocidade de movimento
-  | 'ricochet'          // Projéteis ricocheteiam para inimigos próximos
-  | 'ammo_capacity'     // Aumentar capacidade máxima de munição
-  | 'tri_shot';         // 20% chance de spawnar 3 projéteis em triângulo ao acertar inimigo
 
 /**
  * Informações de uma skill individual
@@ -110,6 +113,7 @@ export interface Projectile {
   ownerId: string;         // ID da entidade que disparou
   createdAt: number;       // Timestamp de criação (para cleanup)
   noSkillTrigger?: boolean; // Se true, não ativa ricochete nem tri_shot
+  _ghostFirstHitDone?: boolean; // Interno: se já trigou skills no primeiro hit
 }
 
 /**
@@ -540,6 +544,16 @@ export interface SkillConfig {
  * Configurações de todas as skills do jogo
  */
 export const SKILLS_CONFIG: Record<SkillType, SkillConfig> = {
+  ghost_projectiles: {
+    id: 'ghost_projectiles',
+    name: 'Projéteis Fantasmas',
+    description: 'Seus projéteis ficam translúcidos e atravessam inimigos, causando dano em todos na linha de trajetória.',
+    maxLevel: 1,
+    icon: '👻',
+    effects: {
+      1: { value: 1, description: 'Projéteis atravessam inimigos e continuam causando dano até sair do mapa ou expirar.' }
+    }
+  },
   tri_shot: {
     id: 'tri_shot',
     name: 'Tiro Triangular',
