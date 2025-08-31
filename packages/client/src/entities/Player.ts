@@ -1012,6 +1012,12 @@ export class Player extends Entity {
   }
 
   public reset(): void {
+    // Remove barra de vida da cena ao resetar
+    if (this.healthBarGroup && this.healthBarSceneParent) {
+      this.healthBarSceneParent.remove(this.healthBarGroup);
+      this.healthBarGroup = undefined;
+      this.healthBarSceneParent = undefined;
+    }
     console.log('🔄 Player reset called');
     this.stats = {
       health: PLAYER_CONFIG.health,
