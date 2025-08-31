@@ -1,3 +1,22 @@
+/**
+ * Raridade das skills
+ */
+export type SkillRarity = 'rara' | 'epica' | 'lendaria';
+
+/**
+ * Mapeamento de raridade por skill
+ */
+export const SKILL_RARITY_MAP: Record<SkillType, SkillRarity> = {
+  damage_boost: 'rara',
+  attack_speed: 'rara',
+  health_regeneration: 'rara',
+  max_health_boost: 'rara',
+  move_speed: 'rara',
+  ammo_capacity: 'rara',
+  tri_shot: 'epica',
+  multi_shot: 'lendaria',
+  ricochet: 'lendaria'
+};
 // Shared types and utilities for spaceshooter game
 
 /**
@@ -61,6 +80,7 @@ export type SkillType =
 export interface PlayerSkill {
   type: SkillType;
   level: number;
+  rarity?: SkillRarity; // Opcional para retrocompatibilidade
 }
 
 /**
@@ -690,21 +710,38 @@ export interface SkillOption {
  * Gera 3 opções aleatórias de skills para o jogador escolher
  */
 export function generateSkillOptions(playerSkills: PlayerSkill[]): SkillOption[] {
-  const availableSkills: SkillOption[] = [];
-  
+  // Definir chances de raridade
+  const rarityChances: { rarity: SkillRarity; chance: number }[] = [
+    { rarity: 'lendaria', chance: 0.05 }, // 5%
+    { rarity: 'epica', chance: 0.15 },    // 15%
+    { rarity: 'rara', chance: 0.80 }      // 80%
+  ];
+
+  // Sorteia raridade
+  const roll = Math.random();
+  let selectedRarity: SkillRarity = 'rara';
+  let acc = 0;
+  for (const entry of rarityChances) {
+    acc += entry.chance;
+    if (roll < acc) {
+      selectedRarity = entry.rarity;
+      break;
+    }
+  }
+
   // Criar mapa de skills do player para lookup rápido
   const playerSkillsMap = new Map<SkillType, number>();
   playerSkills.forEach(skill => {
     playerSkillsMap.set(skill.type, skill.level);
   });
-  
-  // Verificar todas as skills disponíveis
+
+  // Filtrar skills disponíveis pela raridade sorteada
+  const availableSkills: SkillOption[] = [];
   Object.values(SKILLS_CONFIG).forEach(config => {
     const currentLevel = playerSkillsMap.get(config.id) || 0;
     const nextLevel = currentLevel + 1;
-    
-    // Só adicionar se a skill ainda pode ser evoluída
-    if (nextLevel <= config.maxLevel) {
+    const rarity = SKILL_RARITY_MAP[config.id];
+    if (rarity === selectedRarity && nextLevel <= config.maxLevel) {
       availableSkills.push({
         type: config.id,
         currentLevel,
@@ -713,7 +750,24 @@ export function generateSkillOptions(playerSkills: PlayerSkill[]): SkillOption[]
       });
     }
   });
-  
+
+  // Se não houver skills daquela raridade, fallback para rara
+  if (availableSkills.length === 0 && selectedRarity !== 'rara') {
+    Object.values(SKILLS_CONFIG).forEach(config => {
+      const currentLevel = playerSkillsMap.get(config.id) || 0;
+      const nextLevel = currentLevel + 1;
+      const rarity = SKILL_RARITY_MAP[config.id];
+      if (rarity === 'rara' && nextLevel <= config.maxLevel) {
+        availableSkills.push({
+          type: config.id,
+          currentLevel,
+          nextLevel,
+          config
+        });
+      }
+    });
+  }
+
   // Embaralhar e pegar até 3 opções
   const shuffled = availableSkills.sort(() => Math.random() - 0.5);
   return shuffled.slice(0, Math.min(3, shuffled.length));

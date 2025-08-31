@@ -1,3 +1,5 @@
+import { SKILL_RARITY_MAP } from '@spaceshooter/shared';
+
 /**
  * HTML-based Skill Selection Modal
  * Replaces the Three.js modal with a proper HTML implementation
@@ -27,55 +29,58 @@ export class UISkillModal {
       return;
     }
 
-    // Clear previous options
+
+    // Limpar opções anteriores
     container.innerHTML = '';
 
-    // Create skill option buttons
+    // Cores e labels de raridade
+    const rarityColors: Record<string, string> = {
+      'rara': '#3fa7ff',
+      'epica': '#b86cff',
+      'lendaria': '#ffd700'
+    };
+    const rarityLabels: Record<string, string> = {
+      'rara': 'Rara',
+      'epica': 'Épica',
+      'lendaria': 'Lendária'
+    };
+
+    // Criar botões de skill
     skillOptions.forEach((skillOption, index) => {
       const skillConfig = skillOption.config;
-      const skillName = `${skillConfig.icon || '⭐'} ${skillConfig.name}`;
-      const skillDesc = skillConfig.effects[skillOption.nextLevel]?.description || skillConfig.description;
+      const skillName = (skillConfig.icon || '⭐') + ' ' + skillConfig.name;
+      const skillDesc = (skillConfig.effects[skillOption.nextLevel] && skillConfig.effects[skillOption.nextLevel].description) || skillConfig.description;
+  // Corrigir tipagem para acessar SKILL_RARITY_MAP
+  const skillType = skillOption.type as keyof typeof SKILL_RARITY_MAP;
+  const rarity = SKILL_RARITY_MAP[skillType] || skillOption.rarity || 'rara';
+      const rarityColor = rarityColors[rarity] || '#fff';
+      const rarityLabel = rarityLabels[rarity] || '';
 
-      // Create skill option element
       const skillElement = document.createElement('div');
       skillElement.className = 'skill-option';
       skillElement.setAttribute('data-skill-type', skillOption.type);
       skillElement.setAttribute('data-skill-index', index.toString());
 
-      skillElement.innerHTML = `
-        <div class="skill-header">
-          <div class="skill-name">${skillName}</div>
-          <div class="skill-key">${index + 1}</div>
-        </div>
-        <div class="skill-description">${skillDesc}</div>
-      `;
+      skillElement.innerHTML =
+        '<div class="skill-header">' +
+          '<div class="skill-name">' + skillName + '</div>' +
+          '<div class="skill-key">' + (index + 1) + '</div>' +
+        '</div>' +
+        '<div class="skill-meta">' +
+          '<span class="skill-rarity" style="color:' + rarityColor + ';font-weight:bold;letter-spacing:1px;">' + rarityLabel + '</span>' +
+        '</div>' +
+        '<div class="skill-description">' + skillDesc + '</div>';
 
-      // Add click handler
       skillElement.addEventListener('click', () => {
         this.selectSkill(skillOption.type);
       });
-
-      // Add touch support
       skillElement.addEventListener('touchend', (e) => {
         e.preventDefault();
         this.selectSkill(skillOption.type);
       });
-
       container.appendChild(skillElement);
     });
-
-    // Show modal
     modal.classList.add('show');
-
-    // Setup keyboard handler
-    this.setupKeyboardHandler();
-  }
-
-  private setupKeyboardHandler(): void {
-    // Remove existing handler
-    if (this.keyHandler) {
-      window.removeEventListener('keydown', this.keyHandler);
-    }
 
     // Keyboard handler for (1, 2, 3 keys)
     this.keyHandler = (event: KeyboardEvent) => {
