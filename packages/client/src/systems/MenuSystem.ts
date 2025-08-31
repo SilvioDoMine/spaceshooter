@@ -686,6 +686,163 @@ export class MenuSystem {
           font-size: 0.6em;
         }
       }
+
+      /* Mobile landscape - specifically for abilities grid */
+      @media (orientation: landscape) and (max-height: 500px) {
+        #menu-container {
+          padding: 5px;
+          overflow-y: auto;
+          align-items: flex-start;
+          padding-top: 10px;
+        }
+
+        .menu-content {
+          min-width: 90%;
+          max-width: none;
+          padding: 10px;
+          margin: auto;
+          max-height: 90vh;
+          overflow-y: auto;
+        }
+
+        .game-title, .game-over-title, .pause-title {
+          font-size: 1.4em;
+          margin: 5px 0 10px 0;
+          line-height: 1.1;
+        }
+
+        .abilities-section h3 {
+          margin: 5px 0 8px 0;
+          font-size: 1em;
+        }
+
+        .abilities-grid {
+          grid-template-columns: repeat(auto-fit, minmax(35px, 40px));
+          gap: 6px;
+          max-width: 320px;
+          margin: 0 auto 10px auto;
+        }
+
+        .ability-icon {
+          width: 35px;
+          height: 35px;
+          font-size: 1em;
+          border-radius: 6px;
+          border-width: 2px;
+          margin-bottom: 3px;
+        }
+
+        .ability-level {
+          top: -4px;
+          right: -4px;
+          width: 14px;
+          height: 14px;
+          font-size: 0.55em;
+          border-width: 1px;
+        }
+
+        .menu-buttons {
+          gap: 8px;
+          margin-top: 10px;
+        }
+
+        .menu-button {
+          font-size: 0.9em;
+          padding: 8px 15px;
+          min-height: 36px;
+        }
+
+        .stats-container {
+          margin: 8px 0;
+        }
+
+        .stat-item {
+          margin: 4px 0;
+          padding: 4px 0;
+          font-size: 0.8em;
+        }
+
+        .ability-tooltip {
+          font-size: 0.75em;
+          max-width: 200px;
+          padding: 8px;
+          border-radius: 6px;
+        }
+
+        .tooltip-header {
+          font-size: 0.85em;
+          margin-bottom: 4px;
+        }
+
+        .tooltip-description {
+          font-size: 0.8em;
+          line-height: 1.2;
+        }
+      }
+
+      /* Extra narrow landscape (phones rotated) */
+      @media (orientation: landscape) and (max-height: 400px) {
+        .abilities-grid {
+          grid-template-columns: repeat(auto-fit, minmax(30px, 35px));
+          gap: 4px;
+          max-width: 280px;
+        }
+
+        .ability-icon {
+          width: 30px;
+          height: 30px;
+          font-size: 0.9em;
+          border-radius: 5px;
+          margin-bottom: 2px;
+        }
+
+        .ability-level {
+          top: -3px;
+          right: -3px;
+          width: 12px;
+          height: 12px;
+          font-size: 0.5em;
+        }
+
+        .game-title, .game-over-title, .pause-title {
+          font-size: 1.2em;
+          margin: 3px 0 8px 0;
+        }
+
+        .abilities-section h3 {
+          margin: 3px 0 5px 0;
+          font-size: 0.9em;
+        }
+
+        .menu-button {
+          font-size: 0.8em;
+          padding: 6px 12px;
+          min-height: 32px;
+        }
+
+        .menu-buttons {
+          gap: 6px;
+          margin-top: 8px;
+        }
+
+        .ability-tooltip {
+          font-size: 0.7em;
+          max-width: 180px;
+          padding: 6px;
+          border-radius: 4px;
+          border-width: 1px;
+        }
+
+        .tooltip-header {
+          font-size: 0.8em;
+          margin-bottom: 3px;
+        }
+
+        .tooltip-description {
+          font-size: 0.75em;
+          line-height: 1.1;
+        }
+      }
     `;
     
     document.head.appendChild(style);
@@ -893,9 +1050,39 @@ export class MenuSystem {
         `;
         
         tooltip.style.display = 'block';
-        tooltip.style.left = `${rect.left + rect.width / 2}px`;
-        tooltip.style.top = `${rect.top - 10}px`;
-        tooltip.style.transform = 'translate(-50%, -100%)';
+        
+        // Calculate initial position
+        let left = rect.left + rect.width / 2;
+        let top = rect.top - 10;
+        let transformX = '-50%';
+        let transformY = '-100%';
+        
+        // Check viewport bounds and adjust position
+        const tooltipRect = tooltip.getBoundingClientRect();
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        
+        // Horizontal bounds checking
+        if (left - tooltipRect.width / 2 < 10) {
+          // Too far left, align to left edge
+          left = rect.left;
+          transformX = '0%';
+        } else if (left + tooltipRect.width / 2 > viewportWidth - 10) {
+          // Too far right, align to right edge
+          left = rect.right;
+          transformX = '-100%';
+        }
+        
+        // Vertical bounds checking (especially important for landscape)
+        if (rect.top < tooltipRect.height + 20) {
+          // Not enough space above, show below
+          top = rect.bottom + 10;
+          transformY = '0%';
+        }
+        
+        tooltip.style.left = `${left}px`;
+        tooltip.style.top = `${top}px`;
+        tooltip.style.transform = `translate(${transformX}, ${transformY})`;
       };
       
       const hideTooltip = () => {
