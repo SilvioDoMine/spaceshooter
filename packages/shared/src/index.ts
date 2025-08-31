@@ -305,7 +305,7 @@ export const ENEMY_CONFIG = {
     size: 0.3,              // Tamanho visual
     radius: 0.25,           // Raio da hitbox
     color: 0xff4444,        // Vermelho
-    spawnRate: 1000,        // A cada 2 segundos
+    spawnRate: 1000,        // A cada 1 segundo
     xpDrop: 10,             // XP dado quando morto
     xpOrbCount: 10,         // Número de orbes de XP que dropa
     // Não atira por enquanto
@@ -319,7 +319,7 @@ export const ENEMY_CONFIG = {
     size: 0.2,              // Tamanho visual
     radius: 0.175,            // Raio da hitbox (menor)
     color: 0xff8800,        // Laranja
-    spawnRate: 1500,        // A cada 3 segundos
+    spawnRate: 8000,        // A cada 8 segundos
     xpDrop: 8,              // XP dado quando morto
     xpOrbCount: 5,          // Poucos orbes, mas rápido de matar
     // Não atira por enquanto
@@ -333,7 +333,7 @@ export const ENEMY_CONFIG = {
     size: 0.5,              // Tamanho visual
     radius: 0.4,           // Raio da hitbox (maior)
     color: 0x8844ff,        // Roxo
-    spawnRate: 2500,        // A cada 5 segundos
+    spawnRate: 20000,        // A cada 20 segundos
     xpDrop: 25,             // XP dado quando morto
     xpOrbCount: 15,         // Muitos orbes para recompensa visual
     // Heavy atira projéteis pequenos e rápidos
