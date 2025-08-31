@@ -5,28 +5,25 @@ import { PowerUp } from '../entities/PowerUp';
 import { ProjectileSystem } from './ProjectileSystem';
 import { RenderingSystem } from './RenderingSystem';
 import { CollisionUtils } from '../utils/CollisionUtils';
-import { ENEMY_CONFIG, POWERUP_CONFIG, PROJECTILE_CONFIG } from '@spaceshooter/shared';
+import { POWERUP_CONFIG, PROJECTILE_CONFIG } from '@spaceshooter/shared';
+import { WaveSystem } from './WaveSystem';
 
 export class EntitySystem {
   private eventBus: EventBus;
   private renderingSystem: RenderingSystem;
   private projectileSystem: ProjectileSystem;
+  private waveSystem: WaveSystem;
   private player: Player | null = null;
   private enemies: Map<string, Enemy> = new Map();
   private powerUps: Map<string, PowerUp> = new Map();
-  private enemySpawnTimer: number = 0;
   private powerUpSpawnTimer: number = 0;
   private isActive: boolean = false;
-  // Boss spawn system
-  private bossSpawnTimer: number = 0;
-  private gameStartTime: number = 0;
-  private activeBoss: Enemy | null = null;
-  private readonly BOSS_INITIAL_DELAY = 90; // 1m30s em segundos
 
   constructor(eventBus: EventBus, renderingSystem?: RenderingSystem) {
     this.eventBus = eventBus;
     this.renderingSystem = renderingSystem!; // Will be injected later if not provided
     this.projectileSystem = new ProjectileSystem(eventBus, renderingSystem);
+    this.waveSystem = new WaveSystem(eventBus);
     this.setupEventHandlers();
   }
 
@@ -79,17 +76,31 @@ export class EntitySystem {
     this.eventBus.on('collision:projectile-player', (data) => {
       this.handleProjectilePlayerCollision(data);
     });
+
+    // Wave system handlers
+    this.eventBus.on('wave:clear-enemies', () => {
+      console.log('🌊 EntitySystem: Clearing all enemies for boss spawn');
+      this.clearAllEnemies();
+    });
+
+    this.eventBus.on('wave:enemy-spawned', (data) => {
+      // Add enemy to tracking
+      this.enemies.set(data.enemy.getId(), data.enemy);
+      console.log(`🌊 EntitySystem: Tracking wave enemy ${data.enemy.getId()}`);
+    });
+
+    this.eventBus.on('boss:spawned', (data) => {
+      // Add boss to tracking
+      this.enemies.set(data.boss.getId(), data.boss);
+      console.log(`👹 EntitySystem: Tracking boss ${data.boss.getId()}`);
+    });
   }
 
   private startGame(): void {
     console.log('🚀 EntitySystem.startGame called');
     this.isActive = true;
-    // Reset spawn timers
-    this.enemySpawnTimer = 0;
+    // Reset power-up spawn timer
     this.powerUpSpawnTimer = 0;
-    this.bossSpawnTimer = 0;
-    this.gameStartTime = Date.now();
-    this.activeBoss = null;
     
     console.log('👤 Creating player...');
     this.createPlayer();
@@ -162,12 +173,8 @@ export class EntitySystem {
     //   xp: data.xp
     // });
     
-    // Se era um boss, limpar referência
-    if (this.activeBoss && this.activeBoss.getId() === data.enemyId) {
-      this.activeBoss = null;
-      this.eventBus.emit('boss:defeated', { enemyId: data.enemyId });
-      console.log('👹 Boss defeated! Normal enemy spawning will resume.');
-    }
+    // Emit boss defeated event (WaveSystem handles boss tracking)
+    this.eventBus.emit('boss:defeated', { enemyId: data.enemyId });
     
     // Enemy is already destroyed, just clean up references
     this.enemies.delete(data.enemyId);
@@ -338,33 +345,16 @@ export class EntitySystem {
 
     this.projectileSystem.update(deltaTime);
     
-    this.trySpawnEnemy(deltaTime);
-    this.trySpawnBoss(deltaTime);
+    // Update wave system (handles enemy and boss spawning)
+    this.waveSystem.update(deltaTime);
+    
+    // Keep power-ups spawning as before
     this.trySpawnPowerUp(deltaTime);
     
     // Update debug system with entity counts
     this.updateDebugInfo();
   }
 
-  private trySpawnEnemy(deltaTime: number): void {
-    // Não spawn inimigos comuns se há boss ativo
-    if (this.activeBoss) {
-      return;
-    }
-    
-    this.enemySpawnTimer += deltaTime;
-    const spawnRate = ENEMY_CONFIG.basic.spawnRate / 1000; // Convert milliseconds to seconds
-    
-    if (this.enemySpawnTimer >= spawnRate) {
-      try {
-        const enemy = Enemy.spawnEnemy(this.eventBus);
-        this.enemies.set(enemy.getId(), enemy);
-        this.enemySpawnTimer = 0; // Reset timer
-      } catch (error) {
-        console.error('❌ Error spawning enemy:', error);
-      }
-    }
-  }
 
   private trySpawnPowerUp(deltaTime: number): void {
     this.powerUpSpawnTimer += deltaTime;
@@ -435,40 +425,6 @@ export class EntitySystem {
     }
   }
 
-  private trySpawnBoss(deltaTime: number): void {
-    // Não spawn boss se já existe um ativo
-    if (this.activeBoss) {
-      return;
-    }
-    
-    const elapsedGameTime = (Date.now() - this.gameStartTime) / 1000; // em segundos
-    
-    // Não spawn boss antes do delay inicial
-    if (elapsedGameTime < this.BOSS_INITIAL_DELAY) {
-      return;
-    }
-    
-    this.bossSpawnTimer += deltaTime;
-    const bossSpawnRate = ENEMY_CONFIG.boss.spawnRate / 1000; // Convert milliseconds to seconds
-    
-    if (this.bossSpawnTimer >= bossSpawnRate) {
-      try {
-        console.log('👹 Spawning boss! Normal enemy spawning paused.');
-        const boss = Enemy.spawnBoss(this.eventBus);
-        this.enemies.set(boss.getId(), boss);
-        this.activeBoss = boss;
-        this.bossSpawnTimer = 0; // Reset timer
-        
-        // Emit boss spawned event
-        this.eventBus.emit('boss:spawned', { 
-          bossId: boss.getId(),
-          boss: boss
-        });
-      } catch (error) {
-        console.error('❌ Error spawning boss:', error);
-      }
-    }
-  }
 
   private handleEntityShoot(data: any): void {
     const { ownerId, position, velocity, damage, config } = data;
@@ -517,7 +473,7 @@ export class EntitySystem {
   }
 
   public getActiveBoss(): Enemy | null {
-    return this.activeBoss;
+    return this.waveSystem.getActiveBoss();
   }
 
   public dispose(): void {

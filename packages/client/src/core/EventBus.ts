@@ -125,6 +125,32 @@ export type GameEventMap = {
   // Motivo: MenuSystem precisa atualizar a exibição de habilidades no menu de pausa
   'player:skills-updated': { skills: any[] };
 
+  // ========== WAVE SYSTEM EVENTS ==========
+  // Emitido em: WaveSystem.ts quando o sistema de ondas inicia
+  // Motivo: UI precisa mostrar timer e informações da onda
+  'wave:started': { totalDuration: number };
+  
+  // Emitido em: WaveSystem.ts quando uma nova onda começa
+  // Motivo: UI precisa atualizar informações da onda atual
+  'wave:changed': { wave: any; gameTime: number };
+  
+  // Emitido em: WaveSystem.ts quando um boss aparece
+  // Motivo: UI precisa mostrar aviso de boss e limpar inimigos
+  'wave:boss-spawned': { boss: any; gameTime: number };
+  
+  // Emitido em: WaveSystem.ts para limpar todos os inimigos
+  // Motivo: EntitySystem precisa remover inimigos quando boss aparece
+  'wave:clear-enemies': {};
+  
+  // Emitido em: WaveSystem.ts quando um inimigo de onda é spawnado
+  // Motivo: EntitySystem precisa rastrear inimigos da onda
+  'wave:enemy-spawned': { enemy: any; config: any; waveDescription: string };
+
+  // ========== VICTORY EVENTS ==========
+  // Emitido em: WaveSystem.ts quando o jogador sobrevive 6 minutos
+  // Motivo: GameStateManager precisa mostrar tela de vitória
+  'game:victory': { gameTime: number; frozenTime: number };
+
   // ========== ENEMY EVENTS ==========
   // Emitido em: Enemy.ts quando inimigo escapa
   // Motivo: EntitySystem aplicar penalidade ao jogador

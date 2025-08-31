@@ -97,6 +97,13 @@ export class GameStateManager implements Subject {
       console.log('🔚 GameStateManager received game:over with stats:', data.stats);
       this.setState(GameStateEnum.GAME_OVER);
     });
+
+    // Listen to game:victory from WaveSystem
+    this.eventBus.on('game:victory', (data) => {
+      console.log('🎉 GameStateManager received game:victory - 6 minutes survived!', data);
+      // For now, treat victory same as game over but we could create a VICTORY state
+      this.setState(GameStateEnum.GAME_OVER);
+    });
     this.eventBus.on('game:exit', () => {
       this.resetGameStats();
       this.returnToMenu();

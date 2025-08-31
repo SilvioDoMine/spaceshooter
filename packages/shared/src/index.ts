@@ -923,3 +923,258 @@ export function calculateAmmoCapacityBonus(skills: PlayerSkill[]): number {
   const effect = SKILLS_CONFIG.ammo_capacity.effects[ammoSkill.level];
   return effect ? effect.value : 0;
 }
+
+/**
+ * Sistema de Ondas - Configurações de progressão do jogo
+ */
+export interface WaveConfig {
+  startTime: number;          // Tempo em segundos quando a onda começa
+  endTime: number;            // Tempo em segundos quando a onda termina
+  enemyTypes: EnemyWaveConfig[];  // Configurações de inimigos para esta onda
+  description: string;        // Descrição da onda
+}
+
+export interface EnemyWaveConfig {
+  type: Enemy['type'];        // Tipo do inimigo
+  spawnRate: number;          // Intervalo entre spawns em ms
+  maxConcurrent: number;      // Máximo de inimigos deste tipo na tela
+  healthMultiplier: number;   // Multiplicador de vida
+  speedMultiplier: number;    // Multiplicador de velocidade
+  canShoot: boolean;          // Se pode atirar
+}
+
+export interface BossWaveConfig {
+  time: number;               // Tempo exato para spawn (em segundos)
+  type: Enemy['type'];        // Tipo do boss
+  healthMultiplier: number;   // Multiplicador de vida
+  description: string;        // Descrição do boss fight
+  freezeTime: boolean;        // Se congela o timer durante a luta
+}
+
+/**
+ * Configuração completa do sistema de ondas
+ * Duração total: 6 minutos (360 segundos)
+ * Boss 1: 2:59 (179 segundos)
+ * Boss Final: 5:59 (359 segundos)
+ */
+export const WAVE_SYSTEM_CONFIG = {
+  totalDuration: 360, // 6 minutos em segundos
+  
+  // Marcos de boss fights
+  bosses: [
+    {
+      time: 179, // 2:59
+      type: 'boss' as const,
+      healthMultiplier: 1.0,
+      description: 'Boss Intermediário',
+      freezeTime: true
+    },
+    {
+      time: 359, // 5:59  
+      type: 'boss' as const,
+      healthMultiplier: 2.5,
+      description: 'Boss Final',
+      freezeTime: true
+    }
+  ] as BossWaveConfig[],
+  
+  // Ondas de inimigos progressivas
+  waves: [
+    // Onda 1: 0-60s - Tutorial, inimigos muito fracos
+    {
+      startTime: 0,
+      endTime: 60,
+      description: 'Primeiros Contatos',
+      enemyTypes: [
+        {
+          type: 'basic' as const,
+          spawnRate: 3000,
+          maxConcurrent: 2,
+          healthMultiplier: 0.5, // 10 HP (morrem com 1 tiro)
+          speedMultiplier: 0.7,
+          canShoot: false
+        }
+      ]
+    },
+    
+    // Onda 2: 60-120s - Intensifica um pouco
+    {
+      startTime: 60,
+      endTime: 120,
+      description: 'Chegada dos Reforços',
+      enemyTypes: [
+        {
+          type: 'basic' as const,
+          spawnRate: 2000,
+          maxConcurrent: 3,
+          healthMultiplier: 1.0, // 20 HP (2 tiros)
+          speedMultiplier: 0.8,
+          canShoot: false
+        },
+        {
+          type: 'fast' as const,
+          spawnRate: 8000,
+          maxConcurrent: 1,
+          healthMultiplier: 1.0, // 10 HP
+          speedMultiplier: 1.0,
+          canShoot: false
+        }
+      ]
+    },
+    
+    // Onda 3: 120-179s - Antes do primeiro boss
+    {
+      startTime: 120,
+      endTime: 179,
+      description: 'Preparação para o Boss',
+      enemyTypes: [
+        {
+          type: 'basic' as const,
+          spawnRate: 1500,
+          maxConcurrent: 4,
+          healthMultiplier: 1.5, // 30 HP (3 tiros)
+          speedMultiplier: 0.9,
+          canShoot: false
+        },
+        {
+          type: 'fast' as const,
+          spawnRate: 6000,
+          maxConcurrent: 2,
+          healthMultiplier: 1.2, // 12 HP
+          speedMultiplier: 1.1,
+          canShoot: false
+        }
+      ]
+    },
+    
+    // Onda 4: 179-240s - Após primeiro boss, introduz inimigos que atiram
+    {
+      startTime: 179,
+      endTime: 240,
+      description: 'Contraataque',
+      enemyTypes: [
+        {
+          type: 'basic' as const,
+          spawnRate: 2000,
+          maxConcurrent: 3,
+          healthMultiplier: 1.2, // 24 HP
+          speedMultiplier: 0.8,
+          canShoot: true // Agora atiram!
+        },
+        {
+          type: 'fast' as const,
+          spawnRate: 5000,
+          maxConcurrent: 2,
+          healthMultiplier: 1.0,
+          speedMultiplier: 1.2,
+          canShoot: false
+        },
+        {
+          type: 'heavy' as const,
+          spawnRate: 15000,
+          maxConcurrent: 1,
+          healthMultiplier: 0.8, // 40 HP
+          speedMultiplier: 1.5,
+          canShoot: true
+        }
+      ]
+    },
+    
+    // Onda 5: 240-300s - Intensifica
+    {
+      startTime: 240,
+      endTime: 300,
+      description: 'Ofensiva Pesada',
+      enemyTypes: [
+        {
+          type: 'basic' as const,
+          spawnRate: 1200,
+          maxConcurrent: 5,
+          healthMultiplier: 1.5, // 30 HP
+          speedMultiplier: 1.0,
+          canShoot: true
+        },
+        {
+          type: 'fast' as const,
+          spawnRate: 4000,
+          maxConcurrent: 3,
+          healthMultiplier: 1.3, // 13 HP
+          speedMultiplier: 1.3,
+          canShoot: false
+        },
+        {
+          type: 'heavy' as const,
+          spawnRate: 12000,
+          maxConcurrent: 2,
+          healthMultiplier: 1.0, // 50 HP
+          speedMultiplier: 1.2,
+          canShoot: true
+        }
+      ]
+    },
+    
+    // Onda 6: 300-359s - Final intenso antes do boss final
+    {
+      startTime: 300,
+      endTime: 359,
+      description: 'Último Assalto',
+      enemyTypes: [
+        {
+          type: 'basic' as const,
+          spawnRate: 800,
+          maxConcurrent: 6,
+          healthMultiplier: 2.0, // 40 HP (4 tiros)
+          speedMultiplier: 1.1,
+          canShoot: true
+        },
+        {
+          type: 'fast' as const,
+          spawnRate: 3000,
+          maxConcurrent: 4,
+          healthMultiplier: 1.5, // 15 HP
+          speedMultiplier: 1.4,
+          canShoot: true
+        },
+        {
+          type: 'heavy' as const,
+          spawnRate: 8000,
+          maxConcurrent: 3,
+          healthMultiplier: 1.2, // 60 HP
+          speedMultiplier: 1.0,
+          canShoot: true
+        }
+      ]
+    }
+  ] as WaveConfig[]
+};
+
+/**
+ * Calcula a onda atual baseada no tempo de jogo
+ */
+export function getCurrentWave(gameTime: number): WaveConfig | null {
+  for (const wave of WAVE_SYSTEM_CONFIG.waves) {
+    if (gameTime >= wave.startTime && gameTime < wave.endTime) {
+      return wave;
+    }
+  }
+  return null;
+}
+
+/**
+ * Verifica se deve spawnar um boss no tempo atual
+ */
+export function shouldSpawnBoss(gameTime: number): BossWaveConfig | null {
+  for (const boss of WAVE_SYSTEM_CONFIG.bosses) {
+    if (Math.abs(gameTime - boss.time) < 0.5) { // Tolerância de 0.5 segundos
+      return boss;
+    }
+  }
+  return null;
+}
+
+/**
+ * Verifica se o jogo foi completado (vitória)
+ */
+export function isGameVictorious(gameTime: number): boolean {
+  return gameTime >= WAVE_SYSTEM_CONFIG.totalDuration;
+}

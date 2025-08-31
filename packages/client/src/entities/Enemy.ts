@@ -3,7 +3,7 @@ import { Entity, Position } from './Entity';
 import { EventBus } from '../core/EventBus';
 import { assetManager } from '../services/AssetManager';
 import { ENEMY_CONFIG } from '@spaceshooter/shared';
-import type { Enemy as EnemyData } from '@spaceshooter/shared';
+import type { Enemy as EnemyData, EnemyWaveConfig, BossWaveConfig } from '@spaceshooter/shared';
 
 export class Enemy extends Entity {
   /**
@@ -15,6 +15,7 @@ export class Enemy extends Entity {
   private health: number;
   private maxHealth: number;
   private config: typeof ENEMY_CONFIG[keyof typeof ENEMY_CONFIG];
+  private speedMultiplier: number = 1.0;
   
   // Barra de vida do inimigo
   private healthBarGroup?: THREE.Group;
@@ -28,7 +29,9 @@ export class Enemy extends Entity {
     eventBus: EventBus,
     id: string,
     enemyType: EnemyData['type'],
-    initialPosition: Position
+    initialPosition: Position,
+    waveConfig?: EnemyWaveConfig,
+    bossConfig?: BossWaveConfig
   ) {
     const config = ENEMY_CONFIG[enemyType];
     if (!config) {
@@ -40,8 +43,22 @@ export class Enemy extends Entity {
   this.enemyType = enemyType;
   this.config = config;
   this.diesOnPlayerCollision = config.diesOnPlayerCollision ?? true;
-    this.health = config.health;
-    this.maxHealth = config.health;
+    
+    // Apply wave multipliers
+    let healthMultiplier = 1.0;
+    let speedMultiplier = 1.0;
+    
+    if (waveConfig) {
+      healthMultiplier = waveConfig.healthMultiplier;
+      speedMultiplier = waveConfig.speedMultiplier;
+    } else if (bossConfig) {
+      healthMultiplier = bossConfig.healthMultiplier;
+      speedMultiplier = 1.0; // Boss speed não é modificado por enquanto
+    }
+    
+    this.health = Math.round(config.health * healthMultiplier);
+    this.maxHealth = Math.round(config.health * healthMultiplier);
+    this.speedMultiplier = speedMultiplier;
     this.createVisual();
   }
 
@@ -93,8 +110,9 @@ export class Enemy extends Entity {
           const dy = playerPos.y - this.position.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
           if (dist > 0.01) {
-            this.velocity.x = (dx / dist) * this.config.speed;
-            this.velocity.y = (dy / dist) * this.config.speed;
+            const modifiedSpeed = this.config.speed * this.speedMultiplier;
+            this.velocity.x = (dx / dist) * modifiedSpeed;
+            this.velocity.y = (dy / dist) * modifiedSpeed;
           }
         }
       }
@@ -204,6 +222,10 @@ export class Enemy extends Entity {
 
   public getHealth(): number {
     return this.health;
+  }
+
+  public getType(): EnemyData['type'] {
+    return this.enemyType;
   }
 
   public getMaxHealth(): number {
@@ -512,6 +534,72 @@ export class Enemy extends Entity {
     const spawnPosition: Position = { x, y };
     const boss = new Enemy(eventBus, bossId, enemyType, spawnPosition);
     console.log(`👹 BOSS spawned at (${spawnPosition.x.toFixed(1)}, ${spawnPosition.y.toFixed(1)})!`);
+    return boss;
+  }
+
+  /**
+   * Spawn enemy with wave-based configuration (health/speed multipliers)
+   */
+  public static spawnEnemyWithWaveConfig(eventBus: EventBus, waveConfig: EnemyWaveConfig): Enemy {
+    const currentTime = Date.now();
+    const enemyId = `enemy_${currentTime}_${Math.random()}`;
+    
+    // Use enemy type from wave config
+    const enemyType = waveConfig.type;
+    
+    // Choose spawn position (same logic as regular spawn)
+    const edge = Math.floor(Math.random() * 4); // 0:top, 1:bottom, 2:left, 3:right
+    let x = 0, y = 0;
+    const bounds = { minX: -10, maxX: 10, minY: -7.5, maxY: 7.5 };
+    if (edge === 0) { // topo
+      x = bounds.minX + Math.random() * (bounds.maxX - bounds.minX);
+      y = bounds.maxY;
+    } else if (edge === 1) { // baixo
+      x = bounds.minX + Math.random() * (bounds.maxX - bounds.minX);
+      y = bounds.minY;
+    } else if (edge === 2) { // esquerda
+      x = bounds.minX;
+      y = bounds.minY + Math.random() * (bounds.maxY - bounds.minY);
+    } else { // direita
+      x = bounds.maxX;
+      y = bounds.minY + Math.random() * (bounds.maxY - bounds.minY);
+    }
+    
+    const spawnPosition: Position = { x, y };
+    const enemy = new Enemy(eventBus, enemyId, enemyType, spawnPosition, waveConfig);
+    console.log(`🌊 Wave enemy spawned: ${enemyType} (${waveConfig.healthMultiplier}x HP, ${waveConfig.speedMultiplier}x speed) at (${spawnPosition.x.toFixed(1)}, ${spawnPosition.y.toFixed(1)})`);
+    return enemy;
+  }
+
+  /**
+   * Spawn boss with wave-based configuration
+   */
+  public static spawnBossWithWaveConfig(eventBus: EventBus, bossConfig: BossWaveConfig): Enemy {
+    const currentTime = Date.now();
+    const bossId = `boss_${currentTime}_${Math.random()}`;
+    const enemyType = bossConfig.type;
+    
+    // Spawn boss em uma borda aleatória do mapa
+    const edge = Math.floor(Math.random() * 4); // 0:top, 1:bottom, 2:left, 3:right
+    let x = 0, y = 0;
+    const bounds = { minX: -10, maxX: 10, minY: -7.5, maxY: 7.5 };
+    if (edge === 0) { // topo
+      x = bounds.minX + Math.random() * (bounds.maxX - bounds.minX);
+      y = bounds.maxY;
+    } else if (edge === 1) { // baixo
+      x = bounds.minX + Math.random() * (bounds.maxX - bounds.minX);
+      y = bounds.minY;
+    } else if (edge === 2) { // esquerda
+      x = bounds.minX;
+      y = bounds.minY + Math.random() * (bounds.maxY - bounds.minY);
+    } else { // direita
+      x = bounds.maxX;
+      y = bounds.minY + Math.random() * (bounds.maxY - bounds.minY);
+    }
+    
+    const spawnPosition: Position = { x, y };
+    const boss = new Enemy(eventBus, bossId, enemyType, spawnPosition, undefined, bossConfig);
+    console.log(`👹 ${bossConfig.description} spawned (${bossConfig.healthMultiplier}x HP) at (${spawnPosition.x.toFixed(1)}, ${spawnPosition.y.toFixed(1)})!`);
     return boss;
   }
 }

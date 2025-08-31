@@ -56,6 +56,13 @@ export class UISystem {
   private currentXP: number = 0;
   private xpToNext: number = 100;
   private xpProgress: number = 0;
+  
+  // Wave timer
+  private waveTimerText?: THREE.Sprite;
+  private currentWaveDescription: string = '';
+  private gameTime: number = 0;
+  private totalDuration: number = 360; // 6 minutes
+  private timeFrozen: boolean = false;
 
   private eventBus: EventBus;
 
@@ -149,6 +156,34 @@ export class UISystem {
     this.eventBus.on('boss:damage-taken', (data: { health: number; maxHealth: number }) => {
       this.updateBossHealthBar(data.health, data.maxHealth);
     });
+
+    // Wave system events
+    this.eventBus.on('wave:started', (data: { totalDuration: number }) => {
+      this.totalDuration = data.totalDuration;
+      this.gameTime = 0;
+      this.timeFrozen = false;
+      this.currentWaveDescription = 'Starting...';
+      this.updateWaveTimer(this.gameTime, this.currentWaveDescription, this.timeFrozen, this.totalDuration);
+    });
+
+    this.eventBus.on('wave:changed', (data: { wave: any; gameTime: number }) => {
+      this.currentWaveDescription = data.wave.description || '';
+      this.gameTime = data.gameTime;
+      this.updateWaveTimer(this.gameTime, this.currentWaveDescription, this.timeFrozen, this.totalDuration);
+    });
+
+    this.eventBus.on('wave:boss-spawned', (data: { boss: any; gameTime: number }) => {
+      this.timeFrozen = true;
+      this.gameTime = data.gameTime;
+      this.currentWaveDescription = data.boss.description || 'Boss Fight';
+      this.updateWaveTimer(this.gameTime, this.currentWaveDescription, this.timeFrozen, this.totalDuration);
+    });
+
+    this.eventBus.on('boss:defeated', () => {
+      this.hideBossHealthBar();
+      this.timeFrozen = false;
+      this.updateWaveTimer(this.gameTime, this.currentWaveDescription, this.timeFrozen, this.totalDuration);
+    });
   }
 
   private createUIElements(): void {
@@ -169,6 +204,11 @@ export class UISystem {
     this.levelText.position.set(0, 0.7, 0);
     this.levelText.scale.setScalar(baseScale * 0.7);
     this.hudGroup.add(this.levelText);
+    // Wave timer (above level text)
+    this.waveTimerText = this.createTextSprite(this.getWaveTimerText());
+    this.waveTimerText.position.set(0, 0.9, 0);
+    this.waveTimerText.scale.setScalar(baseScale * 0.6);
+    this.hudGroup.add(this.waveTimerText);
     // XP bar background (below level text)
     const xpBarWidth = Math.min(aspect * 0.3, 0.5);
     const xpBarBgGeometry = new THREE.PlaneGeometry(xpBarWidth, 0.025);
@@ -489,6 +529,7 @@ export class UISystem {
       this.scoreText === undefined 
       || this.ammoText === undefined
       || this.levelText === undefined
+      || this.waveTimerText === undefined
       || this.xpBar === undefined
       || this.xpBarBg === undefined
     ) {
@@ -502,6 +543,7 @@ export class UISystem {
     this.ammoText.position.x = aspect * 0.9;
     this.ammoText.scale.setScalar(baseScale);
     this.levelText.scale.setScalar(baseScale * 0.7);
+    this.waveTimerText.scale.setScalar(baseScale * 0.6);
     // Update XP bar width
     const barWidth = Math.min(aspect * 0.3, 0.5);
     const originalWidth = Math.min(window.innerWidth / window.innerHeight * 0.3, 0.5);
@@ -628,6 +670,30 @@ export class UISystem {
       this.bossNameText = undefined;
       
       console.log('👹 Boss health bar hidden from HUD');
+    }
+  }
+
+  private getWaveTimerText(): string {
+    const remainingTime = Math.max(0, this.totalDuration - this.gameTime);
+    const minutes = Math.floor(remainingTime / 60);
+    const seconds = Math.floor(remainingTime % 60);
+    const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    
+    if (this.timeFrozen) {
+      return `⏰ BOSS FIGHT - ${this.currentWaveDescription}`;
+    }
+    
+    return `${timeStr} - ${this.currentWaveDescription}`;
+  }
+
+  private updateWaveTimer(gameTime: number, waveDescription: string = '', timeFrozen: boolean = false, totalDuration: number = 360): void {
+    this.gameTime = gameTime;
+    this.currentWaveDescription = waveDescription;
+    this.timeFrozen = timeFrozen;
+    this.totalDuration = totalDuration;
+    
+    if (this.waveTimerText) {
+      this.updateTextSprite(this.waveTimerText, this.getWaveTimerText(), '#ffffff');
     }
   }
 }

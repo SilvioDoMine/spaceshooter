@@ -232,7 +232,7 @@ export class Game {
     if (this.gameStateManager.isPlaying()) {
       this.cameraSystem.update(deltaTime);
       this.backgroundSystem.update(deltaTime);
-      this.entitySystem.update(deltaTime);
+      this.entitySystem.update(deltaTime); // EntitySystem now includes WaveSystem
       this.particleSystem.update(deltaTime);
       this.xpOrbSystem.update(deltaTime);
     }
