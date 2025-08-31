@@ -317,11 +317,11 @@ export const ENEMY_CONFIG = {
     health: 2000,            // 50 hits para destruir - muito resistente
     speed: 0.2,             // Bem lento
     size: 2,                // Grande
-    radius: 0.6,            // Hitbox maior
+    radius: 1.6,            // Hitbox maior
     color: 0xff0080,        // Rosa/Magenta para diferenciação
     spawnRate: 60000,       // A cada 60 segundos (muito raro)
     xpDrop: 200,            // Muito XP
-    xpOrbCount: 50          // Muitos orbes de XP
+    xpOrbCount: 200          // Muitos orbes de XP
   }
 };
 
