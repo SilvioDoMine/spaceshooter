@@ -366,12 +366,25 @@ export class Player extends Entity {
   protected onUpdate(deltaTime: number): void {
     if (!this.isActive) return;
 
+    // Corrigir slow motion: usar deltaTime "real" para mira e tiro
+    let realDelta = deltaTime;
+    const game = (window as any).game;
+    if (game && typeof game.getDebugSystem === 'function') {
+      const debugSystem = game.getDebugSystem();
+      if (typeof debugSystem.getTimeScale === 'function') {
+        const timeScale = debugSystem.getTimeScale();
+        if (timeScale && timeScale < 0.99) {
+          realDelta = deltaTime / timeScale;
+        }
+      }
+    }
+
     this.handleMovement(deltaTime);
     this.constrainToWorld();
 
-    // Update shot cooldown timer
+    // Update shot cooldown timer (usar realDelta)
     if (this.shotTimer > 0) {
-      this.shotTimer -= deltaTime;
+      this.shotTimer -= realDelta;
     }
 
     // Update health regeneration timer
@@ -390,10 +403,8 @@ export class Player extends Entity {
       }
     }
 
-    // TIRO AUTOMÁTICO AO PARAR
+    // TIRO AUTOMÁTICO AO PARAR (usar realDelta para rotação)
     if (!this.isMoving && (this.infiniteAmmoEnabled || this.stats.ammo > 0) && this.shotTimer <= 0) {
-      // Tenta acessar o sistema de entidades pelo window.game
-      const game = (window as any).game;
       if (game && typeof game.getEntitySystem === 'function') {
         const entitySystem = game.getEntitySystem();
         if (entitySystem && typeof entitySystem.getEnemies === 'function') {
@@ -426,7 +437,7 @@ export class Player extends Entity {
             } else if (rotationDifference < -Math.PI) {
               rotationDifference += 2 * Math.PI;
             }
-            this.currentRotation += rotationDifference * this.rotationSmoothness * deltaTime;
+            this.currentRotation += rotationDifference * this.rotationSmoothness * realDelta;
             if (this.currentRotation > Math.PI) {
               this.currentRotation -= 2 * Math.PI;
             } else if (this.currentRotation < -Math.PI) {

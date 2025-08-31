@@ -73,7 +73,8 @@ export class ProjectileSystem {
     ricochetCount: number = 0,
     maxRicochets: number = 0,
     isRicochet: boolean = false,
-    ricochetLevel: number = 0
+    ricochetLevel: number = 0,
+    noSkillTrigger: boolean = false
   ): string {
     const currentTime = Date.now();
     const projectileId = `projectile_${currentTime}_${Math.random()}`;
@@ -84,7 +85,8 @@ export class ProjectileSystem {
       velocity: { ...velocity },
       damage,
       ownerId,
-      createdAt: currentTime
+      createdAt: currentTime,
+      noSkillTrigger
     };
 
     const geometry = new THREE.SphereGeometry(PROJECTILE_CONFIG.size);
@@ -194,7 +196,8 @@ export class ProjectileSystem {
       projectileId: projectile.id,
       position: projectile.data.position,
       damage: projectile.data.damage,
-      radius: PROJECTILE_CONFIG.size
+      radius: PROJECTILE_CONFIG.size,
+      noSkillTrigger: projectile.data.noSkillTrigger || false
     });
   }
 
@@ -220,24 +223,20 @@ export class ProjectileSystem {
   public handleProjectileHit(projectileId: string, targetId: string): void {
     const projectile = this.projectiles.get(projectileId);
     if (projectile) {
-      console.log(`🎯 Projectile ${projectileId} hit ${targetId} (isRicochet: ${projectile.isRicochet}, maxRicochets: ${projectile.maxRicochets})`);
-      
+      console.log(`🎯 Projectile ${projectileId} hit ${targetId} (isRicochet: ${projectile.isRicochet}, maxRicochets: ${projectile.maxRicochets}, noSkillTrigger: ${projectile.data.noSkillTrigger})`);
+
       // Add to hit enemies for anti-loop protection
       if (projectile.hitEnemies) {
         projectile.hitEnemies.add(targetId);
       }
-      
+
       this.eventBus.emit('projectile:hit', {
-        projectileId,
         targetId,
-        damage: projectile.data.damage,
-        position: projectile.data.position
+        damage: projectile.data.damage
       });
-      
-      // Check for ricochet only for non-ricochet projectiles (original shots)
-      // And only if this projectile hasn't ricocheted yet
-      if (!projectile.isRicochet && projectile.maxRicochets && projectile.maxRicochets > 0 && (projectile.ricochetCount || 0) === 0) {
-        // Check if we can ricochet (cooldown system)
+
+      // Só ativa ricochete se não for ricochete nem tri_shot
+      if (!projectile.data.noSkillTrigger && !projectile.isRicochet && projectile.maxRicochets && projectile.maxRicochets > 0 && (projectile.ricochetCount || 0) === 0) {
         if (this.canRicochet(projectile.data.ownerId, projectile.data.position, projectile.hitEnemies)) {
           console.log(`🔄 Attempting ricochet for projectile ${projectileId}`);
           this.handleRicochet(projectile, targetId);
@@ -245,7 +244,7 @@ export class ProjectileSystem {
           console.log(`⏱️ Ricochet blocked - no valid target or cooldown`);
         }
       }
-      
+
       this.removeProjectile(projectileId);
     }
   }
@@ -343,7 +342,8 @@ export class ProjectileSystem {
       (originalProjectile.ricochetCount || 0) + 1,
       originalProjectile.maxRicochets,
       true, // Mark as ricochet projectile
-      ricochetLevel
+      ricochetLevel,
+      true // noSkillTrigger: ricochet projéteis não ativam skills
     );
   }
   
@@ -363,7 +363,7 @@ export class ProjectileSystem {
     let nearestEnemy: { id: string; position: Position } | null = null;
     let nearestDistance = Infinity;
     
-    enemies.forEach(enemy => {
+  enemies.forEach((enemy: any) => {
       // // Skip enemies that have already been hit by this projectile chain
       // if (excludeEnemies && excludeEnemies.has(enemy.getId())) {
       //   return;

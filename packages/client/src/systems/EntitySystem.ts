@@ -5,7 +5,7 @@ import { PowerUp } from '../entities/PowerUp';
 import { ProjectileSystem } from './ProjectileSystem';
 import { RenderingSystem } from './RenderingSystem';
 import { CollisionUtils } from '../utils/CollisionUtils';
-import { ENEMY_CONFIG, POWERUP_CONFIG } from '@spaceshooter/shared';
+import { ENEMY_CONFIG, POWERUP_CONFIG, PROJECTILE_CONFIG } from '@spaceshooter/shared';
 
 export class EntitySystem {
   private eventBus: EventBus;
@@ -59,7 +59,7 @@ export class EntitySystem {
       this.handleCollisionCheck(data);
     });
 
-    this.eventBus.on('collision:projectile-enemy', (data) => {
+    this.eventBus.on('collision:projectile-enemy', (data: { projectileId: string; position: { x: number; y: number }; damage: number; radius: number; noSkillTrigger?: boolean }) => {
       this.handleProjectileEnemyCollision(data);
     });
 
@@ -195,11 +195,45 @@ export class EntitySystem {
       const hitEnemy = collision.target;
       const hitEnemyId = collision.id!;
       const isDead = hitEnemy.takeDamage(data.damage);
-      
+
+      // --- Skill: Tri Shot ---
+      if (
+        this.player &&
+        this.player.getSkillLevel &&
+        this.player.getSkillLevel('tri_shot') > 0 &&
+        !data.noSkillTrigger // só ativa se não for ricochete/triangular
+      ) {
+        const enemyPos = hitEnemy.getPosition();
+        const dx = enemyPos.x - data.position.x;
+        const dy = enemyPos.y - data.position.y;
+        const baseAngle = Math.atan2(dy, dx);
+        const projectileSpeed = PROJECTILE_CONFIG.speed;
+        const angles = [0, Math.PI / 3, -Math.PI / 3];
+        angles.forEach(offset => {
+          const angle = baseAngle + offset;
+          const velocity = {
+            x: Math.cos(angle) * projectileSpeed,
+            y: Math.sin(angle) * projectileSpeed
+          };
+          this.projectileSystem.createProjectile(
+            'player',
+            { x: enemyPos.x, y: enemyPos.y },
+            velocity,
+            PROJECTILE_CONFIG.damage,
+            0, // ricochetCount
+            0, // maxRicochets
+            false,
+            0,
+            true // noSkillTrigger: não ativa ricochete nem tri_shot
+          );
+        });
+        this.eventBus.emit('audio:play', { soundId: 'shoot', options: { volume: 0.25 } });
+      }
+
       // Call handleProjectileHit instead of removeProjectile directly
       // This triggers ricochet logic if the projectile has ricochet enabled
       this.projectileSystem.handleProjectileHit(data.projectileId, hitEnemyId);
-      
+
       if (isDead) {
         this.enemies.delete(hitEnemyId);
       }

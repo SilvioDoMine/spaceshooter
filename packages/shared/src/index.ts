@@ -52,7 +52,8 @@ export type SkillType =
   | 'max_health_boost'  // Aumento de vida permanente
   | 'move_speed'        // Aumentar velocidade de movimento
   | 'ricochet'          // Projéteis ricocheteiam para inimigos próximos
-  | 'ammo_capacity';    // Aumentar capacidade máxima de munição
+  | 'ammo_capacity'     // Aumentar capacidade máxima de munição
+  | 'tri_shot';         // 20% chance de spawnar 3 projéteis em triângulo ao acertar inimigo
 
 /**
  * Informações de uma skill individual
@@ -88,6 +89,7 @@ export interface Projectile {
   damage: number;          // Dano causado ao colidir
   ownerId: string;         // ID da entidade que disparou
   createdAt: number;       // Timestamp de criação (para cleanup)
+  noSkillTrigger?: boolean; // Se true, não ativa ricochete nem tri_shot
 }
 
 /**
@@ -518,6 +520,16 @@ export interface SkillConfig {
  * Configurações de todas as skills do jogo
  */
 export const SKILLS_CONFIG: Record<SkillType, SkillConfig> = {
+  tri_shot: {
+    id: 'tri_shot',
+    name: 'Tiro Triangular',
+    description: '100% de chance de, ao acertar um inimigo, disparar 3 projéteis em triângulo a partir do inimigo',
+    maxLevel: 1,
+    icon: '🔺',
+    effects: {
+      1: { value: 1.0, description: '100% de chance de spawnar 3 projéteis em triângulo ao acertar inimigo' }
+    }
+  },
   damage_boost: {
     id: 'damage_boost',
     name: 'Dano Aumentado',

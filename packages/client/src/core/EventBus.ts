@@ -130,7 +130,7 @@ export type GameEventMap = {
   
   // Emitido em: ProjectileSystem.ts:133 quando projétil pode colidir com inimigo
   // Motivo: Sistema de colisão verificar impacto entre projétil e inimigos
-  'collision:projectile-enemy': { projectileId: string; position: { x: number; y: number }; damage: number; radius: number };
+  'collision:projectile-enemy': { projectileId: string; position: { x: number; y: number }; damage: number; radius: number; noSkillTrigger?: boolean };
   
   // Emitido em: ProjectileSystem quando projétil acerta um alvo
   // Motivo: Alvo precisa processar dano recebido
