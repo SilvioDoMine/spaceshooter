@@ -726,9 +726,9 @@ export interface SkillOption {
 export function generateSkillOptions(playerSkills: PlayerSkill[]): SkillOption[] {
   // Definir chances de raridade
   const rarityChances: { rarity: SkillRarity; chance: number }[] = [
-    { rarity: 'lendaria', chance: 0.05 }, // 5%
-    { rarity: 'epica', chance: 0.15 },    // 15%
-    { rarity: 'rara', chance: 0.80 }      // 80%
+    { rarity: 'lendaria', chance: 0.10 }, // 10%
+    { rarity: 'epica', chance: 0.25 },    // 25%
+    { rarity: 'rara', chance: 0.65 }      // 65%
   ];
 
   // Sorteia raridade
