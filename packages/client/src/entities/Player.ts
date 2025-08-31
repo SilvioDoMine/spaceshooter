@@ -1047,7 +1047,7 @@ export class Player extends Entity {
   this.createHealthBar3D();
   }
 
-  // Ajuste: barra mais grossa
+  // Barra de vida estilo Archero: pequena, próxima da nave, com segmentos e números
   private createHealthBar3D(): void {
     if (!this.playerShipModel) {
       console.warn('[Player] playerShipModel não definido ao criar barra de vida 3D');
@@ -1058,47 +1058,91 @@ export class Player extends Entity {
       console.log('[Player] Removendo healthBarGroup antigo da cena');
     }
     const group = new THREE.Group();
-    // BARRA EXTREMAMENTE VISÍVEL
-  const barWidth = 1.2;
-  const barHeight = 0.14;
-    const segments = Math.max(3, Math.min(10, this.stats.maxHealth));
-  const segmentGap = 0.03;
+    
+    // Dimensões estilo Archero - mais compacta e larga
+    const barWidth = 1.0; // Largura ideal para o estilo Archero
+    const barHeight = 0.08; // Mais fina como no Archero
+    const segments = Math.ceil(this.stats.maxHealth / 10); // Cada segmento = 10 de vida
+    const segmentGap = 0.008; // Gap bem fino como no Archero
     const segmentWidth = (barWidth - (segments - 1) * segmentGap) / segments;
+    
+    // Borda externa bem grossa e destacada (estilo Archero)
+    const borderThickness = 0.02; // Mais grossa
+    const borderGeom = new THREE.PlaneGeometry(barWidth + borderThickness * 2, barHeight + borderThickness * 2);
+    const borderMat = new THREE.MeshBasicMaterial({ 
+      color: 0x000000, 
+      transparent: false, // Borda sólida
+      depthTest: false 
+    });
+    const border = new THREE.Mesh(borderGeom, borderMat);
+    border.position.z = -0.002;
+    border.renderOrder = 9997;
+    group.add(border);
+    
+    // Fundo da barra (preto sólido como no Archero)
+    const bgGeom = new THREE.PlaneGeometry(barWidth, barHeight);
+    const bgMat = new THREE.MeshBasicMaterial({ 
+      color: 0x000000, // Preto sólido
+      transparent: false, 
+      depthTest: false 
+    });
+    const background = new THREE.Mesh(bgGeom, bgMat);
+    background.position.z = -0.001;
+    background.renderOrder = 9998;
+    group.add(background);
+    
+    // Segmentos de vida estilo Archero clássico
     this.healthBarSegments = [];
     for (let i = 0; i < segments; i++) {
-      const geometry = new THREE.PlaneGeometry(segmentWidth, barHeight);
-      const material = new THREE.MeshBasicMaterial({ color: 0xff00ff, transparent: true, opacity: 1, depthTest: false });
+      const geometry = new THREE.PlaneGeometry(segmentWidth, barHeight * 0.9); // Mais altura
+      const material = new THREE.MeshBasicMaterial({ 
+        color: 0x00cc00, // Verde mais saturado e escuro
+        transparent: false, // Sem transparência
+        depthTest: false 
+      });
       const mesh = new THREE.Mesh(geometry, material);
       mesh.position.x = -barWidth / 2 + segmentWidth / 2 + i * (segmentWidth + segmentGap);
       mesh.renderOrder = 9999;
       group.add(mesh);
       this.healthBarSegments.push(mesh);
     }
-  const outlineGeom = new THREE.PlaneGeometry(barWidth + 0.04, barHeight + 0.04);
-  const outlineMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5, depthTest: false });
-  const outline = new THREE.Mesh(outlineGeom, outlineMat);
-  outline.position.z = -0.01;
-  outline.renderOrder = 9998;
-  group.add(outline);
+    
+    // Linhas divisórias mais claras entre segmentos (estilo Archero)
+    for (let i = 0; i < segments - 1; i++) {
+      const dividerGeom = new THREE.PlaneGeometry(0.004, barHeight);
+      const dividerMat = new THREE.MeshBasicMaterial({ 
+        color: 0xaaaaaa, // Mais claro que 0x666666
+        transparent: true, 
+        opacity: 0.8, // Um pouco mais opaco
+        depthTest: false 
+      });
+      const divider = new THREE.Mesh(dividerGeom, dividerMat);
+      divider.position.x = -barWidth / 2 + (i + 1) * (segmentWidth + segmentGap) - segmentGap / 2;
+      divider.position.z = 0.001;
+      divider.renderOrder = 10000;
+      group.add(divider);
+    }
+    
+    // Texto dos números estilo Archero (apenas vida atual)
     this.healthBarText = this.createHealthBarTextSprite(`${this.stats.health}`);
-    this.healthBarText.position.set(0, 0, 0.02);
-    this.healthBarText.scale.set(0.7, 0.35, 1);
+    this.healthBarText.position.set(0, barHeight * 0.4, 0.002); // Mais acima da barra
+    this.healthBarText.scale.set(0.35, 0.18, 1); // Tamanho otimizado
     (this.healthBarText.material as THREE.SpriteMaterial).depthTest = false;
     (this.healthBarText.material as THREE.SpriteMaterial).opacity = 1;
-    this.healthBarText.renderOrder = 10000;
+    this.healthBarText.renderOrder = 10001;
     group.add(this.healthBarText);
-  // Posição Y bem acima da nave, mas agora no plano XZ (de frente para a câmera)
-  group.position.set(0, 1.05, 0);
-  group.rotation.set(-Math.PI / 2, 0, 0); // Rotaciona para o plano XZ
-  group.renderOrder = 10000;
-  // Ajusta o texto para ficar maior e centralizado
-  this.healthBarText.scale.set(0.35, 0.18, 1);
+    
+    // Posição próxima mas bem visível da nave
+    group.position.set(0, 0.8, 0);
+    // Sem rotação inicial - vai ser ajustada no update
+    group.renderOrder = 10000;
+    
     // Adiciona a barra diretamente na cena
     const scene = (this.renderingSystem as any).scene as THREE.Scene;
     if (scene) {
       scene.add(group);
       this.healthBarSceneParent = scene;
-      console.log('[Player] healthBarGroup criado e adicionado à cena', group);
+      console.log('[Player] healthBarGroup estilo Archero criado e adicionado à cena', group);
     } else {
       console.warn('[Player] Não foi possível obter a cena para adicionar healthBarGroup');
     }
@@ -1107,44 +1151,80 @@ export class Player extends Entity {
   }
 
   private updateHealthBar3D(): void {
-    // Atualiza a posição da barra para sempre ficar "acima" do player, independente da rotação
-    if (this.healthBarGroup) {
-      const playerPos = this.getPosition();
-      this.healthBarGroup.position.set(playerPos.x, playerPos.y + 1.05, 0);
-      this.healthBarGroup.rotation.set(-Math.PI / 2, 0, 0); // Sempre de frente para a câmera
-    }
     if (!this.healthBarGroup || !this.healthBarSegments.length) {
-      console.warn('[Player] updateHealthBar3D: healthBarGroup ou segments ausentes');
       return;
     }
+    
+    // Atualiza a posição da barra para sempre ficar "acima" do player, independente da rotação
+    const playerPos = this.getPosition();
+    this.healthBarGroup.position.set(playerPos.x, playerPos.y + 0.8, 0); // Posição próxima da nave
+    
     const health = this.stats.health;
     const maxHealth = this.stats.maxHealth;
     const segments = this.healthBarSegments.length;
-    const filled = Math.round((health / maxHealth) * segments);
+    const healthPercentage = health / maxHealth;
+    const filledSegments = health / 10; // Cada segmento = 10 de vida
+    
+    // Atualiza cada segmento com o efeito "secando"
     for (let i = 0; i < segments; i++) {
       const mesh = this.healthBarSegments[i];
-      if (i < filled) {
-        if (health / maxHealth > 0.5) {
-          (mesh.material as THREE.MeshBasicMaterial).color.set(0x00ff00);
-        } else if (health / maxHealth > 0.25) {
-          (mesh.material as THREE.MeshBasicMaterial).color.set(0xffff00);
+      const material = mesh.material as THREE.MeshBasicMaterial;
+      
+      if (i < Math.floor(filledSegments)) {
+        // Segmento completamente cheio - cores Archero mais saturadas
+        if (healthPercentage > 0.6) {
+          material.color.set(0x00cc00); // Verde mais saturado e escuro
+        } else if (healthPercentage > 0.3) {
+          material.color.set(0xffaa00); // Amarelo/laranja mais saturado
         } else {
-          (mesh.material as THREE.MeshBasicMaterial).color.set(0xff0000);
+          material.color.set(0xcc0000); // Vermelho mais saturado e escuro
         }
         mesh.visible = true;
+        mesh.scale.x = 1; // Escala total
+        // Restaura posição original
+        const barWidth = 1.0;
+        const segmentGap = 0.008;
+        const segmentWidth = (barWidth - (segments - 1) * segmentGap) / segments;
+        mesh.position.x = -barWidth / 2 + segmentWidth / 2 + i * (segmentWidth + segmentGap);
+      } else if (i === Math.floor(filledSegments) && filledSegments % 1 > 0) {
+        // Segmento parcial - efeito "secando" com cores Archero mais saturadas
+        const partialFill = filledSegments % 1;
+        if (healthPercentage > 0.6) {
+          material.color.set(0x00cc00); // Verde mais saturado e escuro
+        } else if (healthPercentage > 0.3) {
+          material.color.set(0xffaa00); // Amarelo/laranja mais saturado
+        } else {
+          material.color.set(0xcc0000); // Vermelho mais saturado e escuro
+        }
+        mesh.visible = true;
+        mesh.scale.x = partialFill; // Escala parcial para efeito "secando"
+        
+        // Ajusta posição X para manter alinhamento à esquerda
+        const barWidth = 1.0;
+        const segmentGap = 0.008;
+        const segmentWidth = (barWidth - (segments - 1) * segmentGap) / segments;
+        const originalX = -barWidth / 2 + segmentWidth / 2 + i * (segmentWidth + segmentGap);
+        mesh.position.x = originalX - (segmentWidth * (1 - partialFill)) / 2;
       } else {
-        mesh.visible = false;
+        // Segmento vazio - cor escura como no Archero (visível mas escuro)
+        material.color.set(0x333333); // Cinza escuro como no Archero
+        mesh.visible = true;
+        mesh.scale.x = 1; // Escala total
+        // Restaura posição original
+        const barWidth = 1.0;
+        const segmentGap = 0.008;
+        const segmentWidth = (barWidth - (segments - 1) * segmentGap) / segments;
+        mesh.position.x = -barWidth / 2 + segmentWidth / 2 + i * (segmentWidth + segmentGap);
       }
     }
+    
+    // Atualiza o texto com apenas a vida atual
     if (this.healthBarText) {
       this.updateHealthBarTextSprite(this.healthBarText, `${health}`);
-      console.log('[Player] updateHealthBar3D: texto atualizado para', health);
     }
-    // Não faz lookAt, mantém sempre reta
-    if (this.healthBarGroup) {
-      this.healthBarGroup.rotation.set(0, 0, 0);
-      console.log('[Player] updateHealthBar3D: healthBarGroup rotação zerada');
-    }
+    
+    // Mantém sempre reta (sem rotação) - como no original
+    this.healthBarGroup.rotation.set(0, 0, 0);
   }
 
   private createHealthBarTextSprite(text: string): THREE.Sprite {
@@ -1152,12 +1232,12 @@ export class Player extends Entity {
     canvas.width = 128;
     canvas.height = 64;
     const ctx = canvas.getContext('2d')!;
-    ctx.font = 'bold 48px Arial';
+    ctx.font = 'bold 36px Arial'; // Fonte maior para PC
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = '#fff';
-    ctx.strokeStyle = '#222';
-    ctx.lineWidth = 6;
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 3; // Borda menor
     ctx.strokeText(text, 64, 32);
     ctx.fillText(text, 64, 32);
     const texture = new THREE.CanvasTexture(canvas);
@@ -1166,18 +1246,24 @@ export class Player extends Entity {
   }
 
   private updateHealthBarTextSprite(sprite: THREE.Sprite, text: string): void {
-    const canvas = (sprite.material as THREE.SpriteMaterial).map.image as HTMLCanvasElement;
-    const ctx = canvas.getContext('2d')!;
+    const material = sprite.material as THREE.SpriteMaterial;
+    const texture = material.map;
+    if (!texture) return;
+    
+    const canvas = texture.image as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.font = 'bold 48px Arial';
+    ctx.font = 'bold 36px Arial'; // Fonte maior para PC
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = '#fff';
-    ctx.strokeStyle = '#222';
-    ctx.lineWidth = 6;
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 3; // Borda menor
     ctx.strokeText(text, 64, 32);
     ctx.fillText(text, 64, 32);
-    (sprite.material as THREE.SpriteMaterial).map.needsUpdate = true;
+    texture.needsUpdate = true;
   }
 
   private updateUI(): void {
