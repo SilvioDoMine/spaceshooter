@@ -13,6 +13,12 @@ export interface ProjectileData {
   data: Projectile;
   collisionVisualizer?: THREE.LineLoop;
   lifetime: number; // Time remaining in seconds
+  // Ricochet properties
+  ricochetCount?: number;
+  maxRicochets?: number;
+  isRicochet?: boolean;
+  hitEnemies?: Set<string>; // Anti-loop protection
+  ricochetLevel?: number; // Skill level for damage calculation
 }
 
 export class ProjectileSystem {
@@ -21,6 +27,9 @@ export class ProjectileSystem {
   private projectiles: Map<string, ProjectileData> = new Map();
   private isActive: boolean = false;
   private collisionDebugEnabled: boolean = false;
+  private lastRicochetTime: number = 0;
+  private ricochetCooldown: number = 200; // 200ms between different ricochet salvos
+  private cachedRicochetTarget: { id: string; position: Position } | null = null; // Store target for multi-shot
 
   constructor(eventBus: EventBus, renderingSystem?: RenderingSystem) {
     this.eventBus = eventBus;
@@ -60,7 +69,11 @@ export class ProjectileSystem {
     ownerId: string, 
     position: Position, 
     velocity: Velocity,
-    damage: number = PROJECTILE_CONFIG.damage
+    damage: number = PROJECTILE_CONFIG.damage,
+    ricochetCount: number = 0,
+    maxRicochets: number = 0,
+    isRicochet: boolean = false,
+    ricochetLevel: number = 0
   ): string {
     const currentTime = Date.now();
     const projectileId = `projectile_${currentTime}_${Math.random()}`;
@@ -112,10 +125,19 @@ export class ProjectileSystem {
       object: projectileMesh,
       data: projectileData,
       collisionVisualizer: collisionVisualizer,
-      lifetime: PROJECTILE_CONFIG.lifetime / 1000 // Convert milliseconds to seconds
+      lifetime: PROJECTILE_CONFIG.lifetime / 1000, // Convert milliseconds to seconds
+      ricochetCount,
+      maxRicochets,
+      isRicochet,
+      hitEnemies: new Set<string>(),
+      ricochetLevel
     });
 
-    console.log(`Projectile created: ${projectileId} by ${ownerId}`);
+    if (maxRicochets > 0) {
+      console.log(`🟡 Projectile created with ricochet: ${projectileId} (${ricochetCount}/${maxRicochets} bounces, isRicochet: ${isRicochet})`);
+    } else {
+      console.log(`🔵 Projectile created: ${projectileId} by ${ownerId}`);
+    }
     
     return projectileId;
   }
@@ -198,12 +220,31 @@ export class ProjectileSystem {
   public handleProjectileHit(projectileId: string, targetId: string): void {
     const projectile = this.projectiles.get(projectileId);
     if (projectile) {
+      console.log(`🎯 Projectile ${projectileId} hit ${targetId} (isRicochet: ${projectile.isRicochet}, maxRicochets: ${projectile.maxRicochets})`);
+      
+      // Add to hit enemies for anti-loop protection
+      if (projectile.hitEnemies) {
+        projectile.hitEnemies.add(targetId);
+      }
+      
       this.eventBus.emit('projectile:hit', {
         projectileId,
         targetId,
         damage: projectile.data.damage,
         position: projectile.data.position
       });
+      
+      // Check for ricochet only for non-ricochet projectiles (original shots)
+      // And only if this projectile hasn't ricocheted yet
+      if (!projectile.isRicochet && projectile.maxRicochets && projectile.maxRicochets > 0 && (projectile.ricochetCount || 0) === 0) {
+        // Check if we can ricochet (cooldown system)
+        if (this.canRicochet(projectile.data.ownerId, projectile.data.position, projectile.hitEnemies)) {
+          console.log(`🔄 Attempting ricochet for projectile ${projectileId}`);
+          this.handleRicochet(projectile, targetId);
+        } else {
+          console.log(`⏱️ Ricochet blocked - no valid target or cooldown`);
+        }
+      }
       
       this.removeProjectile(projectileId);
     }
@@ -235,6 +276,151 @@ export class ProjectileSystem {
         projectile.collisionVisualizer.visible = this.collisionDebugEnabled;
       }
     });
+  }
+
+  private handleRicochet(originalProjectile: ProjectileData, hitTargetId: string): void {
+    const ricochetPosition = { ...originalProjectile.data.position };
+    
+    // Use cached ricochet target instead of searching again
+    // This ensures all projectiles in a multi-shot ricochet to the same enemy
+    let nearestEnemy = this.cachedRicochetTarget;
+    
+    // Validate that the cached target still exists
+    if (nearestEnemy) {
+      const stillExists = this.validateEnemyExists(nearestEnemy.id);
+      if (!stillExists) {
+        console.log(`⚠️ Cached target ${nearestEnemy.id} no longer exists, finding new target`);
+        nearestEnemy = this.findNearestEnemy(ricochetPosition, originalProjectile.hitEnemies);
+        this.cachedRicochetTarget = nearestEnemy;
+      }
+    }
+    
+    if (!nearestEnemy) {
+      console.log('🎯 No valid ricochet target available');
+      return;
+    }
+    
+    // Calculate direction to nearest enemy
+    // NOTE: This aims at the enemy's CURRENT position, not predicted position
+    // The enemy may move and dodge the ricochet - this is intentional for balance
+    const dx = nearestEnemy.position.x - ricochetPosition.x;
+    const dy = nearestEnemy.position.y - ricochetPosition.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    
+    if (distance === 0) return;
+    
+    // Create ricochet projectile with normalized direction
+    const ricochetSpeed = Math.sqrt(
+      originalProjectile.data.velocity.x * originalProjectile.data.velocity.x +
+      originalProjectile.data.velocity.y * originalProjectile.data.velocity.y
+    );
+    
+    const ricochetVelocity = {
+      x: (dx / distance) * ricochetSpeed,
+      y: (dy / distance) * ricochetSpeed
+    };
+    
+    console.log(`🏁 Ricochet velocity: original speed ${ricochetSpeed.toFixed(2)}, new direction (${ricochetVelocity.x.toFixed(2)}, ${ricochetVelocity.y.toFixed(2)})`);
+    
+    // Calculate ricochet damage based on skill level
+    const ricochetLevel = originalProjectile.ricochetLevel || 0;
+    let damageMultiplier = 1.0;
+    if (ricochetLevel === 1) {
+      damageMultiplier = 0.5; // 50% damage
+    } else if (ricochetLevel >= 2) {
+      damageMultiplier = 1.0; // 100% damage
+    }
+    
+    const ricochetDamage = Math.round(originalProjectile.data.damage * damageMultiplier);
+    
+    console.log(`🎯 Creating ricochet projectile to enemy ${nearestEnemy.id} with ${Math.round(damageMultiplier * 100)}% damage (${ricochetDamage})`);
+    
+    this.createProjectile(
+      originalProjectile.data.ownerId,
+      ricochetPosition,
+      ricochetVelocity,
+      ricochetDamage,
+      (originalProjectile.ricochetCount || 0) + 1,
+      originalProjectile.maxRicochets,
+      true, // Mark as ricochet projectile
+      ricochetLevel
+    );
+  }
+  
+  private findNearestEnemy(position: Position, excludeEnemies?: Set<string>): { id: string; position: Position } | null {
+    // Get all enemies from EntitySystem via global game reference
+    const game = (window as any).game;
+    if (!game || typeof game.getEntitySystem !== 'function') {
+      return null;
+    }
+    
+    const entitySystem = game.getEntitySystem();
+    if (!entitySystem || typeof entitySystem.getEnemies !== 'function') {
+      return null;
+    }
+    
+    const enemies = entitySystem.getEnemies();
+    let nearestEnemy: { id: string; position: Position } | null = null;
+    let nearestDistance = Infinity;
+    
+    enemies.forEach(enemy => {
+      // // Skip enemies that have already been hit by this projectile chain
+      // if (excludeEnemies && excludeEnemies.has(enemy.getId())) {
+      //   return;
+      // }
+      
+      const enemyPos = enemy.getPosition();
+      const dx = enemyPos.x - position.x;
+      const dy = enemyPos.y - position.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestEnemy = {
+          id: enemy.getId(),
+          position: enemyPos
+        };
+      }
+    });
+    
+    return nearestEnemy;
+  }
+  
+  private validateEnemyExists(enemyId: string): boolean {
+    const game = (window as any).game;
+    if (!game || typeof game.getEntitySystem !== 'function') {
+      return false;
+    }
+    
+    const entitySystem = game.getEntitySystem();
+    if (!entitySystem || typeof entitySystem.getEnemies !== 'function') {
+      return false;
+    }
+    
+    const enemies = entitySystem.getEnemies();
+    return enemies.has(enemyId);
+  }
+  
+  private canRicochet(ownerId: string, impactPosition: Position, hitEnemies?: Set<string>): boolean {
+    const currentTime = Date.now();
+    if (currentTime - this.lastRicochetTime >= this.ricochetCooldown) {
+      // Clear old cache and find new target based on impact position
+      this.cachedRicochetTarget = null;
+      this.cachedRicochetTarget = this.findNearestEnemy(impactPosition, hitEnemies);
+      this.lastRicochetTime = currentTime;
+      
+      if (this.cachedRicochetTarget) {
+        console.log(`🎨 New ricochet target cached: ${this.cachedRicochetTarget.id} (nearest to impact at ${impactPosition.x.toFixed(2)}, ${impactPosition.y.toFixed(2)})`);
+      }
+      
+      return this.cachedRicochetTarget !== null;
+    }
+    // If within cooldown, we can still ricochet if we have a cached target
+    const canUseCache = this.cachedRicochetTarget !== null;
+    if (canUseCache) {
+      console.log(`📄 Using cached ricochet target: ${this.cachedRicochetTarget!.id} (from cache)`);
+    }
+    return canUseCache;
   }
 
   public dispose(): void {

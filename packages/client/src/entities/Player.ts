@@ -618,15 +618,25 @@ export class Player extends Entity {
     const damageMultiplier = calculateDamageMultiplier(this.stats.skills);
     const projectileDamage = Math.round(PROJECTILE_CONFIG.damage * damageMultiplier);
     
-    // Create main projectile
-    this.projectileSystem.createProjectile('player', projectilePosition, projectileVelocity, projectileDamage);
+    // Check for ricochet skill
+    const ricochetSkill = this.stats.skills.find(skill => skill.type === 'ricochet');
+    const maxRicochets = ricochetSkill ? this.getRicochetCount(ricochetSkill.level) : 0;
+    const ricochetLevel = ricochetSkill ? ricochetSkill.level : 0;
+    
+    if (maxRicochets > 0) {
+      const damagePercent = ricochetLevel === 1 ? 50 : 100;
+      console.log(`🎯 Creating projectile with ricochet: ${maxRicochets} bounces (level ${ricochetLevel}, ${damagePercent}% dano)`);
+    }
+    
+    // Create main projectile (pass ricochet level for damage calculation)
+    this.projectileSystem.createProjectile('player', projectilePosition, projectileVelocity, projectileDamage, 0, maxRicochets, false, ricochetLevel);
     
     // Check for multi-shot skill
     if (hasMultiShot(this.stats.skills)) {
       // Create second projectile with slight delay
       setTimeout(() => {
         if (this.isActive) {
-          this.projectileSystem.createProjectile('player', projectilePosition, projectileVelocity, projectileDamage);
+          this.projectileSystem.createProjectile('player', projectilePosition, projectileVelocity, projectileDamage, 0, maxRicochets, false, ricochetLevel);
         }
       }, 50); // 50ms delay for visual effect
     }
@@ -789,10 +799,23 @@ export class Player extends Entity {
     const attackSpeedMultiplier = calculateAttackSpeedMultiplier(this.stats.skills);
     this.shotCooldown = PLAYER_CONFIG.shotCooldown * attackSpeedMultiplier;
     
+    // Apply move speed bonus
+    const moveSpeedSkill = this.stats.skills.find(skill => skill.type === 'move_speed');
+    const moveSpeedMultiplier = moveSpeedSkill ? this.getMoveSpeedMultiplier(moveSpeedSkill.level) : 1.0;
+    this.speed = PLAYER_CONFIG.speed * moveSpeedMultiplier;
+    
+    // Check ricochet skill
+    const ricochetSkill = this.stats.skills.find(skill => skill.type === 'ricochet');
+    if (ricochetSkill) {
+      const ricochetCount = this.getRicochetCount(ricochetSkill.level);
+      console.log(`🎯 Player has ricochet skill: level ${ricochetSkill.level} (${ricochetCount} bounces)`);
+    }
+    
     // Update health regeneration interval
     this.updateHealthRegeneration();
     
-    console.log(`🔧 Skills applied: MaxHP=${this.stats.maxHealth}, ShotCooldown=${this.shotCooldown.toFixed(2)}s`);
+    console.log(`🔧 Skills applied: MaxHP=${this.stats.maxHealth}, ShotCooldown=${this.shotCooldown.toFixed(2)}s, Speed=${this.speed.toFixed(2)}`);
+    console.log(`📊 Current skills:`, this.stats.skills.map(s => `${s.type}:${s.level}`));
   }
 
   private processHealthRegeneration(): void {
@@ -811,6 +834,27 @@ export class Player extends Entity {
       case 2: return 8;
       case 3: return 12;
       default: return 0;
+    }
+  }
+  
+  private getRicochetCount(level: number): number {
+    // Apenas 1 ricochet em ambos os níveis, diferença está no dano
+    return level > 0 ? 1 : 0;
+  }
+  
+  private getMoveSpeedMultiplier(level: number): number {
+    switch (level) {
+      case 1: return 1.15;
+      case 2: return 1.3;
+      case 3: return 1.5;
+      case 4: return 1.7;
+      case 5: return 1.9;
+      case 6: return 2.15;
+      case 7: return 2.4;
+      case 8: return 2.7;
+      case 9: return 3.0;
+      case 10: return 3.5;
+      default: return 1.0;
     }
   }
 

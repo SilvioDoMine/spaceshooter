@@ -195,7 +195,10 @@ export class EntitySystem {
       const hitEnemy = collision.target;
       const hitEnemyId = collision.id!;
       const isDead = hitEnemy.takeDamage(data.damage);
-      this.projectileSystem.removeProjectile(data.projectileId);
+      
+      // Call handleProjectileHit instead of removeProjectile directly
+      // This triggers ricochet logic if the projectile has ricochet enabled
+      this.projectileSystem.handleProjectileHit(data.projectileId, hitEnemyId);
       
       if (isDead) {
         this.enemies.delete(hitEnemyId);

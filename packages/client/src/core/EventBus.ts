@@ -308,6 +308,7 @@ export class EventBus {
     'player:ammo-changed',
     'player:score-changed',
     'player:level-changed',
+    'player:position-changed',
   ]);
 
   /**

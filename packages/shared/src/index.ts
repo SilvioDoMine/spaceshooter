@@ -50,7 +50,8 @@ export type SkillType =
   | 'multi_shot'        // Multi ataque (único nível)
   | 'health_regeneration' // Recuperar vida aleatória
   | 'max_health_boost'  // Aumento de vida permanente
-  | 'move_speed';       // Aumentar velocidade de movimento
+  | 'move_speed'        // Aumentar velocidade de movimento
+  | 'ricochet';         // Proj�teis ricocheteiam para inimigos pr�ximos
 
 /**
  * Informações de uma skill individual
@@ -231,7 +232,7 @@ export const PLAYER_CONFIG = {
  * - radius: Raio da hitbox para colisões
  */
 export const PROJECTILE_CONFIG = {
-  speed: 30,                // Unidades por segundo
+  speed: 20,                // Unidades por segundo
   damage: 10,               // Dano por hit
   lifetime: 3000,           // 3 segundos em milliseconds
   size: 0.1,                // Raio visual
@@ -558,19 +559,19 @@ export const SKILLS_CONFIG: Record<SkillType, SkillConfig> = {
     id: 'multi_shot',
     name: 'Tiro Múltiplo',
     description: 'Atira múltiplos projéteis simultaneamente',
-    maxLevel: 10,
+    maxLevel: 1,
     icon: '🔫',
     effects: {
       1: { value: 2, description: 'Atira 2 projéteis por disparo' },
-      2: { value: 3, description: 'Atira 3 projéteis por disparo' },
-      3: { value: 4, description: 'Atira 4 projéteis por disparo' },
-      4: { value: 5, description: 'Atira 5 projéteis por disparo' },
-      5: { value: 6, description: 'Atira 6 projéteis por disparo' },
-      6: { value: 7, description: 'Atira 7 projéteis por disparo' },
-      7: { value: 8, description: 'Atira 8 projéteis por disparo' },
-      8: { value: 9, description: 'Atira 9 projéteis por disparo' },
-      9: { value: 10, description: 'Atira 10 projéteis por disparo' },
-      10: { value: 12, description: 'Atira 12 projéteis por disparo' }
+      // 2: { value: 3, description: 'Atira 3 projéteis por disparo' },
+      // 3: { value: 4, description: 'Atira 4 projéteis por disparo' },
+      // 4: { value: 5, description: 'Atira 5 projéteis por disparo' },
+      // 5: { value: 6, description: 'Atira 6 projéteis por disparo' },
+      // 6: { value: 7, description: 'Atira 7 projéteis por disparo' },
+      // 7: { value: 8, description: 'Atira 8 projéteis por disparo' },
+      // 8: { value: 9, description: 'Atira 9 projéteis por disparo' },
+      // 9: { value: 10, description: 'Atira 10 projéteis por disparo' },
+      // 10: { value: 12, description: 'Atira 12 projéteis por disparo' }
     }
   },
   health_regeneration: {
@@ -628,6 +629,17 @@ export const SKILLS_CONFIG: Record<SkillType, SkillConfig> = {
       8: { value: 3.0, description: '+200% velocidade de movimento' },
       9: { value: 3.5, description: '+250% velocidade de movimento' },
       10: { value: 4.0, description: '+300% velocidade de movimento' }
+    }
+  },
+  ricochet: {
+    id: 'ricochet',
+    name: 'Ricochete',
+    description: 'Projéteis ricocheteiam para inimigos próximos',
+    maxLevel: 2,
+    icon: '⚡',
+    effects: {
+      1: { value: 1, description: 'Projéteis ricocheteiam 1 vez (50% dano)' },
+      2: { value: 1, description: 'Projéteis ricocheteiam 1 vez (100% dano)' }
     }
   }
 };
