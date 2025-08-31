@@ -1043,6 +1043,8 @@ export class Player extends Entity {
     
     console.log('📊 Player stats after reset:', this.stats);
     this.updateUI();
+  // Cria novamente a barra de vida após reset
+  this.createHealthBar3D();
   }
 
   // Ajuste: barra mais grossa
@@ -1204,16 +1206,27 @@ export class Player extends Entity {
   private onDeath(): void {
     console.log('Player died!');
     this.isActive = false;
-    
+
+    // Remove barra de vida da cena ao morrer e limpa referências
+    if (this.healthBarGroup && this.healthBarSceneParent) {
+      this.healthBarSceneParent.remove(this.healthBarGroup);
+    }
+    this.healthBarGroup = undefined;
+    this.healthBarSceneParent = undefined;
+    this.healthBarSegments = [];
+    this.healthBarText = undefined;
+    // Garante que não haverá atualização visual após a morte
+    this.updateHealthBar3D();
+
     // Calculate final time alive
     const currentTime = Date.now();
     this.stats.timeAlive = currentTime - this.gameStartTime;
-    
+
     // Final accuracy calculation
     this.updateAccuracy();
-    
+
     console.log('💀 Final player stats:', this.stats);
-    
+
     this.eventBus.emit('game:over', { 
       finalScore: this.stats.score, 
       stats: {
@@ -1228,6 +1241,14 @@ export class Player extends Entity {
   }
 
   protected onDestroy(): void {
+    // Remove barra de vida da cena ao destruir o player
+    if (this.healthBarGroup && this.healthBarSceneParent) {
+      this.healthBarSceneParent.remove(this.healthBarGroup);
+    }
+    this.healthBarGroup = undefined;
+    this.healthBarSceneParent = undefined;
+    this.healthBarSegments = [];
+    this.healthBarText = undefined;
     this.renderingSystem.removeFromScene(this.object);
   }
 }
