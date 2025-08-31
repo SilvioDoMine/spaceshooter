@@ -395,55 +395,55 @@ export interface Observer {
  */
 export const LEVEL_XP_TABLE: Record<number, number> = {
   1: 0,      // Nível 1 não precisa de XP
-  2: 10,     // 10 XP para nível 2
-  3: 25,     // 25 XP para nível 3
-  4: 45,     // 45 XP para nível 4
-  5: 70,     // 70 XP para nível 5
-  6: 100,    // 100 XP para nível 6
-  7: 135,    // 135 XP para nível 7
-  8: 175,    // 175 XP para nível 8
-  9: 220,    // 220 XP para nível 9
-  10: 270,   // 270 XP para nível 10
-  11: 325,   // 325 XP para nível 11
-  12: 385,   // 385 XP para nível 12
-  13: 450,   // 450 XP para nível 13
-  14: 520,   // 520 XP para nível 14
-  15: 595,   // 595 XP para nível 15
-  16: 675,   // 675 XP para nível 16
-  17: 760,   // 760 XP para nível 17
-  18: 850,   // 850 XP para nível 18
-  19: 945,   // 945 XP para nível 19
-  20: 1045,  // 1045 XP para nível 20
-  21: 1150,  // 1150 XP para nível 21
-  22: 1260,  // 1260 XP para nível 22
-  23: 1375,  // 1375 XP para nível 23
-  24: 1495,  // 1495 XP para nível 24
-  25: 1620,  // 1620 XP para nível 25
-  26: 1750,  // 1750 XP para nível 26
-  27: 1885,  // 1885 XP para nível 27
-  28: 2025,  // 2025 XP para nível 28
-  29: 2170,  // 2170 XP para nível 29
-  30: 2320,  // 2320 XP para nível 30
-  31: 2475,  // 2475 XP para nível 31
-  32: 2635,  // 2635 XP para nível 32
-  33: 2800,  // 2800 XP para nível 33
-  34: 2970,  // 2970 XP para nível 34
-  35: 3145,  // 3145 XP para nível 35
-  36: 3325,  // 3325 XP para nível 36
-  37: 3510,  // 3510 XP para nível 37
-  38: 3700,  // 3700 XP para nível 38
-  39: 3895,  // 3895 XP para nível 39
-  40: 4095,  // 4095 XP para nível 40
-  41: 4300,  // 4300 XP para nível 41
-  42: 4510,  // 4510 XP para nível 42
-  43: 4725,  // 4725 XP para nível 43
-  44: 4945,  // 4945 XP para nível 44
-  45: 5170,  // 5170 XP para nível 45
-  46: 5400,  // 5400 XP para nível 46
-  47: 5635,  // 5635 XP para nível 47
-  48: 5875,  // 5875 XP para nível 48
-  49: 6120,  // 6120 XP para nível 49
-  50: 6370   // 6370 XP para nível 50 (máximo)
+  2: 20,     // 2 inimigos
+  3: 50,     // 5 inimigos
+  4: 90,     // 9 inimigos
+  5: 150,    // 15 inimigos
+  6: 230,    // 23 inimigos
+  7: 330,    // 33 inimigos
+  8: 450,    // 45 inimigos
+  9: 590,    // 59 inimigos
+  10: 750,   // 75 inimigos
+  11: 930,   // 93 inimigos
+  12: 1130,  // 113 inimigos
+  13: 1350,  // 135 inimigos
+  14: 1590,  // 159 inimigos
+  15: 1850,  // 185 inimigos
+  16: 2130,  // 213 inimigos
+  17: 2430,  // 243 inimigos
+  18: 2750,  // 275 inimigos
+  19: 3090,  // 309 inimigos
+  20: 3450,  // 345 inimigos
+  21: 3830,  // 383 inimigos
+  22: 4230,  // 423 inimigos
+  23: 4650,  // 465 inimigos
+  24: 5090,  // 509 inimigos
+  25: 5550,  // 555 inimigos
+  26: 6030,  // 603 inimigos
+  27: 6530,  // 653 inimigos
+  28: 7050,  // 705 inimigos
+  29: 7590,  // 759 inimigos
+  30: 8150,  // 815 inimigos
+  31: 8730,  // 873 inimigos
+  32: 9330,  // 933 inimigos
+  33: 9950,  // 995 inimigos
+  34: 10590, // 1059 inimigos
+  35: 11250, // 1125 inimigos
+  36: 11930, // 1193 inimigos
+  37: 12630, // 1263 inimigos
+  38: 13350, // 1335 inimigos
+  39: 14090, // 1409 inimigos
+  40: 14850, // 1485 inimigos
+  41: 15630, // 1563 inimigos
+  42: 16430, // 1643 inimigos
+  43: 17250, // 1725 inimigos
+  44: 18090, // 1809 inimigos
+  45: 18950, // 1895 inimigos
+  46: 19830, // 1983 inimigos
+  47: 20730, // 2073 inimigos
+  48: 21650, // 2165 inimigos
+  49: 22590, // 2259 inimigos
+  50: 23550  // 2355 inimigos
 };
 
 /**
