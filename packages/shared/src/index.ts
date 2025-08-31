@@ -51,7 +51,8 @@ export type SkillType =
   | 'health_regeneration' // Recuperar vida aleatória
   | 'max_health_boost'  // Aumento de vida permanente
   | 'move_speed'        // Aumentar velocidade de movimento
-  | 'ricochet';         // Proj�teis ricocheteiam para inimigos pr�ximos
+  | 'ricochet'          // Projéteis ricocheteiam para inimigos próximos
+  | 'ammo_capacity';    // Aumentar capacidade máxima de munição
 
 /**
  * Informações de uma skill individual
@@ -186,7 +187,7 @@ export const PLAYER_CONFIG = {
   health: 100,
   maxHealth: 100,
   ammo: 30,
-  maxAmmo: 100,
+  maxAmmo: 30,
   speed: 2.5,
   size: 0.2,              // Escala visual do modelo
   radius: 0.15,            // Raio da hitbox (legacy - não usado com compound shapes)
@@ -641,6 +642,25 @@ export const SKILLS_CONFIG: Record<SkillType, SkillConfig> = {
       1: { value: 1, description: 'Projéteis ricocheteiam 1 vez (50% dano)' },
       2: { value: 1, description: 'Projéteis ricocheteiam 1 vez (100% dano)' }
     }
+  },
+  ammo_capacity: {
+    id: 'ammo_capacity',
+    name: 'Capacidade de Munição',
+    description: 'Aumenta a quantidade máxima de munição',
+    maxLevel: 10,
+    icon: '📦',
+    effects: {
+      1: { value: 15, description: '+15 munição máxima' },
+      2: { value: 30, description: '+30 munição máxima' },
+      3: { value: 45, description: '+45 munição máxima' },
+      4: { value: 60, description: '+60 munição máxima' },
+      5: { value: 75, description: '+75 munição máxima' },
+      6: { value: 90, description: '+90 munição máxima' },
+      7: { value: 105, description: '+105 munição máxima' },
+      8: { value: 120, description: '+120 munição máxima' },
+      9: { value: 135, description: '+135 munição máxima' },
+      10: { value: 150, description: '+150 munição máxima' }
+    }
   }
 };
 
@@ -747,4 +767,15 @@ export function calculateMoveSpeedMultiplier(skills: PlayerSkill[]): number {
   
   const effect = SKILLS_CONFIG.move_speed.effects[speedSkill.level];
   return effect ? effect.value : 1.0;
+}
+
+/**
+ * Calcula a capacidade máxima de munição adicional baseada nas skills do player
+ */
+export function calculateAmmoCapacityBonus(skills: PlayerSkill[]): number {
+  const ammoSkill = skills.find(skill => skill.type === 'ammo_capacity');
+  if (!ammoSkill) return 0;
+  
+  const effect = SKILLS_CONFIG.ammo_capacity.effects[ammoSkill.level];
+  return effect ? effect.value : 0;
 }

@@ -4,7 +4,7 @@ import { EventBus } from '../core/EventBus';
 import { RenderingSystem } from '../systems/RenderingSystem';
 import { assetManager } from '../services/AssetManager';
 import { ProjectileSystem } from '../systems/ProjectileSystem';
-import { PLAYER_CONFIG, DEFAULT_WORLD_BOUNDS, WorldBounds, PROJECTILE_CONFIG, calculateLevelFromXP, getXPToNextLevel, getLevelProgress, PlayerSkill, SkillType, generateSkillOptions, calculateDamageMultiplier, calculateAttackSpeedMultiplier, hasMultiShot, calculateMaxHealthBonus } from '@spaceshooter/shared';
+import { PLAYER_CONFIG, DEFAULT_WORLD_BOUNDS, WorldBounds, PROJECTILE_CONFIG, calculateLevelFromXP, getXPToNextLevel, getLevelProgress, PlayerSkill, SkillType, generateSkillOptions, calculateDamageMultiplier, calculateAttackSpeedMultiplier, hasMultiShot, calculateMaxHealthBonus, calculateAmmoCapacityBonus } from '@spaceshooter/shared';
 import { CompoundCollisionShape, CollisionUtils } from '../utils/CollisionUtils';
 
 export interface PlayerStats {
@@ -808,6 +808,26 @@ export class Player extends Entity {
     // Ensure current health doesn't exceed new max (safety check)
     this.stats.health = Math.min(this.stats.health, this.stats.maxHealth);
     
+    // Apply ammo capacity bonus with intelligent ammo refill
+    const oldMaxAmmo = this.stats.maxAmmo;
+    const ammoBonus = calculateAmmoCapacityBonus(this.stats.skills);
+    const newMaxAmmo = PLAYER_CONFIG.maxAmmo + ammoBonus;
+    
+    // Calculate how much max ammo increased
+    const maxAmmoIncrease = newMaxAmmo - oldMaxAmmo;
+    
+    if (maxAmmoIncrease > 0) {
+      // If max ammo increased, give the player the increase amount immediately
+      // This ensures they get the "free ammo" when picking ammo capacity skills
+      this.stats.ammo = Math.min(this.stats.ammo + maxAmmoIncrease, newMaxAmmo);
+      console.log(`📦 Max ammo increased by ${maxAmmoIncrease}, ammo refilled to ${this.stats.ammo}/${newMaxAmmo}`);
+    }
+    
+    this.stats.maxAmmo = newMaxAmmo;
+    
+    // Ensure current ammo doesn't exceed new max (safety check)
+    this.stats.ammo = Math.min(this.stats.ammo, this.stats.maxAmmo);
+    
     // Update shot cooldown based on attack speed
     const attackSpeedMultiplier = calculateAttackSpeedMultiplier(this.stats.skills);
     this.shotCooldown = PLAYER_CONFIG.shotCooldown * attackSpeedMultiplier;
@@ -827,7 +847,7 @@ export class Player extends Entity {
     // Update health regeneration interval
     this.updateHealthRegeneration();
     
-    console.log(`🔧 Skills applied: MaxHP=${this.stats.maxHealth}, ShotCooldown=${this.shotCooldown.toFixed(2)}s, Speed=${this.speed.toFixed(2)}`);
+    console.log(`🔧 Skills applied: MaxHP=${this.stats.maxHealth}, MaxAmmo=${this.stats.maxAmmo}, ShotCooldown=${this.shotCooldown.toFixed(2)}s, Speed=${this.speed.toFixed(2)}`);
     console.log(`📊 Current skills:`, this.stats.skills.map(s => `${s.type}:${s.level}`));
   }
 
