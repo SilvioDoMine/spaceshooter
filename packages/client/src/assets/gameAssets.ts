@@ -10,7 +10,8 @@ export const GAME_ASSETS: AssetManifest = {
     'shoot': '/assets/sounds/shoot.wav',
     'explosion': '/assets/sounds/explosion.wav',
     'hit': '/assets/sounds/hit.wav',
-    'powerup': '/assets/sounds/powerup.wav'
+    'powerup': '/assets/sounds/powerup.wav',
+    'level-up': '/assets/sounds/level-up.mp3'
   }
 };
 

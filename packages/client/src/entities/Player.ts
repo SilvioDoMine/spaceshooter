@@ -676,7 +676,7 @@ export class Player extends Entity {
       
       // Start slow motion effect (1.5 seconds to reach 0 speed)
       this.eventBus.emit('game:slow-motion', {
-        duration: 1.5,
+        duration: 1.0,
         targetScale: 0.0
       });
       
