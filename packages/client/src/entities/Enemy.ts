@@ -10,6 +10,11 @@ export class Enemy extends Entity {
   private health: number;
   private maxHealth: number;
   private config: typeof ENEMY_CONFIG[keyof typeof ENEMY_CONFIG];
+  
+  // Barra de vida do inimigo
+  private healthBarGroup?: THREE.Group;
+  private healthBarBackground?: THREE.Mesh;
+  private healthBarForeground?: THREE.Mesh;
 
   constructor(
     eventBus: EventBus,
@@ -91,6 +96,9 @@ export class Enemy extends Entity {
       y: this.position.y + this.velocity.y * deltaTime
     });
 
+    // Atualiza posição da barra de vida
+    this.updateHealthBarPosition();
+
     this.checkPlayerCollision();
   }
 
@@ -156,6 +164,11 @@ export class Enemy extends Entity {
   public takeDamage(damage: number): boolean {
     this.health = Math.max(0, this.health - damage);
     
+    // Mostra a barra de vida quando o inimigo toma dano
+    if (this.health < this.maxHealth && this.health > 0) {
+      this.showHealthBar();
+    }
+    
     if (this.health <= 0) {
       this.onDeath();
       return true;
@@ -210,7 +223,137 @@ export class Enemy extends Entity {
     }
   }
 
+  private createGradientTexture(width: number, height: number): THREE.CanvasTexture {
+    // Criar canvas para o gradiente
+    const canvas = document.createElement('canvas');
+    const canvasWidth = 256; // Resolução da textura
+    const canvasHeight = 32;
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
+    
+    const context = canvas.getContext('2d')!;
+    
+    // Criar gradiente vertical totalmente vermelho (cima para baixo) para indicar inimigo
+    const gradient = context.createLinearGradient(0, 0, 0, canvasHeight);
+    gradient.addColorStop(0, '#ff0000'); // Vermelho puro no topo
+    gradient.addColorStop(0.5, '#dd0000'); // Vermelho puro no meio
+    gradient.addColorStop(1, '#aa0000'); // Vermelho puro escuro embaixo (sombra)
+    
+    // Preencher o canvas com o gradiente
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, canvasWidth, canvasHeight);
+    
+    // Criar textura Three.js
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.needsUpdate = true;
+    texture.generateMipmaps = false;
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    texture.wrapS = THREE.ClampToEdgeWrapping;
+    texture.wrapT = THREE.ClampToEdgeWrapping;
+    
+    return texture;
+  }
+
+  private createEnemyHealthBar(): void {
+    const group = new THREE.Group();
+    
+    // Dimensões da barra de vida do inimigo (igual ao player)
+    const barWidth = 1.0; // Mesma largura do player
+    const barHeight = 0.08; // Mesma altura do player
+    
+    // Borda preta (mesma espessura do player)
+    const borderThickness = 0.02; // Mesma espessura do player
+    const borderGeom = new THREE.PlaneGeometry(barWidth + borderThickness * 2, barHeight + borderThickness * 2);
+    const borderMat = new THREE.MeshBasicMaterial({ 
+      color: 0x000000, 
+      transparent: false, 
+      depthTest: false 
+    });
+    const border = new THREE.Mesh(borderGeom, borderMat);
+    border.position.z = -0.002;
+    border.renderOrder = 9997;
+    group.add(border);
+    
+    // Fundo cinza escuro para mostrar barra total quando danificado
+    const bgGeom = new THREE.PlaneGeometry(barWidth, barHeight);
+    const bgMat = new THREE.MeshBasicMaterial({ 
+      color: 0x333333, // Cinza escuro como os segmentos vazios do player
+      transparent: false, 
+      depthTest: false 
+    });
+    this.healthBarBackground = new THREE.Mesh(bgGeom, bgMat);
+    this.healthBarBackground.position.z = -0.001;
+    this.healthBarBackground.renderOrder = 9998;
+    group.add(this.healthBarBackground);
+    
+    // Barra de vida com gradiente laranja-vermelho (foreground)
+    const fgGeom = new THREE.PlaneGeometry(barWidth, barHeight * 0.9);
+    const gradientTexture = this.createGradientTexture(barWidth, barHeight * 0.9);
+    const fgMat = new THREE.MeshBasicMaterial({ 
+      map: gradientTexture,
+      transparent: false, 
+      depthTest: false 
+    });
+    this.healthBarForeground = new THREE.Mesh(fgGeom, fgMat);
+    this.healthBarForeground.position.z = 0.001;
+    this.healthBarForeground.renderOrder = 9999;
+    group.add(this.healthBarForeground);
+    
+    // Posição acima do inimigo
+    const enemySize = this.config.size || 0.3;
+    group.position.set(this.position.x, this.position.y + enemySize * 0.8, 0);
+    group.rotation.set(0, 0, 0); // Sempre reta
+    group.renderOrder = 10000;
+    
+    this.healthBarGroup = group;
+    this.eventBus.emit('scene:add-object', { object: group });
+  }
+  
+  private showHealthBar(): void {
+    if (!this.healthBarGroup) {
+      this.createEnemyHealthBar();
+    }
+    this.updateHealthBar();
+  }
+  
+  private updateHealthBar(): void {
+    if (!this.healthBarGroup || !this.healthBarForeground) return;
+    
+    const healthPercentage = this.health / this.maxHealth;
+    
+    // Atualiza a escala da barra vermelha baseada na vida
+    this.healthBarForeground.scale.x = Math.max(0, healthPercentage);
+    
+    // Ajusta posição para manter alinhamento à esquerda
+    const barWidth = 1.0; // Mesma largura do player
+    const originalX = 0;
+    this.healthBarForeground.position.x = originalX - (barWidth * (1 - healthPercentage)) / 2;
+  }
+  
+  private updateHealthBarPosition(): void {
+    if (this.healthBarGroup) {
+      const enemySize = this.config.size || 0.3;
+      this.healthBarGroup.position.set(
+        this.position.x, 
+        this.position.y + enemySize * 0.8, 
+        0
+      );
+    }
+  }
+  
+  private hideHealthBar(): void {
+    if (this.healthBarGroup) {
+      this.eventBus.emit('scene:remove-object', { object: this.healthBarGroup });
+      this.healthBarGroup = undefined;
+      this.healthBarBackground = undefined;
+      this.healthBarForeground = undefined;
+    }
+  }
+
   protected onDestroy(): void {
+    // Remove a barra de vida ao destruir o inimigo
+    this.hideHealthBar();
     this.eventBus.emit('scene:remove-object', { object: this.object });
   }
 

@@ -260,7 +260,7 @@ export const PLAYER_CONFIG = {
  */
 export const PROJECTILE_CONFIG = {
   speed: 20,                // Unidades por segundo
-  damage: 10,               // Dano por hit
+  damage: 5,               // Dano por hit
   lifetime: 3000,           // 3 segundos em milliseconds
   size: 0.1,                // Raio visual
   radius: 0.05              // Raio da hitbox
