@@ -1059,9 +1059,9 @@ export class Player extends Entity {
     }
     const group = new THREE.Group();
     
-    // Dimensões estilo Archero - mais compacta e larga
-    const barWidth = 1.0; // Largura ideal para o estilo Archero
-    const barHeight = 0.08; // Mais fina como no Archero
+    // Dimensões estilo Archero - mais compacta
+    const barWidth = 0.7; // Mais curta para não ficar muito longa
+    const barHeight = 0.08; // Mantém altura fina
     const segments = Math.ceil(this.stats.maxHealth / 10); // Cada segmento = 10 de vida
     const segmentGap = 0.008; // Gap bem fino como no Archero
     const segmentWidth = (barWidth - (segments - 1) * segmentGap) / segments;
@@ -1182,7 +1182,7 @@ export class Player extends Entity {
         mesh.visible = true;
         mesh.scale.x = 1; // Escala total
         // Restaura posição original
-        const barWidth = 1.0;
+        const barWidth = 0.7;
         const segmentGap = 0.008;
         const segmentWidth = (barWidth - (segments - 1) * segmentGap) / segments;
         mesh.position.x = -barWidth / 2 + segmentWidth / 2 + i * (segmentWidth + segmentGap);
@@ -1200,7 +1200,7 @@ export class Player extends Entity {
         mesh.scale.x = partialFill; // Escala parcial para efeito "secando"
         
         // Ajusta posição X para manter alinhamento à esquerda
-        const barWidth = 1.0;
+        const barWidth = 0.7;
         const segmentGap = 0.008;
         const segmentWidth = (barWidth - (segments - 1) * segmentGap) / segments;
         const originalX = -barWidth / 2 + segmentWidth / 2 + i * (segmentWidth + segmentGap);
@@ -1211,7 +1211,7 @@ export class Player extends Entity {
         mesh.visible = true;
         mesh.scale.x = 1; // Escala total
         // Restaura posição original
-        const barWidth = 1.0;
+        const barWidth = 0.7;
         const segmentGap = 0.008;
         const segmentWidth = (barWidth - (segments - 1) * segmentGap) / segments;
         mesh.position.x = -barWidth / 2 + segmentWidth / 2 + i * (segmentWidth + segmentGap);

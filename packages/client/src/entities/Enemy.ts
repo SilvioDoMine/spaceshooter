@@ -259,7 +259,7 @@ export class Enemy extends Entity {
     const group = new THREE.Group();
     
     // Dimensões da barra de vida do inimigo (igual ao player)
-    const barWidth = 1.0; // Mesma largura do player
+    const barWidth = 0.7; // Mesma largura do player (mais curta)
     const barHeight = 0.08; // Mesma altura do player
     
     // Borda preta (mesma espessura do player)
@@ -326,7 +326,7 @@ export class Enemy extends Entity {
     this.healthBarForeground.scale.x = Math.max(0, healthPercentage);
     
     // Ajusta posição para manter alinhamento à esquerda
-    const barWidth = 1.0; // Mesma largura do player
+    const barWidth = 0.7; // Mesma largura do player (mais curta)
     const originalX = 0;
     this.healthBarForeground.position.x = originalX - (barWidth * (1 - healthPercentage)) / 2;
   }
