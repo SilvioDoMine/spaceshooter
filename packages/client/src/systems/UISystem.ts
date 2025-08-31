@@ -24,17 +24,13 @@ import { UISkillModal } from './UISkillModal';
  * ```
  */
 export class UISystem {
-  private scene: THREE.Scene;
-  private camera: THREE.OrthographicCamera;
-  private renderer: THREE.WebGLRenderer;
-  
+  private scene!: THREE.Scene;
+  private camera!: THREE.OrthographicCamera;
+  private renderer!: THREE.WebGLRenderer;
   // UI Elements
-  private hudGroup: THREE.Group;
+  private hudGroup!: THREE.Group;
   private scoreText?: THREE.Sprite;
-  private healthText?: THREE.Sprite;
   private ammoText?: THREE.Sprite;
-  private healthBar?: THREE.Mesh;
-  private healthBarBg?: THREE.Mesh;
   private levelText?: THREE.Sprite;
   private xpBar?: THREE.Mesh;
   private xpBarBg?: THREE.Mesh;
@@ -65,7 +61,7 @@ export class UISystem {
   }
   
   public setRenderingSystem(scene: THREE.Scene, renderer: THREE.WebGLRenderer): void {
-    this.initialize({ scene, renderer });
+  this.initialize({ renderer });
   }
   
   private initialize(data: { renderer: THREE.WebGLRenderer }): void {
@@ -85,7 +81,7 @@ export class UISystem {
     this.hudGroup = new THREE.Group();
     this.scene.add(this.hudGroup);
     
-    this.createUIElements();
+  this.createUIElements();
     
     // Handler para resize
     window.addEventListener('resize', this.onWindowResize.bind(this));
@@ -105,9 +101,7 @@ export class UISystem {
       this.initialize(data);
     });
 
-    this.eventBus.on('ui:update-health', (data: { current: number; max?: number }) => {
-      this.updateHealth(data.current, data.max);
-    });
+  // Removido: não há mais barra de vida no HUD
 
     this.eventBus.on('ui:update-ammo', (data: { current: number; max: number }) => {
       this.updateAmmo(data.current, data.max);
@@ -136,61 +130,23 @@ export class UISystem {
 
   private createUIElements(): void {
     const aspect = window.innerWidth / window.innerHeight;
-    const baseScale = 0.15; // Fixed base scale instead of responsive
-    
+    const baseScale = 0.15;
     // Score (top-left)
     this.scoreText = this.createTextSprite(`Score: ${this.currentScore}`);
     this.scoreText.position.set(-aspect * 0.9, 0.85, 0);
     this.scoreText.scale.setScalar(baseScale);
     this.hudGroup.add(this.scoreText);
-    
-    // Health text (top-center) with correct initial color
-    const healthPercent = (this.currentHealth / this.maxHealth) * 100;
-    let healthColor = '#00ff00'; // Green
-    if (healthPercent < 50) healthColor = '#ffff00'; // Yellow
-    if (healthPercent < 25) healthColor = '#ff0000'; // Red
-    
-    this.healthText = this.createTextSprite(`Health: ${this.currentHealth}/${this.maxHealth}`, healthColor);
-    this.healthText.position.set(0, 0.85, 0);
-    this.healthText.scale.setScalar(baseScale);
-    this.hudGroup.add(this.healthText);
-    
-    // Health bar background (top-center, below text)
-    const barWidth = Math.min(aspect * 0.3, 0.5);
-    const healthBarBgGeometry = new THREE.PlaneGeometry(barWidth, 0.05);
-    const healthBarBgMaterial = new THREE.MeshBasicMaterial({ 
-      color: 0x330000,
-      transparent: true,
-      opacity: 0.8
-    });
-    this.healthBarBg = new THREE.Mesh(healthBarBgGeometry, healthBarBgMaterial);
-    this.healthBarBg.position.set(0, 0.65, 0);
-    this.hudGroup.add(this.healthBarBg);
-    
-    // Health bar (foreground)
-    const healthBarGeometry = new THREE.PlaneGeometry(barWidth, 0.05);
-    const healthBarMaterial = new THREE.MeshBasicMaterial({ 
-      color: 0x00ff00,
-      transparent: true,
-      opacity: 0.9
-    });
-    this.healthBar = new THREE.Mesh(healthBarGeometry, healthBarMaterial);
-    this.healthBar.position.set(0, 0.65, 0.001); // Slightly in front
-    this.hudGroup.add(this.healthBar);
-    
     // Ammo (top-right)
     this.ammoText = this.createTextSprite(`Ammo: ${this.currentAmmo}/${this.maxAmmo}`);
     this.ammoText.position.set(aspect * 0.9, 0.85, 0);
     this.ammoText.scale.setScalar(baseScale);
     this.hudGroup.add(this.ammoText);
-    
-    // Level text (below health bar) - tamanho menor
+    // Level text (top-center, below score/ammo)
     this.levelText = this.createTextSprite(`Level ${this.currentLevel}`);
-    this.levelText.position.set(0, 0.55, 0);
-    this.levelText.scale.setScalar(baseScale * 0.7); // 30% menor
+    this.levelText.position.set(0, 0.7, 0);
+    this.levelText.scale.setScalar(baseScale * 0.7);
     this.hudGroup.add(this.levelText);
-    
-    // XP bar background (próximo da health bar)
+    // XP bar background (below level text)
     const xpBarWidth = Math.min(aspect * 0.3, 0.5);
     const xpBarBgGeometry = new THREE.PlaneGeometry(xpBarWidth, 0.025);
     const xpBarBgMaterial = new THREE.MeshBasicMaterial({ 
@@ -199,9 +155,8 @@ export class UISystem {
       opacity: 0.8
     });
     this.xpBarBg = new THREE.Mesh(xpBarBgGeometry, xpBarBgMaterial);
-    this.xpBarBg.position.set(0, 0.45, 0);
+    this.xpBarBg.position.set(0, 0.6, 0);
     this.hudGroup.add(this.xpBarBg);
-    
     // XP bar (foreground)
     const xpBarGeometry = new THREE.PlaneGeometry(xpBarWidth, 0.025);
     const xpBarMaterial = new THREE.MeshBasicMaterial({ 
@@ -210,7 +165,7 @@ export class UISystem {
       opacity: 0.9
     });
     this.xpBar = new THREE.Mesh(xpBarGeometry, xpBarMaterial);
-    this.xpBar.position.set(0, 0.45, 0.001); // Slightly in front
+    this.xpBar.position.set(0, 0.6, 0.001);
     this.hudGroup.add(this.xpBar);
   }
   
@@ -359,16 +314,7 @@ export class UISystem {
       this.updateTextSprite(this.scoreText, `Score: ${this.currentScore}`);
     }
     
-    if (this.healthText) {
-      const healthPercent = (this.currentHealth / this.maxHealth) * 100;
-      let healthColor = '#00ff00'; // Green
-      if (healthPercent < 50) healthColor = '#ffff00'; // Yellow
-      if (healthPercent < 25) healthColor = '#ff0000'; // Red
-      
-      this.updateTextSprite(this.healthText, `Health: ${this.currentHealth}/${this.maxHealth}`, healthColor);
-    }
-    
-    if (this.ammoText) {
+  if (this.ammoText) {
       this.updateTextSprite(this.ammoText, `Ammo: ${this.currentAmmo}/${this.maxAmmo}`);
     }
     
@@ -377,10 +323,7 @@ export class UISystem {
     }
     
     // Update health bar
-    if (this.healthBar) {
-      const healthBarScale = Math.max(0, this.currentHealth / this.maxHealth);
-      this.healthBar.scale.setX(healthBarScale);
-    }
+  // healthBar removido
     
     // Update XP bar
     if (this.xpBar) {
@@ -408,50 +351,7 @@ export class UISystem {
     this.updateTextSprite(this.scoreText, `Score: ${this.currentScore}`);
   }
   
-  public updateHealth(current: number, max?: number): void {
-    console.log(`Atualizando saúde: ${current}/${max}`);
-
-    if (
-      this.healthBar === undefined 
-      || this.healthBarBg === undefined
-      || this.healthText === undefined
-    ) {
-      console.warn('Health bar not initialized yet, skipping update');
-      return;
-    }
-
-    this.currentHealth = Math.max(0, current);
-    if (max !== undefined) {
-      this.maxHealth = max;
-    }
-    
-    // Update health text with color
-    const healthPercent = (this.currentHealth / this.maxHealth) * 100;
-    let healthColor = '#00ff00'; // Green
-    if (healthPercent < 50) healthColor = '#ffff00'; // Yellow
-    if (healthPercent < 25) healthColor = '#ff0000'; // Red
-    
-    this.updateTextSprite(
-      this.healthText,
-      `Health: ${this.currentHealth}/${this.maxHealth}`,
-      healthColor
-    );
-    
-    // Update health bar
-    const healthBarScale = Math.max(0, this.currentHealth / this.maxHealth);
-    this.healthBar.scale.x = healthBarScale;
-    this.healthBar.position.x = -0.2 * (1 - healthBarScale);
-    
-    // Update health bar color
-    const healthBarMaterial = this.healthBar.material as THREE.MeshBasicMaterial;
-    if (healthPercent > 50) {
-      healthBarMaterial.color.setHex(0x00ff00);
-    } else if (healthPercent > 25) {
-      healthBarMaterial.color.setHex(0xffff00);
-    } else {
-      healthBarMaterial.color.setHex(0xff0000);
-    }
-  }
+  // updateHealth removido: barra de vida do HUD não existe mais
   
   public updateAmmo(current: number, max: number): void {    
     // Update ammo text with color
@@ -530,7 +430,7 @@ export class UISystem {
     this.skillOptions = skillOptions;
     
     // Pause the game completely while modal is open
-    this.eventBus.emit('game:pause-for-skill-selection');
+  this.eventBus.emit('game:pause-for-skill-selection', {});
     console.log('⏸️ Game paused for skill selection');
     
     // Show HTML modal
@@ -545,7 +445,7 @@ export class UISystem {
     this.skillOptions = [];
     
     // Resume game after skill selection
-    this.eventBus.emit('game:resume-after-skill-selection');
+  this.eventBus.emit('game:resume-after-skill-selection', {});
     console.log('▶️ Game resumed after skill selection');
     
     // Grant 0.5 seconds of invulnerability
@@ -564,9 +464,6 @@ export class UISystem {
 
     if (
       this.scoreText === undefined 
-      || this.healthText === undefined 
-      || this.healthBar === undefined
-      || this.healthBarBg === undefined
       || this.ammoText === undefined
       || this.levelText === undefined
       || this.xpBar === undefined
@@ -579,22 +476,12 @@ export class UISystem {
     // Update positions
     this.scoreText.position.x = -aspect * 0.9;
     this.scoreText.scale.setScalar(baseScale);
-    
-    this.healthText.scale.setScalar(baseScale);
-    
     this.ammoText.position.x = aspect * 0.9;
     this.ammoText.scale.setScalar(baseScale);
-    
-    this.levelText.scale.setScalar(baseScale * 0.7); // Manter o tamanho menor
-    
-    // Update health bar width
+    this.levelText.scale.setScalar(baseScale * 0.7);
+    // Update XP bar width
     const barWidth = Math.min(aspect * 0.3, 0.5);
     const originalWidth = Math.min(window.innerWidth / window.innerHeight * 0.3, 0.5);
-    this.healthBarBg.scale.x = barWidth / originalWidth;
-    this.healthBar.scale.x = (barWidth / originalWidth) * (this.currentHealth / this.maxHealth);
-    this.healthBar.position.x = -barWidth * 0.5 * (1 - (this.currentHealth / this.maxHealth));
-    
-    // Update XP bar width
     this.xpBarBg.scale.x = barWidth / originalWidth;
     this.xpBar.scale.x = (barWidth / originalWidth) * (this.xpProgress / 100);
     this.xpBar.position.x = -barWidth * 0.5 * (1 - (this.xpProgress / 100));
@@ -629,9 +516,7 @@ export class UISystem {
     return this.currentScore;
   }
   
-  public getHealth(): { current: number; max: number } {
-    return { current: this.currentHealth, max: this.maxHealth };
-  }
+  // getHealth removido: barra de vida do HUD não existe mais
   
   public getAmmo(): { current: number; max: number } {
     return { current: this.currentAmmo, max: this.maxAmmo };

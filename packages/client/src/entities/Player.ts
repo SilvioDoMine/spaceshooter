@@ -52,6 +52,12 @@ export class Player extends Entity {
   private pendingSkillOptions?: any[]; // Store skill options until slow motion ends
   private skillSelectionQueue: Array<{ fromLevel: number; toLevel: number; skillOptions: any[] }> = []; // Queue for multiple level ups
 
+  // Health bar 3D acima da nave
+  private healthBarGroup?: THREE.Group;
+  private healthBarSceneParent?: THREE.Scene;
+  private healthBarSegments: THREE.Mesh[] = [];
+  private healthBarText?: THREE.Sprite;
+
   constructor(
     eventBus: EventBus,
     renderingSystem: RenderingSystem,
@@ -165,8 +171,9 @@ export class Player extends Entity {
     playerShip.rotation.x = -Math.PI / 2;
     playerShip.rotation.z = Math.PI / 2;
     
-    this.playerShipModel = playerShip;
-    this.object.add(playerShip);
+  this.playerShipModel = playerShip;
+  this.object.add(playerShip);
+  console.log('[Player] Modelo da nave adicionado:', playerShip);
 
     // Setup animation controller if animations are available
     if (shipData.animations && shipData.animations.length > 0) {
@@ -206,6 +213,10 @@ export class Player extends Entity {
 
     // Create collision visualizers for compound shape
     this.createCompoundCollisionVisualizers();
+
+    // Criar barra de vida 3D acima da nave
+  console.log('[Player] Chamando createHealthBar3D na criação visual');
+  this.createHealthBar3D();
 
     this.renderingSystem.addToScene(this.object);
   }
@@ -308,6 +319,7 @@ export class Player extends Entity {
     // Update visual model scale
     if (this.playerShipModel) {
       this.playerShipModel.scale.setScalar(newSize);
+      this.createHealthBar3D();
     }
     
     // Update collision shape
@@ -459,6 +471,8 @@ export class Player extends Entity {
     if (this.animationController) {
       this.animationController.update(deltaTime);
     }
+    // Atualiza a barra de vida para seguir o player a cada frame
+    this.updateHealthBar3D();
   }
 
   private handleMovement(deltaTime: number): void {
@@ -800,7 +814,7 @@ export class Player extends Entity {
     
     // Se há mais skills na fila, processar imediatamente
     if (this.skillSelectionQueue.length > 0) {
-      console.log(`🎯 ${this.skillSelectionQueue.length} more level ups in queue, showing next immediately`);
+      console.log(`🎯 ${this.skillSelectionQueue.length} more level ups in queue, showing next imediatamente`);
       // Pequeno delay para suavizar a transição entre modals
       setTimeout(() => {
         this.processNextSkillSelection();
@@ -1025,6 +1039,139 @@ export class Player extends Entity {
     this.updateUI();
   }
 
+  // Ajuste: barra mais grossa
+  private createHealthBar3D(): void {
+    if (!this.playerShipModel) {
+      console.warn('[Player] playerShipModel não definido ao criar barra de vida 3D');
+      return;
+    }
+    if (this.healthBarGroup && this.healthBarSceneParent) {
+      this.healthBarSceneParent.remove(this.healthBarGroup);
+      console.log('[Player] Removendo healthBarGroup antigo da cena');
+    }
+    const group = new THREE.Group();
+    // BARRA EXTREMAMENTE VISÍVEL
+  const barWidth = 1.2;
+  const barHeight = 0.14;
+    const segments = Math.max(3, Math.min(10, this.stats.maxHealth));
+  const segmentGap = 0.03;
+    const segmentWidth = (barWidth - (segments - 1) * segmentGap) / segments;
+    this.healthBarSegments = [];
+    for (let i = 0; i < segments; i++) {
+      const geometry = new THREE.PlaneGeometry(segmentWidth, barHeight);
+      const material = new THREE.MeshBasicMaterial({ color: 0xff00ff, transparent: true, opacity: 1, depthTest: false });
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.x = -barWidth / 2 + segmentWidth / 2 + i * (segmentWidth + segmentGap);
+      mesh.renderOrder = 9999;
+      group.add(mesh);
+      this.healthBarSegments.push(mesh);
+    }
+  const outlineGeom = new THREE.PlaneGeometry(barWidth + 0.04, barHeight + 0.04);
+  const outlineMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5, depthTest: false });
+  const outline = new THREE.Mesh(outlineGeom, outlineMat);
+  outline.position.z = -0.01;
+  outline.renderOrder = 9998;
+  group.add(outline);
+    this.healthBarText = this.createHealthBarTextSprite(`${this.stats.health}`);
+    this.healthBarText.position.set(0, 0, 0.02);
+    this.healthBarText.scale.set(0.7, 0.35, 1);
+    (this.healthBarText.material as THREE.SpriteMaterial).depthTest = false;
+    (this.healthBarText.material as THREE.SpriteMaterial).opacity = 1;
+    this.healthBarText.renderOrder = 10000;
+    group.add(this.healthBarText);
+  // Posição Y bem acima da nave, mas agora no plano XZ (de frente para a câmera)
+  group.position.set(0, 1.05, 0);
+  group.rotation.set(-Math.PI / 2, 0, 0); // Rotaciona para o plano XZ
+  group.renderOrder = 10000;
+  // Ajusta o texto para ficar maior e centralizado
+  this.healthBarText.scale.set(0.35, 0.18, 1);
+    // Adiciona a barra diretamente na cena
+    const scene = (this.renderingSystem as any).scene as THREE.Scene;
+    if (scene) {
+      scene.add(group);
+      this.healthBarSceneParent = scene;
+      console.log('[Player] healthBarGroup criado e adicionado à cena', group);
+    } else {
+      console.warn('[Player] Não foi possível obter a cena para adicionar healthBarGroup');
+    }
+    this.healthBarGroup = group;
+    this.updateHealthBar3D();
+  }
+
+  private updateHealthBar3D(): void {
+    // Atualiza a posição da barra para sempre ficar "acima" do player, independente da rotação
+    if (this.healthBarGroup) {
+      const playerPos = this.getPosition();
+      this.healthBarGroup.position.set(playerPos.x, playerPos.y + 1.05, 0);
+      this.healthBarGroup.rotation.set(-Math.PI / 2, 0, 0); // Sempre de frente para a câmera
+    }
+    if (!this.healthBarGroup || !this.healthBarSegments.length) {
+      console.warn('[Player] updateHealthBar3D: healthBarGroup ou segments ausentes');
+      return;
+    }
+    const health = this.stats.health;
+    const maxHealth = this.stats.maxHealth;
+    const segments = this.healthBarSegments.length;
+    const filled = Math.round((health / maxHealth) * segments);
+    for (let i = 0; i < segments; i++) {
+      const mesh = this.healthBarSegments[i];
+      if (i < filled) {
+        if (health / maxHealth > 0.5) {
+          (mesh.material as THREE.MeshBasicMaterial).color.set(0x00ff00);
+        } else if (health / maxHealth > 0.25) {
+          (mesh.material as THREE.MeshBasicMaterial).color.set(0xffff00);
+        } else {
+          (mesh.material as THREE.MeshBasicMaterial).color.set(0xff0000);
+        }
+        mesh.visible = true;
+      } else {
+        mesh.visible = false;
+      }
+    }
+    if (this.healthBarText) {
+      this.updateHealthBarTextSprite(this.healthBarText, `${health}`);
+      console.log('[Player] updateHealthBar3D: texto atualizado para', health);
+    }
+    // Não faz lookAt, mantém sempre reta
+    if (this.healthBarGroup) {
+      this.healthBarGroup.rotation.set(0, 0, 0);
+      console.log('[Player] updateHealthBar3D: healthBarGroup rotação zerada');
+    }
+  }
+
+  private createHealthBarTextSprite(text: string): THREE.Sprite {
+    const canvas = document.createElement('canvas');
+    canvas.width = 128;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d')!;
+    ctx.font = 'bold 48px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#fff';
+    ctx.strokeStyle = '#222';
+    ctx.lineWidth = 6;
+    ctx.strokeText(text, 64, 32);
+    ctx.fillText(text, 64, 32);
+    const texture = new THREE.CanvasTexture(canvas);
+    const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
+    return new THREE.Sprite(material);
+  }
+
+  private updateHealthBarTextSprite(sprite: THREE.Sprite, text: string): void {
+    const canvas = (sprite.material as THREE.SpriteMaterial).map.image as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d')!;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.font = 'bold 48px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#fff';
+    ctx.strokeStyle = '#222';
+    ctx.lineWidth = 6;
+    ctx.strokeText(text, 64, 32);
+    ctx.fillText(text, 64, 32);
+    (sprite.material as THREE.SpriteMaterial).map.needsUpdate = true;
+  }
+
   private updateUI(): void {
     // Emit player state changes - UIManager will handle UI updates
     this.eventBus.emit('player:health-changed', { 
@@ -1044,6 +1191,8 @@ export class Player extends Entity {
       xpToNext: getXPToNextLevel(this.stats.currentXP, this.stats.level),
       progress: getLevelProgress(this.stats.currentXP, this.stats.level)
     });
+
+    this.updateHealthBar3D();
   }
 
   private onDeath(): void {
