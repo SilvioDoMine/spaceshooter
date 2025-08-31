@@ -262,7 +262,8 @@ export const ENEMY_CONFIG = {
     radius: 0.25,           // Raio da hitbox
     color: 0xff4444,        // Vermelho
     spawnRate: 1000,        // A cada 2 segundos
-    xpDrop: 10              // XP dado quando morto
+    xpDrop: 10,             // XP dado quando morto
+    xpOrbCount: 10          // Número de orbes de XP que dropa
   },
   fast: {
     health: 10,             // 1 hit para destruir
@@ -271,7 +272,8 @@ export const ENEMY_CONFIG = {
     radius: 0.175,            // Raio da hitbox (menor)
     color: 0xff8800,        // Laranja
     spawnRate: 1500,        // A cada 3 segundos
-    xpDrop: 8               // XP dado quando morto
+    xpDrop: 8,              // XP dado quando morto
+    xpOrbCount: 5           // Poucos orbes, mas rápido de matar
   },
   heavy: {
     health: 50,             // 5 hits para destruir
@@ -280,7 +282,8 @@ export const ENEMY_CONFIG = {
     radius: 0.4,           // Raio da hitbox (maior)
     color: 0x8844ff,        // Roxo
     spawnRate: 2500,        // A cada 5 segundos
-    xpDrop: 25              // XP dado quando morto
+    xpDrop: 25,             // XP dado quando morto
+    xpOrbCount: 15          // Muitos orbes para recompensa visual
   }
 };
 

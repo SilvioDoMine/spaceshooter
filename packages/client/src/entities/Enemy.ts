@@ -184,6 +184,7 @@ export class Enemy extends Entity {
     this.eventBus.emit('enemy:destroyed', { 
       points: scorePoints,
       xp: xpReward,
+      xpOrbCount: this.config.xpOrbCount,
       enemyType: this.enemyType,
       enemyId: this.id,
       position: { x: this.position.x, y: this.position.y, z: 0 }

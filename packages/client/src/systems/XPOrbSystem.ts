@@ -107,6 +107,7 @@ export class XPOrbSystem {
   private readonly COLLECT_DISTANCE = 0.8; // Distance for collection (igual aos power ups)
   private readonly GRID_SIZE = 4; // Spatial grid cell size
   private readonly MAX_ORBS_PER_AREA = 50; // Max orbs before forced merge
+  // Removed MAX_ORBS_PER_ENEMY - now controlled by enemy configuration
   
   // Color tiers
   private static readonly TIER_COLORS: { [key: number]: THREE.Color } = {
@@ -159,9 +160,9 @@ export class XPOrbSystem {
     
     // Listen for enemy deaths to create orbs
     this.eventBus.on('enemy:destroyed', (data) => {
-      if (data.position && data.xp) {
-        const position = new THREE.Vector3(data.position.x, data.position.y, data.position.z);
-        this.createXPOrb(position, data.xp);
+      if (data.position && data.xp && data.xpOrbCount) {
+        const basePosition = new THREE.Vector3(data.position.x, data.position.y, data.position.z);
+        this.createMultipleXPOrbs(basePosition, data.xp, data.xpOrbCount);
       }
     });
     
@@ -176,6 +177,56 @@ export class XPOrbSystem {
     });
   }
   
+  /**
+   * Create multiple XP orbs at scattered positions
+   */
+  createMultipleXPOrbs(basePosition: THREE.Vector3, totalXP: number, orbCount: number): void {
+    if (!this.isActive) return;
+    
+    // Calculate XP per orb based on what the enemy configured
+    const xpPerOrb = Math.ceil(totalXP / orbCount);
+    
+    // Random spread patterns for variety
+    const randomPattern = Math.random();
+    let finalSpread: number;
+    
+    if (randomPattern < 0.4) {
+      // 40% chance: Tight cluster (orbes bem juntinhos)
+      finalSpread = Math.random() * 0.4 + 0.1; // 0.1 to 0.5
+    } else if (randomPattern < 0.7) {
+      // 30% chance: Medium spread (espalhamento médio)
+      finalSpread = Math.random() * 0.5 + 0.4; // 0.4 to 0.9
+    } else {
+      // 30% chance: Wide spread (bem espalhado)
+      finalSpread = Math.random() * 0.6 + 0.8; // 0.8 to 1.4
+    }
+    
+    // Create orbs with completely random positions
+    for (let i = 0; i < orbCount; i++) {
+      // Completely random angle (not evenly distributed)
+      const angle = Math.random() * Math.PI * 2;
+      
+      // Random radius with bias toward center for clustering effect
+      const radiusRandom = Math.random();
+      const radius = Math.pow(radiusRandom, 1.5) * finalSpread; // Power curve biases toward center
+      
+      // Additional random scatter
+      const scatterX = (Math.random() - 0.5) * 0.3;
+      const scatterY = (Math.random() - 0.5) * 0.3;
+      
+      const scatteredPosition = basePosition.clone().add(new THREE.Vector3(
+        Math.cos(angle) * radius + scatterX,
+        Math.sin(angle) * radius + scatterY,
+        (Math.random() - 0.5) * 0.1 // Smaller Z variation
+      ));
+      
+      // Create orb with calculated XP value
+      this.createXPOrb(scatteredPosition, xpPerOrb);
+    }
+    
+    console.log(`💎 Enemy dropped ${orbCount} orbs (${xpPerOrb} XP each) = ${totalXP} total XP`);
+  }
+
   /**
    * Create a new XP orb at the specified position
    */
