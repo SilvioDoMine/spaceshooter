@@ -216,15 +216,20 @@ export class Enemy extends Entity {
       enemyId: this.id,
       position: { x: this.position.x, y: this.position.y, z: 0 }
     });
-    
+
+    // Se for boss, emitir evento para remover barra do HUD
+    if (this.enemyType === 'boss') {
+      this.eventBus.emit('boss:defeated', { enemyId: this.id });
+    }
+
     this.eventBus.emit('audio:play', { soundId: 'explosion', options: { volume: 0.4 } });
-    
+
     this.eventBus.emit('particles:explosion', {
       position: { x: this.position.x, y: this.position.y, z: 0 }
     });
 
     console.log(`Enemy ${this.enemyType} destroyed! +${scorePoints} points`);
-    
+
     this.destroy();
   }
 

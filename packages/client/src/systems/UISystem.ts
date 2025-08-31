@@ -132,6 +132,11 @@ export class UISystem {
       this.resetUI();
     });
 
+    // Remover barra do boss ao terminar o jogo
+    this.eventBus.on('game:over', () => {
+      this.hideBossHealthBar();
+    });
+
     // Boss events
     this.eventBus.on('boss:spawned', (data: { bossId: string; boss: any }) => {
       this.showBossHealthBar(data.boss);

@@ -3,6 +3,13 @@ import { InputState } from "../systems/InputSystem";
 import { JoystickInput } from "../systems/VirtualJoystickSystem";
 
 export type GameEventMap = {
+  // Emitido em: Enemy.ts ao spawnar um boss
+  'boss:spawned': { bossId: string; boss: any };
+  // ========== BOSS EVENTS ==========
+  // Emitido em: Enemy.ts ao derrotar um boss
+  'boss:defeated': { enemyId: string };
+  // Emitido em: Enemy.ts quando o boss toma dano
+  'boss:damage-taken': { health: number; maxHealth: number };
   // ========== STARTUP EVENTS ==========
   // Emitido em: RenderingSystem.ts:116 quando THREE.js está pronto
   // Motivo: Coordenação entre sistemas - outros sistemas aguardam o renderer estar pronto
