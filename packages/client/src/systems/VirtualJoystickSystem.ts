@@ -201,11 +201,11 @@ export class VirtualJoystickSystem {
     this.isFloating = false;
     this.joystickContainer.classList.remove('floating');
 
-    // Reset to original CSS positioning
-    this.joystickContainer.style.left = '50%';
-    this.joystickContainer.style.top = 'auto';
-    this.joystickContainer.style.bottom = '50px';
-    this.joystickContainer.style.transform = 'translateX(-50%)';
+    // Reset to original CSS positioning (let CSS media queries handle positioning)
+    this.joystickContainer.style.left = '';
+    this.joystickContainer.style.top = '';
+    this.joystickContainer.style.bottom = '';
+    this.joystickContainer.style.transform = '';
 
     // Update center position
     this.updateDimensions();
@@ -215,6 +215,7 @@ export class VirtualJoystickSystem {
     if (!this.joystickContainer || !this.joystickKnob) return;
 
     this.isDragging = true;
+    this.joystickContainer.classList.add('active');
     this.joystickKnob.classList.add('active');
     this.handleInteraction(event);
   }
@@ -252,9 +253,10 @@ export class VirtualJoystickSystem {
   }
 
   private endInteraction(): void {
-    if (!this.joystickKnob) return;
+    if (!this.joystickContainer || !this.joystickKnob) return;
 
     this.isDragging = false;
+    this.joystickContainer.classList.remove('active');
     this.joystickKnob.classList.remove('active');
 
     // Reset knob to center
