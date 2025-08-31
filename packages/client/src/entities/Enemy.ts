@@ -164,6 +164,14 @@ export class Enemy extends Entity {
   public takeDamage(damage: number): boolean {
     this.health = Math.max(0, this.health - damage);
     
+    // Se for boss, emite evento para atualizar barra do HUD
+    if (this.enemyType === 'boss') {
+      this.eventBus.emit('boss:damage-taken', {
+        health: this.health,
+        maxHealth: this.maxHealth
+      });
+    }
+    
     // Mostra a barra de vida quando o inimigo toma dano
     if (this.health < this.maxHealth && this.health > 0) {
       this.showHealthBar();
@@ -390,5 +398,34 @@ export class Enemy extends Entity {
     const enemy = new Enemy(eventBus, enemyId, enemyType, spawnPosition);
     console.log(`Enemy spawned: ${enemyType} at (${spawnPosition.x.toFixed(1)}, ${spawnPosition.y.toFixed(1)})`);
     return enemy;
+  }
+
+  public static spawnBoss(eventBus: EventBus): Enemy {
+    const currentTime = Date.now();
+    const bossId = `boss_${currentTime}_${Math.random()}`;
+    const enemyType: EnemyData['type'] = 'boss';
+    
+    // Spawn boss em uma borda aleatória do mapa
+    const edge = Math.floor(Math.random() * 4); // 0:top, 1:bottom, 2:left, 3:right
+    let x = 0, y = 0;
+    const bounds = { minX: -10, maxX: 10, minY: -7.5, maxY: 7.5 };
+    if (edge === 0) { // topo
+      x = bounds.minX + Math.random() * (bounds.maxX - bounds.minX);
+      y = bounds.maxY;
+    } else if (edge === 1) { // baixo
+      x = bounds.minX + Math.random() * (bounds.maxX - bounds.minX);
+      y = bounds.minY;
+    } else if (edge === 2) { // esquerda
+      x = bounds.minX;
+      y = bounds.minY + Math.random() * (bounds.maxY - bounds.minY);
+    } else { // direita
+      x = bounds.maxX;
+      y = bounds.minY + Math.random() * (bounds.maxY - bounds.minY);
+    }
+    
+    const spawnPosition: Position = { x, y };
+    const boss = new Enemy(eventBus, bossId, enemyType, spawnPosition);
+    console.log(`👹 BOSS spawned at (${spawnPosition.x.toFixed(1)}, ${spawnPosition.y.toFixed(1)})!`);
+    return boss;
   }
 }

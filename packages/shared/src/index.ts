@@ -128,7 +128,7 @@ export interface Enemy {
   velocity: Vector2D;      // Velocidade de movimento (unidades/segundo)
   health: number;          // Vida atual
   maxHealth: number;       // Vida máxima
-  type: 'basic' | 'fast' | 'heavy';  // Tipo determina características
+  type: 'basic' | 'fast' | 'heavy' | 'boss';  // Tipo determina características
   createdAt: number;       // Timestamp de criação
 }
 
@@ -312,6 +312,16 @@ export const ENEMY_CONFIG = {
     spawnRate: 2500,        // A cada 5 segundos
     xpDrop: 25,             // XP dado quando morto
     xpOrbCount: 15          // Muitos orbes para recompensa visual
+  },
+  boss: {
+    health: 2000,            // 50 hits para destruir - muito resistente
+    speed: 0.2,             // Bem lento
+    size: 2,                // Grande
+    radius: 0.6,            // Hitbox maior
+    color: 0xff0080,        // Rosa/Magenta para diferenciação
+    spawnRate: 60000,       // A cada 60 segundos (muito raro)
+    xpDrop: 200,            // Muito XP
+    xpOrbCount: 50          // Muitos orbes de XP
   }
 };
 

@@ -17,6 +17,11 @@ export class EntitySystem {
   private enemySpawnTimer: number = 0;
   private powerUpSpawnTimer: number = 0;
   private isActive: boolean = false;
+  // Boss spawn system
+  private bossSpawnTimer: number = 0;
+  private gameStartTime: number = 0;
+  private activeBoss: Enemy | null = null;
+  private readonly BOSS_INITIAL_DELAY = 90; // 1m30s em segundos
 
   constructor(eventBus: EventBus, renderingSystem?: RenderingSystem) {
     this.eventBus = eventBus;
@@ -74,6 +79,9 @@ export class EntitySystem {
     // Reset spawn timers
     this.enemySpawnTimer = 0;
     this.powerUpSpawnTimer = 0;
+    this.bossSpawnTimer = 0;
+    this.gameStartTime = Date.now();
+    this.activeBoss = null;
     
     console.log('👤 Creating player...');
     this.createPlayer();
@@ -145,6 +153,13 @@ export class EntitySystem {
     // this.eventBus.emit('player:xp-gain', {
     //   xp: data.xp
     // });
+    
+    // Se era um boss, limpar referência
+    if (this.activeBoss && this.activeBoss.getId() === data.enemyId) {
+      this.activeBoss = null;
+      this.eventBus.emit('boss:defeated', { enemyId: data.enemyId });
+      console.log('👹 Boss defeated! Normal enemy spawning will resume.');
+    }
     
     // Enemy is already destroyed, just clean up references
     this.enemies.delete(data.enemyId);
@@ -309,6 +324,7 @@ export class EntitySystem {
     this.projectileSystem.update(deltaTime);
     
     this.trySpawnEnemy(deltaTime);
+    this.trySpawnBoss(deltaTime);
     this.trySpawnPowerUp(deltaTime);
     
     // Update debug system with entity counts
@@ -316,6 +332,11 @@ export class EntitySystem {
   }
 
   private trySpawnEnemy(deltaTime: number): void {
+    // Não spawn inimigos comuns se há boss ativo
+    if (this.activeBoss) {
+      return;
+    }
+    
     this.enemySpawnTimer += deltaTime;
     const spawnRate = ENEMY_CONFIG.basic.spawnRate / 1000; // Convert milliseconds to seconds
     
@@ -397,6 +418,45 @@ export class EntitySystem {
     if (this.player) {
       this.player.reset();
     }
+  }
+
+  private trySpawnBoss(deltaTime: number): void {
+    // Não spawn boss se já existe um ativo
+    if (this.activeBoss) {
+      return;
+    }
+    
+    const elapsedGameTime = (Date.now() - this.gameStartTime) / 1000; // em segundos
+    
+    // Não spawn boss antes do delay inicial
+    if (elapsedGameTime < this.BOSS_INITIAL_DELAY) {
+      return;
+    }
+    
+    this.bossSpawnTimer += deltaTime;
+    const bossSpawnRate = ENEMY_CONFIG.boss.spawnRate / 1000; // Convert milliseconds to seconds
+    
+    if (this.bossSpawnTimer >= bossSpawnRate) {
+      try {
+        console.log('👹 Spawning boss! Normal enemy spawning paused.');
+        const boss = Enemy.spawnBoss(this.eventBus);
+        this.enemies.set(boss.getId(), boss);
+        this.activeBoss = boss;
+        this.bossSpawnTimer = 0; // Reset timer
+        
+        // Emit boss spawned event
+        this.eventBus.emit('boss:spawned', { 
+          bossId: boss.getId(),
+          boss: boss
+        });
+      } catch (error) {
+        console.error('❌ Error spawning boss:', error);
+      }
+    }
+  }
+
+  public getActiveBoss(): Enemy | null {
+    return this.activeBoss;
   }
 
   public dispose(): void {
