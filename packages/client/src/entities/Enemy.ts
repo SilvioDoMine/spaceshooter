@@ -6,6 +6,11 @@ import { ENEMY_CONFIG } from '@spaceshooter/shared';
 import type { Enemy as EnemyData } from '@spaceshooter/shared';
 
 export class Enemy extends Entity {
+  /**
+   * Se true, o inimigo morre ao colidir com o player.
+   * Controlado por ENEMY_CONFIG.
+   */
+  private diesOnPlayerCollision: boolean;
   private enemyType: EnemyData['type'];
   private health: number;
   private maxHealth: number;
@@ -32,8 +37,9 @@ export class Enemy extends Entity {
     }
     // Inicializa com velocidade zero, será calculada no update
     super(eventBus, id, initialPosition, { x: 0, y: 0 });
-    this.enemyType = enemyType;
-    this.config = config;
+  this.enemyType = enemyType;
+  this.config = config;
+  this.diesOnPlayerCollision = config.diesOnPlayerCollision ?? true;
     this.health = config.health;
     this.maxHealth = config.health;
     this.createVisual();
@@ -154,7 +160,8 @@ export class Enemy extends Entity {
       entityType: 'enemy',
       position: this.position,
       radius: this.config.radius,
-      damage: this.getCollisionDamage()
+      damage: this.getCollisionDamage(),
+      diesOnPlayerCollision: this.diesOnPlayerCollision
     });
   }
 

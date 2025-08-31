@@ -199,12 +199,12 @@ export class EntitySystem {
       
       const enemy = this.enemies.get(data.entityId);
       if (enemy) {
-        // Boss não morre ao colidir - apenas causa dano contínuo
-        if (enemy.getEnemyType() === 'boss') {
-          console.log('👹 Boss collision with player - no destruction, continuous damage');
-          // Boss continua vivo, apenas causa dano
+        // Usa a propriedade diesOnPlayerCollision para decidir se morre
+        if (data.diesOnPlayerCollision === false) {
+          // Não morre ao colidir (ex: fast enemy)
+          // Apenas causa dano ao player
         } else {
-          // Inimigos normais morrem ao colidir
+          // Morre ao colidir
           enemy.destroy();
           this.enemies.delete(data.entityId);
         }

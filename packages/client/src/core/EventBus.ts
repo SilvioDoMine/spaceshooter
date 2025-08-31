@@ -133,7 +133,7 @@ export type GameEventMap = {
   // ========== COLLISION EVENTS ==========
   // Emitido em: Enemy.ts:117 para verificar colisão de inimigo
   // Motivo: Sistema de colisão verificar se inimigo colidiu com jogador
-  'collision:check': { entityId: string; entityType: string; position: { x: number; y: number }; radius: number; damage: number };
+  'collision:check': { entityId: string; entityType: string; position: { x: number; y: number }; radius: number; damage: number; diesOnPlayerCollision?: boolean };
   
   // Emitido em: ProjectileSystem.ts:133 quando projétil pode colidir com inimigo
   // Motivo: Sistema de colisão verificar impacto entre projétil e inimigos

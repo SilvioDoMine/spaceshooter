@@ -308,6 +308,7 @@ export const ENEMY_CONFIG = {
     spawnRate: 1000,        // A cada 1 segundo
     xpDrop: 10,             // XP dado quando morto
     xpOrbCount: 10,         // Número de orbes de XP que dropa
+    diesOnPlayerCollision: true,
     // Não atira por enquanto
     projectile: {
       canShoot: false
@@ -322,6 +323,7 @@ export const ENEMY_CONFIG = {
     spawnRate: 8000,        // A cada 8 segundos
     xpDrop: 8,              // XP dado quando morto
     xpOrbCount: 5,          // Poucos orbes, mas rápido de matar
+    diesOnPlayerCollision: true,
     // Não atira por enquanto
     projectile: {
       canShoot: false
@@ -336,6 +338,7 @@ export const ENEMY_CONFIG = {
     spawnRate: 20000,        // A cada 20 segundos
     xpDrop: 25,             // XP dado quando morto
     xpOrbCount: 15,         // Muitos orbes para recompensa visual
+    diesOnPlayerCollision: false,
     // Heavy atira projéteis pequenos e rápidos
     projectile: {
       canShoot: true,
@@ -359,6 +362,7 @@ export const ENEMY_CONFIG = {
     spawnRate: 60000,       // A cada 60 segundos (muito raro)
     xpDrop: 200,            // Muito XP
     xpOrbCount: 200,        // Muitos orbes de XP
+    diesOnPlayerCollision: true,
     // Boss atira projéteis grandes e lentos
     projectile: {
       canShoot: true,
