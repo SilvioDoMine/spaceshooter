@@ -19,6 +19,7 @@ interface DebugData {
 
 interface DebugSettings {
   godModeEnabled: boolean;
+  infiniteAmmoEnabled: boolean;
   showCollisions: boolean;
   showJoystick: boolean;
   timeScale: number;
@@ -44,6 +45,7 @@ export class DebugSystem {
   // Default debug settings
   private static readonly DEFAULT_SETTINGS: DebugSettings = {
     godModeEnabled: false,
+    infiniteAmmoEnabled: false,
     showCollisions: false,
     showJoystick: false, // Hidden by default
     timeScale: 1.0,
@@ -55,6 +57,7 @@ export class DebugSystem {
   
   // Debug states
   private godModeEnabled: boolean = false;
+  private infiniteAmmoEnabled: boolean = false;
   private showCollisions: boolean = false;
   private showJoystick: boolean = false;
   private timeScale: number = 1.0;
@@ -83,6 +86,7 @@ export class DebugSystem {
       if (savedSettings) {
         const settings: DebugSettings = JSON.parse(savedSettings);
         this.godModeEnabled = settings.godModeEnabled;
+        this.infiniteAmmoEnabled = settings.infiniteAmmoEnabled || false;
         this.showCollisions = settings.showCollisions;
         this.showJoystick = settings.showJoystick !== undefined ? settings.showJoystick : true;
         this.timeScale = settings.timeScale;
@@ -104,6 +108,7 @@ export class DebugSystem {
     try {
       const settings: DebugSettings = {
         godModeEnabled: this.godModeEnabled,
+        infiniteAmmoEnabled: this.infiniteAmmoEnabled,
         showCollisions: this.showCollisions,
         showJoystick: this.showJoystick,
         timeScale: this.timeScale,
@@ -120,6 +125,7 @@ export class DebugSystem {
 
   private resetToDefaults(): void {
     this.godModeEnabled = DebugSystem.DEFAULT_SETTINGS.godModeEnabled;
+    this.infiniteAmmoEnabled = DebugSystem.DEFAULT_SETTINGS.infiniteAmmoEnabled;
     this.showCollisions = DebugSystem.DEFAULT_SETTINGS.showCollisions;
     this.showJoystick = DebugSystem.DEFAULT_SETTINGS.showJoystick;
     this.timeScale = DebugSystem.DEFAULT_SETTINGS.timeScale;
@@ -141,6 +147,11 @@ export class DebugSystem {
     const godModeCheckbox = document.getElementById('debug-god-mode') as HTMLInputElement;
     if (godModeCheckbox) {
       godModeCheckbox.checked = this.godModeEnabled;
+    }
+
+    const infiniteAmmoCheckbox = document.getElementById('debug-infinite-ammo') as HTMLInputElement;
+    if (infiniteAmmoCheckbox) {
+      infiniteAmmoCheckbox.checked = this.infiniteAmmoEnabled;
     }
 
     const collisionCheckbox = document.getElementById('debug-show-collisions') as HTMLInputElement;
@@ -191,6 +202,7 @@ export class DebugSystem {
     // Delay event emission to ensure all entities are created first
     setTimeout(() => {
       this.eventBus.emit('debug:god-mode-toggle', { enabled: this.godModeEnabled });
+      this.eventBus.emit('debug:infinite-ammo-toggle', { enabled: this.infiniteAmmoEnabled });
       this.eventBus.emit('debug:collision-visibility-toggle', { visible: this.showCollisions });
       this.eventBus.emit('debug:joystick-toggle', { visible: this.showJoystick });
       this.eventBus.emit('debug:time-scale-change', { timeScale: this.getTimeScale() });
@@ -425,6 +437,10 @@ export class DebugSystem {
     return this.godModeEnabled;
   }
 
+  public isInfiniteAmmoEnabled(): boolean {
+    return this.infiniteAmmoEnabled;
+  }
+
   public getTimeScale(): number {
     return this.isPaused ? 0 : this.timeScale;
   }
@@ -467,6 +483,17 @@ export class DebugSystem {
         this.godModeEnabled = target.checked;
         this.saveSettings();
         this.eventBus.emit('debug:god-mode-toggle', { enabled: this.godModeEnabled });
+      });
+    }
+
+    // Infinite Ammo checkbox
+    const infiniteAmmoCheckbox = document.getElementById('debug-infinite-ammo') as HTMLInputElement;
+    if (infiniteAmmoCheckbox) {
+      infiniteAmmoCheckbox.addEventListener('change', (event) => {
+        const target = event.target as HTMLInputElement;
+        this.infiniteAmmoEnabled = target.checked;
+        this.saveSettings();
+        this.eventBus.emit('debug:infinite-ammo-toggle', { enabled: this.infiniteAmmoEnabled });
       });
     }
 

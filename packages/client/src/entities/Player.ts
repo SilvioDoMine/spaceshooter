@@ -33,6 +33,7 @@ export class Player extends Entity {
   private projectileSystem: ProjectileSystem;
   private gameStartTime: number;
   private godModeEnabled: boolean = false;
+  private infiniteAmmoEnabled: boolean = false;
   private boundingBox: THREE.Box3 = new THREE.Box3();
   private playerShipModel?: THREE.Group;
   private collisionShape: CompoundCollisionShape;
@@ -49,6 +50,7 @@ export class Player extends Entity {
   private invulnerabilityTimer: number = 0;
   private isInvulnerable: boolean = false;
   private pendingSkillOptions?: any[]; // Store skill options until slow motion ends
+  private skillSelectionQueue: Array<{ fromLevel: number; toLevel: number; skillOptions: any[] }> = []; // Queue for multiple level ups
 
   constructor(
     eventBus: EventBus,
@@ -103,6 +105,10 @@ export class Player extends Entity {
     const unsubscribeXPGain = this.eventBus.on('player:xp-gain', (data) => {
       this.gainXP(data.xp);
     });
+    
+    const unsubscribeGainXP = this.eventBus.on('player:gain-xp', (data) => {
+      this.gainXP(data.amount);
+    });
 
     const unsubscribeSkillSelected = this.eventBus.on('player:skill-selected', (data) => {
       this.selectSkill(data.skillType as SkillType);
@@ -121,6 +127,11 @@ export class Player extends Entity {
       this.godModeEnabled = data.enabled;
     });
 
+    const unsubscribeInfiniteAmmo = this.eventBus.on('debug:infinite-ammo-toggle', (data: { enabled: boolean }) => {
+      this.infiniteAmmoEnabled = data.enabled;
+      console.log(`🔫 Infinite ammo ${data.enabled ? 'enabled' : 'disabled'}`);
+    });
+
     const unsubscribeSizeChange = this.eventBus.on('player:size-changed', (data) => {
       console.log('Player received size change event:', data);
       this.handleSizeChange(data.newSize);
@@ -137,9 +148,11 @@ export class Player extends Entity {
     this.addCleanupFunction(unsubscribeInput);
     this.addCleanupFunction(unsubscribeScore);
     this.addCleanupFunction(unsubscribeXPGain);
+    this.addCleanupFunction(unsubscribeGainXP);
     this.addCleanupFunction(unsubscribeSkillSelected);
     this.addCleanupFunction(unsubscribeDamage);
     this.addCleanupFunction(unsubscribeGodMode);
+    this.addCleanupFunction(unsubscribeInfiniteAmmo);
     this.addCleanupFunction(unsubscribeSizeChange);
     this.addCleanupFunction(unsubscribeInvulnerability);
     this.addCleanupFunction(unsubscribeSlowMotionComplete);
@@ -378,7 +391,7 @@ export class Player extends Entity {
     }
 
     // TIRO AUTOMÁTICO AO PARAR
-    if (!this.isMoving && this.stats.ammo > 0 && this.shotTimer <= 0) {
+    if (!this.isMoving && (this.infiniteAmmoEnabled || this.stats.ammo > 0) && this.shotTimer <= 0) {
       // Tenta acessar o sistema de entidades pelo window.game
       const game = (window as any).game;
       if (game && typeof game.getEntitySystem === 'function') {
@@ -473,6 +486,11 @@ export class Player extends Entity {
     this.object.position.x = this.position.x;
     this.object.position.y = this.position.y;
 
+    // Emit position change for XP orb collection
+    this.eventBus.emit('player:position-changed', {
+      position: { x: this.position.x, y: this.position.y, z: 0 }
+    });
+
     // Update debug system with current position
     this.eventBus.emit('debug:update', { 
       playerPos: `(${this.position.x.toFixed(1)}, ${this.position.y.toFixed(1)}, 0.0)`
@@ -556,13 +574,19 @@ export class Player extends Entity {
       return; // Still on cooldown
     }
 
-    if (this.stats.ammo <= 0) {
+    // Check ammo only if infinite ammo is not enabled
+    if (!this.infiniteAmmoEnabled && this.stats.ammo <= 0) {
       console.log('No ammo!');
       return;
     }
 
     this.shotTimer = this.shotCooldown; // Reset cooldown timer
-    this.stats.ammo--;
+    
+    // Only consume ammo if infinite ammo is not enabled
+    if (!this.infiniteAmmoEnabled) {
+      this.stats.ammo--;
+    }
+    
     this.stats.shotsFired++;
     
     this.updateUI();
@@ -667,25 +691,33 @@ export class Player extends Entity {
     
     if (newLevel > oldLevel) {
       this.stats.level = newLevel;
-      console.log(`🎉 Level Up! Nível ${oldLevel} → ${newLevel}`);
+      
+      // Para múltiplos level ups, adicionar cada um na fila
+      for (let level = oldLevel + 1; level <= newLevel; level++) {
+        const skillOptions = generateSkillOptions(this.stats.skills);
+        this.skillSelectionQueue.push({
+          fromLevel: level - 1,
+          toLevel: level,
+          skillOptions
+        });
+        
+        console.log(`🎉 Queued Level Up! Nível ${level - 1} → ${level}`);
+      }
       
       // Create level up particle effect at player position
       this.eventBus.emit('particles:level-up', {
         position: { x: this.position.x, y: this.position.y, z: 0 }
       });
       
-      // Start slow motion effect (1.5 seconds to reach 0 speed)
+      this.eventBus.emit('audio:play', { soundId: 'level-up', options: { volume: 0.7 } });
+      
+      // Start slow motion effect apenas no primeiro level up
       this.eventBus.emit('game:slow-motion', {
         duration: 1.0,
         targetScale: 0.0
       });
       
-      // Gerar opções de skills para escolha e armazenar
-      this.pendingSkillOptions = generateSkillOptions(this.stats.skills);
-      
       console.log('🎯 Skill options generated, waiting for slow motion to complete...');
-      
-      this.eventBus.emit('audio:play', { soundId: 'level-up', options: { volume: 0.7 } });
     }
     
     console.log(`💎 Gained ${xpAmount} XP! Total: ${this.stats.currentXP} (Level ${this.stats.level})`);
@@ -719,6 +751,18 @@ export class Player extends Entity {
     
     // Apply skill effects immediately
     this.applySkillEffects();
+    
+    // Clear current pending options
+    this.pendingSkillOptions = undefined;
+    
+    // Se há mais skills na fila, processar imediatamente
+    if (this.skillSelectionQueue.length > 0) {
+      console.log(`🎯 ${this.skillSelectionQueue.length} more level ups in queue, showing next immediately`);
+      // Pequeno delay para suavizar a transição entre modals
+      setTimeout(() => {
+        this.processNextSkillSelection();
+      }, 100);
+    }
     
     // Update UI
     this.updateUI();
@@ -794,19 +838,39 @@ export class Player extends Entity {
     }
   }
 
-  private onSlowMotionComplete(): void {
-    console.log('🎯 Slow motion complete, showing skill selection modal');
+  private processNextSkillSelection(isFirstLevelUp: boolean = false): void {
+    if (this.skillSelectionQueue.length === 0) return;
     
-    if (this.pendingSkillOptions) {
+    const nextSelection = this.skillSelectionQueue.shift()!;
+    this.pendingSkillOptions = nextSelection.skillOptions;
+    
+    console.log(`🎯 Processing skill selection for level ${nextSelection.fromLevel} → ${nextSelection.toLevel} (first: ${isFirstLevelUp})`);
+    
+    if (isFirstLevelUp) {
+      // Para o primeiro level up, mostrar após slow motion
       this.eventBus.emit('player:level-up', {
-        oldLevel: this.stats.level - 1, // Previous level
-        newLevel: this.stats.level,
+        oldLevel: nextSelection.fromLevel,
+        newLevel: nextSelection.toLevel,
         currentXP: this.stats.currentXP,
         skillOptions: this.pendingSkillOptions
       });
-      
-      this.pendingSkillOptions = undefined; // Clear pending options
+      return;
     }
+    
+    // Para level ups subsequentes, mostrar imediatamente
+    this.eventBus.emit('player:level-up', {
+      oldLevel: nextSelection.fromLevel,
+      newLevel: nextSelection.toLevel,
+      currentXP: this.stats.currentXP,
+      skillOptions: this.pendingSkillOptions
+    });
+  }
+
+  private onSlowMotionComplete(): void {
+    console.log('🎯 Slow motion complete, showing skill selection modal');
+    
+    // Primeiro level up após slow motion
+    this.processNextSkillSelection(true);
   }
 
   public setInvulnerable(duration: number): void {

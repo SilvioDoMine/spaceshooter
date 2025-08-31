@@ -141,10 +141,10 @@ export class EntitySystem {
       points: data.points 
     });
     
-    // Emit XP gain event for Player to handle
-    this.eventBus.emit('player:xp-gain', {
-      xp: data.xp
-    });
+    // XP agora vem apenas dos orbes coletados
+    // this.eventBus.emit('player:xp-gain', {
+    //   xp: data.xp
+    // });
     
     // Enemy is already destroyed, just clean up references
     this.enemies.delete(data.enemyId);

@@ -185,7 +185,7 @@ export const PLAYER_CONFIG = {
   health: 100,
   maxHealth: 100,
   ammo: 30,
-  maxAmmo: 50,
+  maxAmmo: 100,
   speed: 2.5,
   size: 0.2,              // Escala visual do modelo
   radius: 0.15,            // Raio da hitbox (legacy - não usado com compound shapes)
@@ -195,7 +195,7 @@ export const PLAYER_CONFIG = {
     minY: -4,
     maxY: 4
   },
-  shotCooldown: 0.5,      // Cooldown entre tiros em segundos (500ms)
+  shotCooldown: 1.0,      // Cooldown entre tiros em segundos (500ms)
   level: 1,               // Nível inicial
   currentXP: 0,           // XP inicial
   skills: [] as PlayerSkill[], // Skills iniciais vazias

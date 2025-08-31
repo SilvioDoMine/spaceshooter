@@ -8,6 +8,7 @@ import { MenuSystem } from '../systems/MenuSystem';
 import { EntitySystem } from '../systems/EntitySystem';
 import { RenderingSystem } from '../systems/RenderingSystem';
 import { ParticleSystem } from '../systems/ParticleSystem';
+import { XPOrbSystem } from '../systems/XPOrbSystem';
 import { BackgroundSystem } from '../systems/BackgroundSystem';
 import { DebugSystem } from '../systems/DebugSystem';
 import { VirtualJoystickSystem } from '../systems/VirtualJoystickSystem';
@@ -44,6 +45,7 @@ export class Game {
   private audioSystem!: AudioSystem;  
   private uiSystem!: UISystem;
   private particleSystem!: ParticleSystem;
+  private xpOrbSystem!: XPOrbSystem;
   private menuSystem!: MenuSystem;
   private gameStateManager!: GameStateManager;
   private entitySystem!: EntitySystem;
@@ -169,6 +171,7 @@ export class Game {
     this.uiSystem = new UISystem(this.eventBus);
     this.uiManager = new UIManager(this.eventBus);
     this.particleSystem = new ParticleSystem(this.eventBus);
+    this.xpOrbSystem = new XPOrbSystem(this.eventBus);
     this.menuSystem = new MenuSystem(this.eventBus);
     this.gameStateManager = new GameStateManager(this.eventBus);
     this.backgroundSystem = new BackgroundSystem(this.eventBus);
@@ -231,6 +234,7 @@ export class Game {
       this.backgroundSystem.update(deltaTime);
       this.entitySystem.update(deltaTime);
       this.particleSystem.update(deltaTime);
+      this.xpOrbSystem.update(deltaTime);
     }
 
     // Render frame directly

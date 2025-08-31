@@ -185,7 +185,8 @@ export class Enemy extends Entity {
       points: scorePoints,
       xp: xpReward,
       enemyType: this.enemyType,
-      enemyId: this.id
+      enemyId: this.id,
+      position: { x: this.position.x, y: this.position.y, z: 0 }
     });
     
     this.eventBus.emit('audio:play', { soundId: 'explosion', options: { volume: 0.4 } });

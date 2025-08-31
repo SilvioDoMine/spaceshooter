@@ -24,6 +24,14 @@ export type GameEventMap = {
   // Motivo: Sistema de efeitos visuais deve estar pronto para explosões e impactos
   'particles:ready': {};
   
+  // Emitido em: XPOrbSystem.ts após configurar sistema de orbes de XP
+  // Motivo: Sistema de orbes de XP deve estar pronto para criar orbes
+  'xp-orbs:ready': {};
+  
+  // Emitido quando precisar limpar todos os orbes de XP
+  // Motivo: Limpar orbes no game over, restart, etc.
+  'xp-orbs:clear': {};
+  
   // Emitido em: MenuSystem.ts:23 após configurar interface de menus
   // Motivo: Sistema de menus deve estar pronto para navegação
   'menu:ready': {};
@@ -74,6 +82,14 @@ export type GameEventMap = {
   // Motivo: Player precisa processar XP ganho
   'player:xp-gain': { xp: number };
   
+  // Emitido em: XPOrbSystem quando orbe é coletado
+  // Motivo: Player precisa processar XP ganho de orbes
+  'player:gain-xp': { amount: number; position: { x: number; y: number; z: number } };
+  
+  // Emitido em: Player.ts quando posição do jogador muda
+  // Motivo: XPOrbSystem precisa saber posição para coleta automática
+  'player:position-changed': { position: { x: number; y: number; z: number } };
+  
   // Emitido em: Player.ts quando vida do jogador muda
   // Motivo: UIManager atualizar barra de vida
   'player:health-changed': { current: number; max: number };
@@ -105,7 +121,7 @@ export type GameEventMap = {
   
   // Emitido em: Enemy.ts quando inimigo é destruído
   // Motivo: EntitySystem dar pontos e XP ao jogador
-  'enemy:destroyed': { points: number; xp: number; enemyType: string; enemyId: string };
+  'enemy:destroyed': { points: number; xp: number; enemyType: string; enemyId: string; position: { x: number; y: number; z: number } };
 
   // ========== COLLISION EVENTS ==========
   // Emitido em: Enemy.ts:117 para verificar colisão de inimigo
@@ -243,6 +259,7 @@ export type GameEventMap = {
   // Emitido em: DebugSystem.ts para alternar modo god
   // Motivo: Player precisa saber quando god mode está ativo
   'debug:god-mode-toggle': { enabled: boolean };
+  'debug:infinite-ammo-toggle': { enabled: boolean };
   
   // Emitido em: DebugSystem.ts para mostrar/ocultar colisões
   // Motivo: Entidades precisam saber quando mostrar visualização de colisão

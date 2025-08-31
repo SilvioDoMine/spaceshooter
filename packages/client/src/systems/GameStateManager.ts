@@ -295,6 +295,10 @@ export class GameStateManager implements Subject {
       case GameStateEnum.MENU:
         // Limpar dados do jogo anterior se necessário
         this.resetGameStats();
+        
+        // Clear all temporary game objects when returning to menu
+        this.eventBus.emit('particles:clear', {});
+        this.eventBus.emit('xp-orbs:clear', {});
 
         this.eventBus.emit('game:main', {});
         break;
@@ -320,6 +324,10 @@ export class GameStateManager implements Subject {
       case GameStateEnum.GAME_OVER:
         // Don't emit game:over here - let the Player emit it with correct stats
         console.log('Game state changed to GAME_OVER');
+        
+        // Clear all temporary game objects like particles and XP orbs
+        this.eventBus.emit('particles:clear', {});
+        this.eventBus.emit('xp-orbs:clear', {});
         break;
     }
   }
