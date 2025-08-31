@@ -788,11 +788,24 @@ export class Player extends Entity {
   }
 
   private applySkillEffects(): void {
-    // Apply max health bonus
+    // Apply max health bonus with intelligent healing
+    const oldMaxHealth = this.stats.maxHealth;
     const healthBonus = calculateMaxHealthBonus(this.stats.skills);
-    this.stats.maxHealth = PLAYER_CONFIG.maxHealth + healthBonus;
+    const newMaxHealth = PLAYER_CONFIG.maxHealth + healthBonus;
     
-    // Ensure current health doesn't exceed new max
+    // Calculate how much max health increased
+    const maxHealthIncrease = newMaxHealth - oldMaxHealth;
+    
+    if (maxHealthIncrease > 0) {
+      // If max health increased, heal the player by the increase amount
+      // This ensures they get the "free heal" when picking max health skills
+      this.stats.health = Math.min(this.stats.health + maxHealthIncrease, newMaxHealth);
+      console.log(`💚 Max health increased by ${maxHealthIncrease}, healed to ${this.stats.health}/${newMaxHealth}`);
+    }
+    
+    this.stats.maxHealth = newMaxHealth;
+    
+    // Ensure current health doesn't exceed new max (safety check)
     this.stats.health = Math.min(this.stats.health, this.stats.maxHealth);
     
     // Update shot cooldown based on attack speed
