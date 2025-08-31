@@ -826,6 +826,11 @@ export class Player extends Entity {
     // Apply skill effects immediately
     this.applySkillEffects();
     
+    // Emit skills updated event for UI
+    this.eventBus.emit('player:skills-updated', {
+      skills: [...this.stats.skills]
+    });
+    
     // Clear current pending options
     this.pendingSkillOptions = undefined;
     

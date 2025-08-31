@@ -120,6 +120,10 @@ export type GameEventMap = {
   // Emitido em: UISystem quando jogador seleciona uma skill
   // Motivo: Player precisa aplicar a skill selecionada
   'player:skill-selected': { skillType: string };
+  
+  // Emitido em: Player.ts quando skills do jogador são atualizadas
+  // Motivo: MenuSystem precisa atualizar a exibição de habilidades no menu de pausa
+  'player:skills-updated': { skills: any[] };
 
   // ========== ENEMY EVENTS ==========
   // Emitido em: Enemy.ts quando inimigo escapa

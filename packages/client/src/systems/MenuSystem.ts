@@ -5,10 +5,12 @@
 
 import { EventBus } from '../core/EventBus';
 import { GameStats } from './GameStateManager';
+import { PlayerSkill, SKILLS_CONFIG, SKILL_RARITY_MAP } from '@spaceshooter/shared';
 
 export class MenuSystem {
   private container: HTMLElement;
   private eventBus: EventBus;
+  private playerSkills: PlayerSkill[] = [];
 
   constructor(eventBus: EventBus) {
     this.eventBus = eventBus;
@@ -37,10 +39,16 @@ export class MenuSystem {
 
     this.eventBus.on('game:started', () => {
       this.hideAllMenus();
+      // Reset skills on game start
+      this.playerSkills = [];
     });
 
     this.eventBus.on('game:resumed', () => {
       this.hideAllMenus();
+    });
+
+    this.eventBus.on('player:skills-updated', (data: { skills: PlayerSkill[] }) => {
+      this.playerSkills = data.skills || [];
     });
   }
 
@@ -124,10 +132,13 @@ export class MenuSystem {
    * Mostra a tela de pause
    */
   showPauseScreen(): void {
+    const abilitiesGridHTML = this.generateAbilitiesGrid();
+    
     this.container.innerHTML = `
       <div class="menu-screen" id="pause-menu">
         <div class="menu-content">
           <h1 class="pause-title">PAUSADO</h1>
+          ${abilitiesGridHTML}
           <div class="menu-buttons">
             <button class="menu-button" id="resume-button">Continuar</button>
             <button class="menu-button secondary" id="menu-button">Menu Principal</button>
@@ -136,9 +147,9 @@ export class MenuSystem {
       </div>
     `;
 
-
     this.container.style.display = 'flex';
     this.setupPauseEvents();
+    this.setupAbilityTooltips();
   }
 
   /**
@@ -486,6 +497,195 @@ export class MenuSystem {
           margin-top: 10px;
         }
       }
+
+      /* Abilities Section Styles */
+      .abilities-section {
+        margin: 20px 0;
+        text-align: center;
+      }
+
+      .abilities-title {
+        color: #00ffff;
+        font-size: 1.2em;
+        margin: 0 0 15px 0;
+        text-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
+      }
+
+      .abilities-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(50px, 55px));
+        gap: 5px;
+        max-width: 400px;
+        margin: 0 auto;
+      }
+
+      .ability-item {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        cursor: pointer;
+        transition: transform 0.2s ease;
+      }
+
+      .ability-item:hover {
+        transform: scale(1.1);
+      }
+
+      .ability-icon {
+        width: 50px;
+        height: 50px;
+        border: 3px solid #3fa7ff;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5em;
+        background: rgba(0, 20, 40, 0.8);
+        box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+        margin-bottom: 5px;
+        position: relative;
+      }
+
+      .ability-level {
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        background: #ff4444;
+        color: white;
+        font-size: 0.5em;
+        font-weight: bold;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #fff;
+        z-index: 10;
+      }
+
+      .abilities-empty {
+        color: #888;
+        font-style: italic;
+        line-height: 1.6;
+      }
+
+      .abilities-empty p {
+        margin: 8px 0;
+      }
+
+      /* Tooltip Styles */
+      .ability-tooltip {
+        position: fixed;
+        background: rgba(0, 20, 40, 0.95);
+        border: 2px solid #00ffff;
+        border-radius: 8px;
+        padding: 12px;
+        color: white;
+        font-family: 'Courier New', monospace;
+        font-size: 0.9em;
+        max-width: 250px;
+        z-index: 2000;
+        display: none;
+        box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+      }
+
+      .tooltip-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+
+      .tooltip-icon {
+        font-size: 1.2em;
+      }
+
+      .tooltip-name {
+        font-weight: bold;
+        color: #00ffff;
+        flex: 1;
+      }
+
+      .tooltip-level {
+        background: #ff4444;
+        color: white;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 0.8em;
+      }
+
+      .tooltip-rarity {
+        font-weight: bold;
+        font-size: 0.8em;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 8px;
+      }
+
+      .tooltip-description {
+        color: #ccc;
+        line-height: 1.4;
+        margin-bottom: 8px;
+      }
+
+      .tooltip-effect {
+        color: #88ff88;
+        line-height: 1.4;
+        font-size: 0.85em;
+      }
+
+      /* Mobile Responsive for Abilities */
+      @media (max-width: 600px) {
+        .abilities-grid {
+          grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+          gap: 12px;
+          max-width: 300px;
+        }
+
+        .ability-icon {
+          width: 45px;
+          height: 45px;
+          font-size: 1.3em;
+        }
+
+        .ability-level {
+          top: -6px;
+          right: -6px;
+          width: 18px;
+          height: 18px;
+          font-size: 0.7em;
+        }
+
+        .ability-tooltip {
+          font-size: 0.8em;
+          max-width: 200px;
+          padding: 10px;
+        }
+      }
+
+      @media (max-width: 400px) {
+        .abilities-grid {
+          grid-template-columns: repeat(auto-fit, minmax(50px, 1fr));
+          gap: 10px;
+          max-width: 250px;
+        }
+
+        .ability-icon {
+          width: 40px;
+          height: 40px;
+          font-size: 1.1em;
+        }
+
+        .ability-level {
+          top: -5px;
+          right: -5px;
+          width: 16px;
+          height: 16px;
+          font-size: 0.6em;
+        }
+      }
     `;
     
     document.head.appendChild(style);
@@ -605,6 +805,152 @@ export class MenuSystem {
         });
       });
     }
+  }
+
+  /**
+   * Gera o HTML da grade de habilidades
+   */
+  private generateAbilitiesGrid(): string {
+    if (this.playerSkills.length === 0) {
+      return `
+        <div class="abilities-section">
+          <h3 class="abilities-title">Habilidades</h3>
+          <div class="abilities-empty">
+            <p>Nenhuma habilidade desbloqueada ainda.</p>
+            <p>Destrua inimigos para ganhar XP e subir de nível!</p>
+          </div>
+        </div>
+      `;
+    }
+
+    const skillsHTML = this.playerSkills.map(skill => {
+      const config = SKILLS_CONFIG[skill.type];
+      const rarity = SKILL_RARITY_MAP[skill.type] || 'rara';
+      const rarityColors = {
+        'rara': '#3fa7ff',
+        'epica': '#b86cff', 
+        'lendaria': '#ffd700'
+      };
+      const rarityColor = rarityColors[rarity];
+      
+      return `
+        <div class="ability-item" data-skill-type="${skill.type}">
+          <div class="ability-icon" style="border-color: ${rarityColor};">
+            ${config.icon || '⭐'}
+            <div class="ability-level">${skill.level}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <div class="abilities-section">
+        <h3 class="abilities-title">Habilidades Ativas</h3>
+        <div class="abilities-grid">
+          ${skillsHTML}
+        </div>
+      </div>
+    `;
+  }
+
+  /**
+   * Configura tooltips para as habilidades
+   */
+  private setupAbilityTooltips(): void {
+    const abilityItems = document.querySelectorAll('.ability-item');
+    const tooltip = this.createTooltip();
+    
+    abilityItems.forEach(item => {
+      const skillType = item.getAttribute('data-skill-type') as keyof typeof SKILLS_CONFIG;
+      if (!skillType) return;
+
+      const skill = this.playerSkills.find(s => s.type === skillType);
+      if (!skill) return;
+
+      const config = SKILLS_CONFIG[skillType];
+      const rarity = SKILL_RARITY_MAP[skillType];
+      const effect = config.effects[skill.level];
+      
+      const showTooltip = (e: Event) => {
+        const target = e.target as HTMLElement;
+        const rect = target.getBoundingClientRect();
+        
+        tooltip.innerHTML = `
+          <div class="tooltip-header">
+            <span class="tooltip-icon">${config.icon || '⭐'}</span>
+            <span class="tooltip-name">${config.name}</span>
+            <span class="tooltip-level">Nível ${skill.level}</span>
+          </div>
+          <div class="tooltip-rarity" style="color: ${this.getRarityColor(rarity)};">
+            ${this.getRarityLabel(rarity)}
+          </div>
+          <div class="tooltip-description">
+            ${config.description}
+          </div>
+          <div class="tooltip-effect">
+            <strong>Efeito atual:</strong> ${effect?.description || 'N/A'}
+          </div>
+        `;
+        
+        tooltip.style.display = 'block';
+        tooltip.style.left = `${rect.left + rect.width / 2}px`;
+        tooltip.style.top = `${rect.top - 10}px`;
+        tooltip.style.transform = 'translate(-50%, -100%)';
+      };
+      
+      const hideTooltip = () => {
+        tooltip.style.display = 'none';
+      };
+
+      // Desktop
+      item.addEventListener('mouseenter', showTooltip);
+      item.addEventListener('mouseleave', hideTooltip);
+      
+      // Mobile
+      item.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        showTooltip(e);
+        setTimeout(hideTooltip, 3000);
+      });
+    });
+  }
+
+  /**
+   * Cria elemento tooltip
+   */
+  private createTooltip(): HTMLElement {
+    let tooltip = document.getElementById('ability-tooltip');
+    if (!tooltip) {
+      tooltip = document.createElement('div');
+      tooltip.id = 'ability-tooltip';
+      tooltip.className = 'ability-tooltip';
+      document.body.appendChild(tooltip);
+    }
+    return tooltip;
+  }
+
+  /**
+   * Retorna a cor da raridade
+   */
+  private getRarityColor(rarity: string): string {
+    const colors = {
+      'rara': '#3fa7ff',
+      'epica': '#b86cff',
+      'lendaria': '#ffd700'
+    };
+    return colors[rarity as keyof typeof colors] || '#fff';
+  }
+
+  /**
+   * Retorna o label da raridade
+   */
+  private getRarityLabel(rarity: string): string {
+    const labels = {
+      'rara': 'Rara',
+      'epica': 'Épica', 
+      'lendaria': 'Lendária'
+    };
+    return labels[rarity as keyof typeof labels] || 'Comum';
   }
 
   /**
