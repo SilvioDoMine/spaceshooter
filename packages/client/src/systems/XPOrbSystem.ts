@@ -137,7 +137,7 @@ export class XPOrbSystem {
   
   private setupStateListeners(): void {
     this.eventBus.on('game:started', () => this.activate());
-    this.eventBus.on('game:paused', () => this.deactivate()); 
+    this.eventBus.on('game:paused', () => this.pause()); 
     this.eventBus.on('game:resumed', () => this.activate());
     this.eventBus.on('game:over', () => this.deactivate());
     this.eventBus.on('game:exit', () => this.deactivate());
@@ -145,6 +145,11 @@ export class XPOrbSystem {
   
   private activate(): void {
     this.isActive = true;
+  }
+  
+  private pause(): void {
+    // Only deactivate during pause, don't clear orbs
+    this.isActive = false;
   }
   
   private deactivate(): void {
