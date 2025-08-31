@@ -74,10 +74,24 @@ export class ProjectileSystem {
     maxRicochets: number = 0,
     isRicochet: boolean = false,
     ricochetLevel: number = 0,
-    noSkillTrigger: boolean = false
+    noSkillTrigger: boolean = false,
+    projectileConfig?: {
+      size?: number;
+      radius?: number;
+      color?: number;
+      lifetime?: number;
+    }
   ): string {
     const currentTime = Date.now();
     const projectileId = `projectile_${currentTime}_${Math.random()}`;
+
+    // Use configurações customizadas ou padrão
+    const config = {
+      size: projectileConfig?.size ?? PROJECTILE_CONFIG.size,
+      radius: projectileConfig?.radius ?? PROJECTILE_CONFIG.radius,
+      color: projectileConfig?.color ?? 0x00ffff, // Azul padrão
+      lifetime: projectileConfig?.lifetime ?? PROJECTILE_CONFIG.lifetime
+    };
 
     const projectileData: Projectile = {
       id: projectileId,
@@ -89,23 +103,35 @@ export class ProjectileSystem {
       noSkillTrigger
     };
 
-    const geometry = new THREE.SphereGeometry(PROJECTILE_CONFIG.size);
+    const geometry = new THREE.SphereGeometry(config.size);
 
-    let material = assetManager.getProjectileMaterial();
-    // Se for projétil fantasma, deixar translúcido
-    if (noSkillTrigger) {
-      material = material.clone();
-      if ('opacity' in material) {
-        (material as any).transparent = true;
-        (material as any).opacity = 0.35;
+    let material: THREE.Material;
+    if (projectileConfig?.color !== undefined) {
+      // Criar material com cor customizada
+      material = new THREE.MeshBasicMaterial({ 
+        color: config.color,
+        transparent: noSkillTrigger,
+        opacity: noSkillTrigger ? 0.35 : 1.0
+      });
+    } else {
+      // Usar material padrão do jogador
+      material = assetManager.getProjectileMaterial();
+      // Se for projétil fantasma, deixar translúcido
+      if (noSkillTrigger) {
+        material = material.clone();
+        if ('opacity' in material) {
+          (material as any).transparent = true;
+          (material as any).opacity = 0.35;
+        }
       }
     }
+    
     const projectileMesh = new THREE.Mesh(geometry, material);
     projectileMesh.position.set(position.x, position.y, 0);
 
     // Create collision visualizer for projectile
     const collisionVisualizer = CollisionDebugHelper.createCollisionVisualizer(
-      PROJECTILE_CONFIG.size
+      config.size
     );
     collisionVisualizer.position.set(position.x, position.y, 0);
     // Set initial visibility based on current debug state
@@ -135,7 +161,7 @@ export class ProjectileSystem {
       object: projectileMesh,
       data: projectileData,
       collisionVisualizer: collisionVisualizer,
-      lifetime: PROJECTILE_CONFIG.lifetime / 1000, // Convert milliseconds to seconds
+      lifetime: config.lifetime / 1000, // Convert milliseconds to seconds
       ricochetCount,
       maxRicochets,
       isRicochet,
@@ -196,6 +222,9 @@ export class ProjectileSystem {
   private checkCollisions(projectile: ProjectileData): void {
     if (projectile.data.ownerId === 'player') {
       this.checkEnemyCollisions(projectile);
+    } else {
+      // Projétil de inimigo - verifica colisão com jogador
+      this.checkPlayerCollisions(projectile);
     }
   }
 
@@ -206,6 +235,16 @@ export class ProjectileSystem {
       damage: projectile.data.damage,
       radius: PROJECTILE_CONFIG.size,
       noSkillTrigger: projectile.data.noSkillTrigger || false
+    });
+  }
+
+  private checkPlayerCollisions(projectile: ProjectileData): void {
+    this.eventBus.emit('collision:projectile-player', {
+      projectileId: projectile.id,
+      position: projectile.data.position,
+      damage: projectile.data.damage,
+      radius: projectile.object.geometry.parameters?.radius || 0.1,
+      ownerId: projectile.data.ownerId
     });
   }
 

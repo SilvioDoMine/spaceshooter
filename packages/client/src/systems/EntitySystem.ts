@@ -71,6 +71,14 @@ export class EntitySystem {
     this.eventBus.on('collision:powerup-player', (data) => {
       this.handlePowerUpPlayerCollision(data);
     });
+
+    this.eventBus.on('entity:shoot', (data) => {
+      this.handleEntityShoot(data);
+    });
+
+    this.eventBus.on('collision:projectile-player', (data) => {
+      this.handleProjectilePlayerCollision(data);
+    });
   }
 
   private startGame(): void {
@@ -452,6 +460,52 @@ export class EntitySystem {
       } catch (error) {
         console.error('❌ Error spawning boss:', error);
       }
+    }
+  }
+
+  private handleEntityShoot(data: any): void {
+    const { ownerId, position, velocity, damage, config } = data;
+    
+    this.projectileSystem.createProjectile(
+      ownerId,
+      position,
+      velocity,
+      damage,
+      0, // ricochetCount
+      0, // maxRicochets
+      false, // isRicochet
+      0, // ricochetLevel
+      false, // noSkillTrigger
+      config // projectileConfig
+    );
+  }
+
+  private handleProjectilePlayerCollision(data: any): void {
+    if (!this.player) return;
+
+    const playerPos = this.player.getPosition();
+    const playerCollisionShape = this.player.getCollisionShape();
+    
+    // Use compound-circle collision detection (player as compound shape, projectile as circle)
+    const hasCollision = CollisionUtils.checkCompoundCircleCollision(
+      playerPos,
+      playerCollisionShape,
+      data.position,
+      data.radius
+    );
+
+    if (hasCollision) {
+      // Remove o projétil
+      this.projectileSystem.removeProjectile(data.projectileId);
+      
+      // Apply damage to player
+      const isDead = this.player.takeDamage(data.damage);
+      if (isDead) {
+        console.log('💀 Player died from enemy projectile, EntitySystem deactivating...');
+        this.isActive = false;
+      }
+      
+      console.log(`🎯 Player hit by projectile from ${data.ownerId} for ${data.damage} damage`);
     }
   }
 

@@ -249,7 +249,23 @@ export const PLAYER_CONFIG = {
 };
 
 /**
- * Configurações dos projéteis
+ * Interface para configuração de projéteis de entidades
+ */
+export interface ProjectileConfig {
+  speed: number;            // Velocidade de movimento (unidades/segundo)
+  damage: number;          // Dano causado
+  lifetime: number;        // Tempo de vida em milliseconds
+  size: number;            // Raio visual
+  radius: number;          // Raio da hitbox
+  color: number;           // Cor hexadecimal
+  cooldown: number;        // Tempo entre tiros em segundos
+  canShoot?: boolean;      // Se a entidade pode atirar
+  shootRange?: number;     // Alcance para atirar (null = sem limite)
+  targetType?: 'player' | 'enemy'; // Tipo de alvo que atira
+}
+
+/**
+ * Configurações dos projéteis do jogador (padrão)
  * 
  * Define comportamento padrão dos projéteis do jogador:
  * - speed: Velocidade de movimento (unidades/segundo)
@@ -291,7 +307,11 @@ export const ENEMY_CONFIG = {
     color: 0xff4444,        // Vermelho
     spawnRate: 1000,        // A cada 2 segundos
     xpDrop: 10,             // XP dado quando morto
-    xpOrbCount: 10          // Número de orbes de XP que dropa
+    xpOrbCount: 10,         // Número de orbes de XP que dropa
+    // Não atira por enquanto
+    projectile: {
+      canShoot: false
+    } as Partial<ProjectileConfig>
   },
   fast: {
     health: 10,             // 1 hit para destruir
@@ -301,7 +321,11 @@ export const ENEMY_CONFIG = {
     color: 0xff8800,        // Laranja
     spawnRate: 1500,        // A cada 3 segundos
     xpDrop: 8,              // XP dado quando morto
-    xpOrbCount: 5           // Poucos orbes, mas rápido de matar
+    xpOrbCount: 5,          // Poucos orbes, mas rápido de matar
+    // Não atira por enquanto
+    projectile: {
+      canShoot: false
+    } as Partial<ProjectileConfig>
   },
   heavy: {
     health: 50,             // 5 hits para destruir
@@ -311,7 +335,20 @@ export const ENEMY_CONFIG = {
     color: 0x8844ff,        // Roxo
     spawnRate: 2500,        // A cada 5 segundos
     xpDrop: 25,             // XP dado quando morto
-    xpOrbCount: 15          // Muitos orbes para recompensa visual
+    xpOrbCount: 15,         // Muitos orbes para recompensa visual
+    // Heavy atira projéteis pequenos e rápidos
+    projectile: {
+      canShoot: true,
+      speed: 12,            // Rápido
+      damage: 15,           // Dano médio
+      lifetime: 4000,       // 4 segundos
+      size: 0.08,           // Projétil pequeno
+      radius: 0.06,         // Hitbox pequena
+      color: 0x8800ff,      // Roxo como o inimigo
+      cooldown: 3.0,        // Atira a cada 3 segundos
+      shootRange: 6.0,      // Só atira se jogador estiver próximo
+      targetType: 'player'  // Atira no jogador
+    } as ProjectileConfig
   },
   boss: {
     health: 2000,            // 50 hits para destruir - muito resistente
@@ -321,7 +358,20 @@ export const ENEMY_CONFIG = {
     color: 0xff0080,        // Rosa/Magenta para diferenciação
     spawnRate: 60000,       // A cada 60 segundos (muito raro)
     xpDrop: 200,            // Muito XP
-    xpOrbCount: 200          // Muitos orbes de XP
+    xpOrbCount: 200,        // Muitos orbes de XP
+    // Boss atira projéteis grandes e lentos
+    projectile: {
+      canShoot: true,
+      speed: 8,             // Mais lento que do jogador
+      damage: 25,           // Dano alto
+      lifetime: 5000,       // 5 segundos
+      size: 0.2,            // Projétil grande
+      radius: 0.15,         // Hitbox maior
+      color: 0xff0040,      // Vermelho escuro
+      cooldown: 2.0,        // Atira a cada 2 segundos
+      shootRange: 8.0,      // Só atira se jogador estiver próximo
+      targetType: 'player'  // Atira no jogador
+    } as ProjectileConfig
   }
 };
 

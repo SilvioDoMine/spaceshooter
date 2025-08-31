@@ -15,6 +15,9 @@ export class Enemy extends Entity {
   private healthBarGroup?: THREE.Group;
   private healthBarBackground?: THREE.Mesh;
   private healthBarForeground?: THREE.Mesh;
+  
+  // Sistema de tiro
+  private lastShotTime: number = 0;
 
   constructor(
     eventBus: EventBus,
@@ -98,6 +101,9 @@ export class Enemy extends Entity {
 
     // Atualiza posição da barra de vida
     this.updateHealthBarPosition();
+
+    // Sistema de tiro (se configurado)
+    this.tryShoot(deltaTime);
 
     this.checkPlayerCollision();
   }
@@ -363,6 +369,74 @@ export class Enemy extends Entity {
     // Remove a barra de vida ao destruir o inimigo
     this.hideHealthBar();
     this.eventBus.emit('scene:remove-object', { object: this.object });
+  }
+
+  private tryShoot(deltaTime: number): void {
+    // Verifica se essa entidade pode atirar
+    const projectileConfig = this.config.projectile;
+    if (!projectileConfig || !projectileConfig.canShoot) {
+      return;
+    }
+
+    const currentTime = Date.now() / 1000; // em segundos
+    const cooldownTime = projectileConfig.cooldown || 2.0;
+
+    // Verifica cooldown
+    if (currentTime - this.lastShotTime < cooldownTime) {
+      return;
+    }
+
+    // Busca o jogador
+    const game = (window as any).game;
+    if (!game || typeof game.getEntitySystem !== 'function') {
+      return;
+    }
+
+    const entitySystem = game.getEntitySystem();
+    if (!entitySystem || typeof entitySystem.getPlayer !== 'function') {
+      return;
+    }
+
+    const player = entitySystem.getPlayer();
+    if (!player || typeof player.getPosition !== 'function') {
+      return;
+    }
+
+    const playerPos = player.getPosition();
+    const dx = playerPos.x - this.position.x;
+    const dy = playerPos.y - this.position.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    // Verifica se está dentro do alcance
+    if (projectileConfig.shootRange && distance > projectileConfig.shootRange) {
+      return;
+    }
+
+    // Calcula direção para o jogador
+    if (distance > 0.01) {
+      const speed = projectileConfig.speed || 8;
+      const velocity = {
+        x: (dx / distance) * speed,
+        y: (dy / distance) * speed
+      };
+
+      // Cria o projétil
+      this.eventBus.emit('entity:shoot', {
+        ownerId: this.id,
+        position: { x: this.position.x, y: this.position.y },
+        velocity: velocity,
+        damage: projectileConfig.damage || 10,
+        config: {
+          size: projectileConfig.size,
+          radius: projectileConfig.radius,
+          color: projectileConfig.color,
+          lifetime: projectileConfig.lifetime
+        }
+      });
+
+      this.lastShotTime = currentTime;
+      console.log(`💥 ${this.enemyType} shot at player! Distance: ${distance.toFixed(2)}`);
+    }
   }
 
   public static spawnEnemy(eventBus: EventBus): Enemy {
