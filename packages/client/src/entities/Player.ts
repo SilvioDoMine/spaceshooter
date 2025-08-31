@@ -409,8 +409,20 @@ export class Player extends Entity {
     // Update invulnerability timer
     if (this.isInvulnerable) {
       this.invulnerabilityTimer -= deltaTime;
+      
+      // Efeito visual de piscar durante invulnerabilidade
+      const blinkRate = 8; // 8 piscadas por segundo
+      const blinkCycle = Math.sin(Date.now() * blinkRate * 0.01) > 0;
+      if (this.playerShipModel) {
+        this.playerShipModel.visible = blinkCycle;
+      }
+      
       if (this.invulnerabilityTimer <= 0) {
         this.isInvulnerable = false;
+        // Restaurar visibilidade normal
+        if (this.playerShipModel) {
+          this.playerShipModel.visible = true;
+        }
         console.log('🛡️ Invulnerability ended');
       }
     }
@@ -708,11 +720,16 @@ export class Player extends Entity {
     this.stats.health = Math.max(0, this.stats.health - damage);
     this.updateUI();
     
+    // Ativar grace period de invulnerabilidade (1 segundo)
+    this.setInvulnerable(1.0);
+    
     this.eventBus.emit('audio:play', { soundId: 'hit', options: { volume: 0.5 } });
     
     this.eventBus.emit('particles:hit', {
       position: { x: this.position.x, y: this.position.y, z: 0 }
     });
+
+    console.log(`💥 Player took ${damage} damage! Health: ${this.stats.health}/${this.stats.maxHealth} (Grace period: 1s)`);
 
     if (this.stats.health <= 0) {
       this.onDeath();
