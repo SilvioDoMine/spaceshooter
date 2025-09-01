@@ -193,6 +193,10 @@ export class ProjectileSystem {
         return;
       }
 
+      // Store previous position for continuous collision detection
+      const previousPosition = { ...data.position };
+
+      // Update position
       data.position.x += data.velocity.x * deltaTime;
       data.position.y += data.velocity.y * deltaTime;
 
@@ -208,7 +212,8 @@ export class ProjectileSystem {
         return;
       }
 
-      this.checkCollisions(projectile);
+      // Use continuous collision detection to prevent tunneling
+      this.checkContinuousCollisions(projectile, previousPosition);
     });
 
     toRemove.forEach(id => this.removeProjectile(id));
@@ -228,6 +233,14 @@ export class ProjectileSystem {
     }
   }
 
+  private checkContinuousCollisions(projectile: ProjectileData, previousPosition: Position): void {
+    if (projectile.data.ownerId === 'player') {
+      this.checkEnemyContinuousCollisions(projectile, previousPosition);
+    } else {
+      this.checkPlayerContinuousCollisions(projectile, previousPosition);
+    }
+  }
+
   private checkEnemyCollisions(projectile: ProjectileData): void {
     this.eventBus.emit('collision:projectile-enemy', {
       projectileId: projectile.id,
@@ -242,6 +255,30 @@ export class ProjectileSystem {
     this.eventBus.emit('collision:projectile-player', {
       projectileId: projectile.id,
       position: projectile.data.position,
+      damage: projectile.data.damage,
+      radius: projectile.object.geometry.parameters?.radius || 0.1,
+      ownerId: projectile.data.ownerId
+    });
+  }
+
+  private checkEnemyContinuousCollisions(projectile: ProjectileData, previousPosition: Position): void {
+    // Emit continuous collision event with both positions
+    this.eventBus.emit('collision:projectile-enemy-continuous', {
+      projectileId: projectile.id,
+      startPosition: previousPosition,
+      endPosition: projectile.data.position,
+      damage: projectile.data.damage,
+      radius: PROJECTILE_CONFIG.size,
+      noSkillTrigger: projectile.data.noSkillTrigger || false
+    });
+  }
+
+  private checkPlayerContinuousCollisions(projectile: ProjectileData, previousPosition: Position): void {
+    // Emit continuous collision event with both positions for enemy projectiles
+    this.eventBus.emit('collision:projectile-player-continuous', {
+      projectileId: projectile.id,
+      startPosition: previousPosition,
+      endPosition: projectile.data.position,
       damage: projectile.data.damage,
       radius: projectile.object.geometry.parameters?.radius || 0.1,
       ownerId: projectile.data.ownerId

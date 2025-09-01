@@ -211,6 +211,28 @@ export type GameEventMap = {
   // Motivo: Sistema de colisão verificar impacto entre projétil e inimigos
   'collision:projectile-enemy': { projectileId: string; position: { x: number; y: number }; damage: number; radius: number; noSkillTrigger?: boolean };
   
+  // Emitido em: ProjectileSystem para continuous collision detection
+  // Motivo: Verificar colisão ao longo do caminho para evitar tunneling
+  'collision:projectile-enemy-continuous': { 
+    projectileId: string; 
+    startPosition: { x: number; y: number }; 
+    endPosition: { x: number; y: number }; 
+    damage: number; 
+    radius: number; 
+    noSkillTrigger?: boolean 
+  };
+  
+  // Emitido em: ProjectileSystem para continuous collision detection de projéteis de inimigos
+  // Motivo: Verificar colisão de projéteis de inimigos com player ao longo do caminho
+  'collision:projectile-player-continuous': {
+    projectileId: string;
+    startPosition: { x: number; y: number };
+    endPosition: { x: number; y: number };
+    damage: number;
+    radius: number;
+    ownerId: string;
+  };
+  
   // Emitido em: ProjectileSystem quando projétil acerta um alvo
   // Motivo: Alvo precisa processar dano recebido
   'projectile:hit': { targetId: string; damage: number };
@@ -389,6 +411,8 @@ export class EventBus {
     'renderer:register-ui-scene',
     'collision:check',
     'collision:projectile-enemy',
+    'collision:projectile-enemy-continuous',
+    'collision:projectile-player-continuous',
     'collision:powerup-player',
     'entity:shoot',
     'debug:update',

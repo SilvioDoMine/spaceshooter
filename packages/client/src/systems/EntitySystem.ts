@@ -64,6 +64,28 @@ export class EntitySystem {
     this.eventBus.on('collision:projectile-enemy', (data: { projectileId: string; position: { x: number; y: number }; damage: number; radius: number; noSkillTrigger?: boolean }) => {
       this.handleProjectileEnemyCollision(data);
     });
+    
+    this.eventBus.on('collision:projectile-enemy-continuous', (data: { 
+      projectileId: string; 
+      startPosition: { x: number; y: number }; 
+      endPosition: { x: number; y: number }; 
+      damage: number; 
+      radius: number; 
+      noSkillTrigger?: boolean 
+    }) => {
+      this.handleProjectileEnemyContinuousCollision(data);
+    });
+    
+    this.eventBus.on('collision:projectile-player-continuous', (data: {
+      projectileId: string;
+      startPosition: { x: number; y: number };
+      endPosition: { x: number; y: number };
+      damage: number;
+      radius: number;
+      ownerId: string;
+    }) => {
+      this.handleProjectilePlayerContinuousCollision(data);
+    });
 
     this.eventBus.on('collision:powerup-player', (data) => {
       this.handlePowerUpPlayerCollision(data);
@@ -474,6 +496,129 @@ export class EntitySystem {
 
   public getActiveBoss(): Enemy | null {
     return this.waveSystem.getActiveBoss();
+  }
+
+  private handleProjectileEnemyContinuousCollision(data: { 
+    projectileId: string; 
+    startPosition: { x: number; y: number }; 
+    endPosition: { x: number; y: number }; 
+    damage: number; 
+    radius: number; 
+    noSkillTrigger?: boolean 
+  }): void {
+    // Use continuous collision detection to find closest enemy that collides with projectile
+    const collision = CollisionUtils.findClosestContinuousCollision(
+      data.startPosition,
+      data.endPosition,
+      data.radius,
+      this.enemies,
+      (enemy) => enemy.getRadius()
+    );
+
+    if (collision) {
+      const hitEnemy = collision.target;
+      const hitEnemyId = collision.id!;
+      const isDead = hitEnemy.takeDamage(data.damage);
+
+      // Execute the same logic as regular collision but without double skill effects
+      // Remove projectile and trigger effects
+      this.projectileSystem.removeProjectile(data.projectileId);
+      this.projectileSystem.handleProjectileHit(data.projectileId, hitEnemyId);
+
+      // Sound and particle effects
+      this.eventBus.emit('audio:play', { soundId: 'hit', options: { volume: 0.3 } });
+      this.eventBus.emit('particles:hit', {
+        position: { x: hitEnemy.getPosition().x, y: hitEnemy.getPosition().y, z: 0 }
+      });
+
+      // Handle skills if not a skill-triggered projectile
+      if (!data.noSkillTrigger && this.player) {
+        this.handleProjectileSkillEffects(hitEnemy, hitEnemyId, isDead, data);
+      }
+
+      console.log(`🎯 Projectile ${data.projectileId} hit ${hitEnemyId} (continuous) for ${data.damage} damage`);
+    }
+  }
+
+  private handleProjectilePlayerContinuousCollision(data: {
+    projectileId: string;
+    startPosition: { x: number; y: number };
+    endPosition: { x: number; y: number };
+    damage: number;
+    radius: number;
+    ownerId: string;
+  }): void {
+    if (!this.player) return;
+
+    const playerPos = this.player.getPosition();
+    const playerCollisionShape = this.player.getCollisionShape();
+
+    // Check continuous collision along the projectile's path against compound player shape
+    // For now, we'll use a simplified approach with player radius
+    const playerRadius = this.player.getRadius();
+    
+    if (CollisionUtils.checkContinuousCollision(
+      data.startPosition,
+      data.endPosition,
+      data.radius,
+      playerPos,
+      playerRadius
+    )) {
+      // Remove projectile
+      this.projectileSystem.removeProjectile(data.projectileId);
+
+      // Player takes damage
+      const isDead = this.player.takeDamage(data.damage);
+      if (isDead) {
+        console.log('💀 Player died from enemy projectile continuous collision, EntitySystem deactivating...');
+        this.isActive = false;
+      }
+
+      console.log(`🎯 Player hit by projectile (continuous) from ${data.ownerId} for ${data.damage} damage`);
+
+      this.eventBus.emit('audio:play', { soundId: 'hit', options: { volume: 0.3 } });
+      this.eventBus.emit('particles:hit', {
+        position: { x: playerPos.x, y: playerPos.y, z: 0 }
+      });
+    }
+  }
+
+  private handleProjectileSkillEffects(hitEnemy: any, hitEnemyId: string, isDead: boolean, data: any): void {
+    // --- Skill: Tri Shot ---
+    if (
+      this.player &&
+      this.player.getSkillLevel &&
+      this.player.getSkillLevel('tri_shot') > 0
+    ) {
+      const enemyPos = hitEnemy.getPosition();
+      const dx = enemyPos.x - data.endPosition.x; // Use end position for tri-shot
+      const dy = enemyPos.y - data.endPosition.y;
+      const baseAngle = Math.atan2(dy, dx);
+      const projectileSpeed = PROJECTILE_CONFIG.speed;
+      const angles = [0, Math.PI / 3, -Math.PI / 3];
+      
+      angles.forEach(offset => {
+        const angle = baseAngle + offset;
+        const velocity = {
+          x: Math.cos(angle) * projectileSpeed,
+          y: Math.sin(angle) * projectileSpeed
+        };
+
+        // Create tri-shot projectile
+        this.projectileSystem.createProjectile(
+          'player',
+          { x: enemyPos.x, y: enemyPos.y },
+          velocity,
+          data.damage,
+          0, 0, false, 0,
+          true, // noSkillTrigger to prevent infinite loops
+          { lifetime: 2000 }
+        );
+      });
+    }
+
+    // --- Skill: Ricochet --- (similar implementation)
+    // Add other skill effects as needed...
   }
 
   public dispose(): void {

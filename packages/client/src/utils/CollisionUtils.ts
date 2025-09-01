@@ -265,4 +265,94 @@ export class CollisionUtils {
       };
     });
   }
+
+  /**
+   * Continuous Collision Detection - verifica colisão ao longo do caminho do movimento
+   * Resolve o problema de "tunneling" quando objetos se movem rápido
+   * @param startPos Posição inicial
+   * @param endPos Posição final
+   * @param movingRadius Raio do objeto em movimento
+   * @param targetPos Posição do alvo estático
+   * @param targetRadius Raio do alvo estático
+   * @returns true se houve colisão durante o movimento
+   */
+  public static checkContinuousCollision(
+    startPos: Position,
+    endPos: Position,
+    movingRadius: number,
+    targetPos: Position,
+    targetRadius: number
+  ): boolean {
+    // Vetor de movimento
+    const moveX = endPos.x - startPos.x;
+    const moveY = endPos.y - startPos.y;
+    const moveDistance = Math.sqrt(moveX * moveX + moveY * moveY);
+    
+    // Se não houve movimento, usar detecção normal
+    if (moveDistance < 0.001) {
+      return this.checkCircularCollision(startPos, movingRadius, targetPos, targetRadius);
+    }
+    
+    // Vetor normalizado do movimento
+    const moveUnitX = moveX / moveDistance;
+    const moveUnitY = moveY / moveDistance;
+    
+    // Vetor do início do movimento até o alvo
+    const toTargetX = targetPos.x - startPos.x;
+    const toTargetY = targetPos.y - startPos.y;
+    
+    // Projeção do vetor até o alvo no vetor de movimento
+    const projection = toTargetX * moveUnitX + toTargetY * moveUnitY;
+    
+    // Clamp a projeção para o segmento de movimento
+    const clampedProjection = Math.max(0, Math.min(moveDistance, projection));
+    
+    // Ponto mais próximo no caminho de movimento
+    const closestPointX = startPos.x + moveUnitX * clampedProjection;
+    const closestPointY = startPos.y + moveUnitY * clampedProjection;
+    
+    // Distância do alvo ao ponto mais próximo no caminho
+    const distanceToPath = Math.sqrt(
+      (targetPos.x - closestPointX) ** 2 + (targetPos.y - closestPointY) ** 2
+    );
+    
+    // Houve colisão se a distância for menor que a soma dos raios
+    return distanceToPath <= (movingRadius + targetRadius);
+  }
+
+  /**
+   * Encontra a entidade mais próxima que colide com um objeto em movimento
+   * Usa continuous collision detection para evitar tunneling
+   */
+  public static findClosestContinuousCollision<T extends { getPosition(): Position }>(
+    startPos: Position,
+    endPos: Position,
+    sourceRadius: number,
+    targets: Map<string, T> | T[],
+    getRadius: (target: T) => number
+  ): { target: T; id?: string; distance: number } | null {
+    let closestCollision: { target: T; id?: string; distance: number } | null = null;
+    let minDistance = Infinity;
+
+    const checkTarget = (target: T, id?: string) => {
+      const targetPos = target.getPosition();
+      const targetRadius = getRadius(target);
+      
+      if (this.checkContinuousCollision(startPos, endPos, sourceRadius, targetPos, targetRadius)) {
+        const distance = this.getDistance(startPos, targetPos);
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestCollision = { target, id, distance };
+        }
+      }
+    };
+
+    if (targets instanceof Map) {
+      targets.forEach((target, id) => checkTarget(target, id));
+    } else {
+      targets.forEach((target, index) => checkTarget(target, index.toString()));
+    }
+
+    return closestCollision;
+  }
 }
