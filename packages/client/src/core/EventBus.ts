@@ -190,7 +190,7 @@ export type GameEventMap = {
   
   // Emitido em: Enemy.ts quando inimigo é destruído
   // Motivo: EntitySystem dar pontos e XP ao jogador
-  'enemy:destroyed': { points: number; xp: number; xpOrbCount: number; enemyType: string; enemyId: string; position: { x: number; y: number; z: number } };
+  'enemy:destroyed': { points: number; xp: number; enemyType: string; enemyId: string; position: { x: number; y: number; z: number } };
 
   // Emitido em: Enemy.ts quando inimigo atira
   // Motivo: EntitySystem criar projétil do inimigo através do ProjectileSystem

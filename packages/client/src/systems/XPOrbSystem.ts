@@ -103,10 +103,9 @@ export class XPOrbSystem {
   private glowGeometry!: THREE.SphereGeometry;
   
   // Configuration
-  private readonly MERGE_DISTANCE = 0.8; // Distance for auto-merge (mais restritivo)
+  private readonly MERGE_DISTANCE = 0.0; // Distance for auto-merge (mais restritivo)
   private readonly COLLECT_DISTANCE = 0.8; // Distance for collection (igual aos power ups)
   private readonly GRID_SIZE = 4; // Spatial grid cell size
-  private readonly MAX_ORBS_PER_AREA = 50; // Max orbs before forced merge
   // Removed MAX_ORBS_PER_ENEMY - now controlled by enemy configuration
   
   // Color tiers
@@ -165,9 +164,10 @@ export class XPOrbSystem {
     
     // Listen for enemy deaths to create orbs
     this.eventBus.on('enemy:destroyed', (data) => {
-      if (data.position && data.xp && data.xpOrbCount) {
+      if (data.position && data.xp) {
         const basePosition = new THREE.Vector3(data.position.x, data.position.y, data.position.z);
-        this.createMultipleXPOrbs(basePosition, data.xp, data.xpOrbCount);
+        // Create one orb per XP point (1 orb = 1 XP)
+        this.createMultipleXPOrbs(basePosition, data.xp, data.xp);
       }
     });
     
@@ -188,8 +188,8 @@ export class XPOrbSystem {
   createMultipleXPOrbs(basePosition: THREE.Vector3, totalXP: number, orbCount: number): void {
     if (!this.isActive) return;
     
-    // Calculate XP per orb based on what the enemy configured
-    const xpPerOrb = Math.ceil(totalXP / orbCount);
+    // Each orb should have exactly 1 XP
+    const xpPerOrb = 1;
     
     // Random spread patterns for variety
     const randomPattern = Math.random();
@@ -303,22 +303,6 @@ export class XPOrbSystem {
     return nearby;
   }
   
-  private findBestMergeTarget(nearbyOrbs: XPOrb[], newXP: number): XPOrb | null {
-    const newTier = this.getTierByXP(newXP);
-    
-    // Prefer orbs of the same tier, then lower tiers
-    const sameTierOrbs = nearbyOrbs.filter(orb => orb.tier === newTier);
-    if (sameTierOrbs.length > 0) {
-      return sameTierOrbs[0];
-    }
-    
-    const lowerTierOrbs = nearbyOrbs.filter(orb => orb.tier < newTier);
-    if (lowerTierOrbs.length > 0) {
-      return lowerTierOrbs[0];
-    }
-    
-    return nearbyOrbs[0];
-  }
   
   private mergeOrbs(targetOrb: XPOrb, additionalXP: number): void {
     const oldTier = targetOrb.tier;

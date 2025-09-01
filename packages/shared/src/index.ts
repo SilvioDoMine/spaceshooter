@@ -289,6 +289,14 @@ export const PROJECTILE_CONFIG = {
 };
 
 /**
+ * Interface para ranges de XP aleatórios
+ */
+export interface XPRange {
+  min: number;
+  max: number;
+}
+
+/**
  * Calcula o lifetime do projétil baseado no range do player
  * Para que o projétil expire quando sair da área de targeting
  */
@@ -323,8 +331,7 @@ export const ENEMY_CONFIG = {
     radius: 0.25,           // Raio da hitbox
     color: 0xff4444,        // Vermelho
     spawnRate: 1000,        // A cada 1 segundo
-    xpDrop: 10,             // XP dado quando morto
-    xpOrbCount: 10,         // Número de orbes de XP que dropa
+    xpRange: { min: 8, max: 15 }, // XP aleatório entre 8-15
     diesOnPlayerCollision: false,
     // Não atira por enquanto
     projectile: {
@@ -335,11 +342,10 @@ export const ENEMY_CONFIG = {
     health: 10,             // 1 hit para destruir
     speed: 0.8,             // Mais rápido
     size: 0.2,              // Tamanho visual
-    radius: 0.175,            // Raio da hitbox (menor)
+    radius: 0.175,          // Raio da hitbox (menor)
     color: 0xff8800,        // Laranja
     spawnRate: 8000,        // A cada 8 segundos
-    xpDrop: 8,              // XP dado quando morto
-    xpOrbCount: 5,          // Poucos orbes, mas rápido de matar
+    xpRange: { min: 5, max: 12 }, // XP aleatório entre 5-12 (rápido de matar, menos XP)
     diesOnPlayerCollision: true,
     // Não atira por enquanto
     projectile: {
@@ -350,11 +356,10 @@ export const ENEMY_CONFIG = {
     health: 50,             // 5 hits para destruir
     speed: 0.1,             // Mais lento
     size: 0.5,              // Tamanho visual
-    radius: 0.4,           // Raio da hitbox (maior)
+    radius: 0.4,            // Raio da hitbox (maior)
     color: 0x8844ff,        // Roxo
-    spawnRate: 20000,        // A cada 20 segundos
-    xpDrop: 25,             // XP dado quando morto
-    xpOrbCount: 15,         // Muitos orbes para recompensa visual
+    spawnRate: 20000,       // A cada 20 segundos
+    xpRange: { min: 20, max: 35 }, // XP aleatório entre 20-35 (difícil de matar, mais XP)
     diesOnPlayerCollision: false,
     // Heavy atira projéteis pequenos e rápidos
     projectile: {
@@ -377,8 +382,7 @@ export const ENEMY_CONFIG = {
     radius: 1.0,            // Hitbox maior
     color: 0xff0080,        // Rosa/Magenta para diferenciação
     spawnRate: 60000,       // A cada 60 segundos (muito raro)
-    xpDrop: 200,            // Muito XP
-    xpOrbCount: 200,        // Muitos orbes de XP
+    xpRange: { min: 150, max: 250 }, // XP aleatório entre 150-250 (boss recompensa alta)
     diesOnPlayerCollision: false,
     // Boss atira projéteis grandes e lentos
     projectile: {
@@ -390,7 +394,7 @@ export const ENEMY_CONFIG = {
       radius: 0.07,         // Hitbox maior
       color: 0xff0040,      // Vermelho escuro
       cooldown: 2.0,        // Atira a cada 2 segundos
-      shootRange: 5,      // Só atira se jogador estiver próximo
+      shootRange: 5,        // Só atira se jogador estiver próximo
       targetType: 'player'  // Atira no jogador
     } as ProjectileConfig
   }

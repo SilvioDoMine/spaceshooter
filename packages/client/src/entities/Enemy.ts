@@ -265,13 +265,14 @@ export class Enemy extends Entity {
 
   private onDeath(): void {
     const scorePoints = this.getScoreValue();
-    const xpReward = this.config.xpDrop;
+    // Generate random XP from the configured range
+    const xpRange = this.config.xpRange;
+    const xpReward = Math.floor(Math.random() * (xpRange.max - xpRange.min + 1)) + xpRange.min;
     
     // Emit enemy death event - other systems will handle score/rewards
     this.eventBus.emit('enemy:destroyed', { 
       points: scorePoints,
       xp: xpReward,
-      xpOrbCount: this.config.xpOrbCount,
       enemyType: this.enemyType,
       enemyId: this.id,
       position: { x: this.position.x, y: this.position.y, z: 0 }
