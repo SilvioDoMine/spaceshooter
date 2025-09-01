@@ -36,8 +36,22 @@ export class HudSystem {
     };
 
     this.setupEventListeners();
+    // Garante barra zerada ao iniciar
+    if (this.elements.levelProgressFill) {
+      this.elements.levelProgressFill.style.width = '0%';
+    }
     this.updateDisplay();
-    
+    // Escuta eventos de UI para manter sincronizado com UISystem
+    this.eventBus.on('ui:update-level', (data: { level: number; currentXP: number; xpToNext: number; progress: number }) => {
+      this.gameState.level = data.level;
+      this.gameState.experience = data.currentXP;
+      this.gameState.experienceToNext = data.xpToNext;
+      this.updateLevelDisplay();
+      // Sempre seta width diretamente, sem animar do valor anterior
+      if (this.elements.levelProgressFill) {
+        this.elements.levelProgressFill.style.width = `${Math.max(0, Math.min(data.progress, 100))}%`;
+      }
+    });
     console.log('🎮 HUD System initialized');
   }
 
@@ -48,15 +62,17 @@ export class HudSystem {
     });
 
     // Game state updates
-    this.eventBus.on('player:level-changed', (data) => {
-      this.gameState.level = data.level;
-      this.updateLevelDisplay();
+    this.eventBus.on('player:level-changed', async (data) => {
+  // Antes de atualizar o nível, anima a barra até 100% se necessário
+  // (Removido: updateLevelProgressDisplay não existe mais, só ui:update-level controla a barra)
+  this.gameState.level = data.level;
+  this.updateLevelDisplay();
     });
 
     this.eventBus.on('player:experience-changed', (data) => {
-      this.gameState.experience = data.experience;
-      this.gameState.experienceToNext = data.experienceToNext;
-      this.updateLevelProgressDisplay();
+  this.gameState.experience = data.experience;
+  this.gameState.experienceToNext = data.experienceToNext;
+  // updateLevelProgressDisplay removido, agora só ui:update-level controla a barra
     });
 
     this.eventBus.on('player:ammo-changed', (data) => {
@@ -111,15 +127,14 @@ export class HudSystem {
 
   private togglePause(): void {
     if (this.gameState.isPaused) {
-      this.eventBus.emit('game:resume');
+      this.eventBus.emit('game:resume', {});
     } else {
-      this.eventBus.emit('game:pause');
+      this.eventBus.emit('game:pause', {});
     }
   }
 
   private updateDisplay(): void {
     this.updateLevelDisplay();
-    this.updateLevelProgressDisplay();
     this.updateAmmoDisplay();
     this.updateScoreDisplay();
     this.updatePauseButton();
@@ -131,12 +146,7 @@ export class HudSystem {
     }
   }
 
-  private updateLevelProgressDisplay(): void {
-    if (this.elements.levelProgressFill) {
-      const progress = (this.gameState.experience / this.gameState.experienceToNext) * 100;
-      this.elements.levelProgressFill.style.width = `${Math.min(progress, 100)}%`;
-    }
-  }
+  // Removido: agora só o evento ui:update-level controla a barra de XP
 
   private updateAmmoDisplay(): void {
     if (this.elements.ammoCount) {
@@ -176,14 +186,15 @@ export class HudSystem {
 
   // Public methods for manual updates
   public setLevel(level: number): void {
-    this.gameState.level = level;
-    this.updateLevelDisplay();
+  this.gameState.level = level;
+  this.updateLevelDisplay();
+  // updateLevelProgressDisplay removido, agora só ui:update-level controla a barra
   }
 
   public setExperience(current: number, toNext: number): void {
-    this.gameState.experience = current;
-    this.gameState.experienceToNext = toNext;
-    this.updateLevelProgressDisplay();
+  this.gameState.experience = current;
+  this.gameState.experienceToNext = toNext;
+  // updateLevelProgressDisplay removido, agora só ui:update-level controla a barra
   }
 
   public setAmmo(current: number, max: number): void {

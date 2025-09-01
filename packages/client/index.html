@@ -732,45 +732,117 @@
             top: 20px;
             left: 50%;
             transform: translateX(-50%);
+            width: 400px;
+            height: 80px;
+            z-index: 1100;
+            pointer-events: none;
+        }
+
+        #level-bar .level-label {
+            position: absolute;
+            top: -3px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(to bottom, #666, #333);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 8px 8px 0 0;
+            font-weight: bold;
+            font-size: 12px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+            border: 3px solid #555;
+            border-bottom: none;
+            box-shadow: 
+                inset 0 1px 2px rgba(255, 255, 255, 0.1),
+                0 2px 8px rgba(0, 0, 0, 0.5);
+            z-index: 2;
+            height: 16px;
             display: flex;
             align-items: center;
-            background: linear-gradient(135deg, rgba(0, 0, 0, 0.8), rgba(20, 20, 20, 0.9));
-            border: 2px solid #ffdd00;
-            border-radius: 20px;
-            padding: 4px;
-            box-shadow: 0 0 15px rgba(255, 221, 0, 0.4);
+            justify-content: center;
+            min-width: fit-content;
+            pointer-events: auto;
         }
 
-        #level-text {
-            color: #ffffff;
-            font-size: 14px;
-            font-weight: bold;
-            padding: 6px 12px;
-            background: linear-gradient(135deg, #ffdd00, #ff9900);
-            border-radius: 16px;
-            text-shadow: 0 0 5px rgba(0, 0, 0, 0.8);
-            min-width: 50px;
-            text-align: center;
-            margin-right: 8px;
+        #level-bar .level-glow {
+            position: absolute;
+            top: -5px;
+            left: -5px;
+            right: -5px;
+            bottom: -5px;
+            background: radial-gradient(ellipse at center, 
+                rgba(255, 235, 59, 0.3) 0%,
+                rgba(255, 193, 7, 0.2) 50%,
+                transparent 70%
+            );
+            border-radius: 35px;
+            animation: glowPulse 3s ease-in-out infinite alternate;
+            z-index: 1;
         }
 
-        #level-progress {
-            width: 180px;
-            height: 12px;
-            background: rgba(0, 0, 0, 0.6);
-            border-radius: 6px;
+        #level-bar .level-bar-inner {
+            width: 100%;
+            height: 60px;
+            background: linear-gradient(to bottom, #333, #111);
+            border-radius: 30px;
+            border: 3px solid #555;
+            box-shadow: 
+                inset 0 2px 4px rgba(0, 0, 0, 0.8),
+                0 4px 15px rgba(0, 0, 0, 0.6);
+            position: absolute;
+            bottom: 0;
             overflow: hidden;
-            margin-right: 8px;
-            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
+            z-index: 2;
         }
 
         #level-progress-fill {
             height: 100%;
-            background: linear-gradient(90deg, #ffdd00, #ff9900);
-            width: 0%;
+            width: 0%; /* Começa zerada */
+            background: linear-gradient(to bottom, 
+                #ffeb3b 0%,
+                #ffc107 20%,
+                #ff9800 40%,
+                #ff5722 60%,
+                #f44336 80%,
+                #d32f2f 100%
+            );
+            border-radius: 27px;
+            position: relative;
+            animation: healthPulse 2s ease-in-out infinite alternate;
             transition: width 0.3s ease;
-            border-radius: 6px;
-            box-shadow: 0 0 8px rgba(255, 221, 0, 0.6);
+        }
+
+        #level-bar .level-shine {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            right: 8px;
+            height: 12px;
+            background: linear-gradient(to right, 
+                rgba(255, 255, 255, 0.6) 0%,
+                rgba(255, 255, 255, 0.9) 50%,
+                rgba(255, 255, 255, 0.6) 100%
+            );
+            border-radius: 20px;
+            opacity: 0.7;
+        }
+
+        @keyframes healthPulse {
+            0% {
+                box-shadow: 
+                    inset 0 2px 4px rgba(0, 0, 0, 0.3),
+                    0 0 20px rgba(255, 235, 59, 0.5);
+            }
+            100% {
+                box-shadow: 
+                    inset 0 2px 4px rgba(0, 0, 0, 0.3),
+                    0 0 30px rgba(255, 235, 59, 0.8);
+            }
+        }
+
+        @keyframes glowPulse {
+            0% { opacity: 0.3; }
+            100% { opacity: 0.6; }
         }
 
         /* Left Side Notches */
@@ -919,11 +991,14 @@
 
     <!-- Game HUD Overlay -->
     <div id="game-hud">
-        <!-- Top Level Bar -->
+        <!-- Top Level Bar (Novo visual estilizado) -->
         <div id="level-bar">
-            <div id="level-text">Level 1</div>
-            <div id="level-progress">
-                <div id="level-progress-fill"></div>
+            <div class="level-label"><span id="level-text">1</span></div>
+            <div class="level-glow"></div>
+            <div class="level-bar-inner">
+                <div id="level-progress-fill">
+                    <div class="level-shine"></div>
+                </div>
             </div>
         </div>
 
