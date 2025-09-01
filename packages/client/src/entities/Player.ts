@@ -464,8 +464,8 @@ export class Player extends Entity {
       this.rangeIndicator.update(deltaTime);
     }
 
-    // AUTO-TARGETING SYSTEM with configurable range
-    if (this.autoTargetEnabled && (this.infiniteAmmoEnabled || this.stats.ammo > 0) && this.shotTimer <= 0) {
+    // AUTO-TARGETING SYSTEM with configurable range - ONLY when player is NOT moving
+    if (this.autoTargetEnabled && !this.isMoving && (this.infiniteAmmoEnabled || this.stats.ammo > 0) && this.shotTimer <= 0) {
       if (game && typeof game.getEntitySystem === 'function') {
         const entitySystem = game.getEntitySystem();
         if (entitySystem && typeof entitySystem.getEnemies === 'function') {
@@ -526,6 +526,9 @@ export class Player extends Entity {
           }
         }
       }
+    } else if (this.isMoving) {
+      // Clear target when moving to prevent auto-shoot conflicts
+      this.currentTarget = null;
     }
 
     // Update animations if available
@@ -561,6 +564,9 @@ export class Player extends Entity {
       movementVector.y -= 1;
       currentlyMoving = true;
     }
+
+    // Store movement state for auto-targeting system
+    this.isMoving = currentlyMoving;
 
     // Update rotation based on movement direction
     this.updateRotation(movementVector, deltaTime);
