@@ -712,10 +712,238 @@
                 margin-bottom: 15px;
             }
         }
+
+        /* Game HUD Styles */
+        #game-hud {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+            font-family: 'Courier New', monospace;
+            color: white;
+        }
+
+        /* Level Bar - Top Center - Archero Style */
+        #level-bar {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.8), rgba(20, 20, 20, 0.9));
+            border: 2px solid #ffdd00;
+            border-radius: 20px;
+            padding: 4px;
+            box-shadow: 0 0 15px rgba(255, 221, 0, 0.4);
+        }
+
+        #level-text {
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: bold;
+            padding: 6px 12px;
+            background: linear-gradient(135deg, #ffdd00, #ff9900);
+            border-radius: 16px;
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.8);
+            min-width: 50px;
+            text-align: center;
+            margin-right: 8px;
+        }
+
+        #level-progress {
+            width: 180px;
+            height: 12px;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 6px;
+            overflow: hidden;
+            margin-right: 8px;
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
+        }
+
+        #level-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ffdd00, #ff9900);
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 6px;
+            box-shadow: 0 0 8px rgba(255, 221, 0, 0.6);
+        }
+
+        /* Left Side Notches */
+        #left-notches {
+            position: absolute;
+            left: -20px;
+            top: 80px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .hud-notch {
+            display: flex;
+            align-items: center;
+            background: linear-gradient(135deg, rgba(0, 20, 40, 0.9), rgba(0, 10, 30, 0.95));
+            border: 2px solid;
+            border-radius: 25px;
+            padding: 8px 15px;
+            padding-left: 30px;
+            min-width: 100px;
+            pointer-events: auto;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+            transition: all 0.3s ease;
+        }
+
+        #ammo-notch {
+            border-color: #ff6600;
+            box-shadow: 0 0 15px rgba(255, 102, 0, 0.3);
+        }
+
+        #score-notch {
+            border-color: #ffdd00;
+            box-shadow: 0 0 15px rgba(255, 221, 0, 0.3);
+        }
+
+        .hud-notch:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+        }
+
+        .notch-icon {
+            font-size: 20px;
+            margin-right: 10px;
+            filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.5));
+        }
+
+        .notch-value {
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 0 0 5px rgba(255, 255, 255, 0.8);
+        }
+
+        /* Right Side Controls */
+        #right-controls {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        #pause-button {
+            background: linear-gradient(135deg, rgba(0, 20, 40, 0.9), rgba(0, 10, 30, 0.95));
+            border: 2px solid #00ffff;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 20px;
+            color: #00ffff;
+            cursor: pointer;
+            pointer-events: auto;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #pause-button:hover {
+            transform: scale(1.1);
+            background: linear-gradient(135deg, rgba(0, 40, 80, 0.9), rgba(0, 20, 60, 0.95));
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.6);
+        }
+
+        #pause-button:active {
+            transform: scale(0.95);
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            #level-bar {
+                top: 15px;
+                padding: 3px;
+            }
+
+            #level-text {
+                font-size: 12px;
+                padding: 4px 8px;
+                min-width: 40px;
+                margin-right: 6px;
+            }
+
+            #level-progress {
+                width: 140px;
+                height: 10px;
+                margin-right: 6px;
+            }
+
+            #left-notches {
+                left: -20px;
+                top: 70px;
+                gap: 12px;
+            }
+
+            .hud-notch {
+                padding: 6px 12px;
+                min-width: 80px;
+            }
+
+            .notch-icon {
+                font-size: 18px;
+                margin-right: 8px;
+            }
+
+            .notch-value {
+                font-size: 14px;
+            }
+
+            #right-controls {
+                right: 10px;
+                top: 15px;
+            }
+
+            #pause-button {
+                width: 40px;
+                height: 40px;
+                font-size: 18px;
+            }
+        }
     </style>
 </head>
 <body>
     <div id="game-container"></div>
+
+    <!-- Game HUD Overlay -->
+    <div id="game-hud">
+        <!-- Top Level Bar -->
+        <div id="level-bar">
+            <div id="level-text">Level 1</div>
+            <div id="level-progress">
+                <div id="level-progress-fill"></div>
+            </div>
+        </div>
+
+        <!-- Left Side Notches -->
+        <div id="left-notches">
+            <div class="hud-notch" id="ammo-notch">
+                <div class="notch-icon">🔫</div>
+                <div class="notch-value" id="ammo-count">30</div>
+            </div>
+            <div class="hud-notch" id="score-notch">
+                <div class="notch-icon">💰</div>
+                <div class="notch-value" id="score-count">0</div>
+            </div>
+        </div>
+
+        <!-- Right Side Controls -->
+        <div id="right-controls">
+            <button id="pause-button" title="Pause Game">⏸️</button>
+        </div>
+    </div>
 
     <!-- Skill Selection Modal -->
     <div id="skill-modal">

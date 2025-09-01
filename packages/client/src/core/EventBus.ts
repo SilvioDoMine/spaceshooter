@@ -64,6 +64,14 @@ export type GameEventMap = {
   // Motivo: Retoma operação de todos os sistemas pausados
   'game:resumed': {};
   
+  // Emitido por: HudSystem quando botão de pause é clicado
+  // Motivo: Pausar o jogo via HUD
+  'game:pause': {};
+  
+  // Emitido por: HudSystem quando botão de resume é clicado
+  // Motivo: Despausar o jogo via HUD
+  'game:resume': {};
+  
   // Emitido em: Player.ts:258 quando vida do jogador chega a zero
   // Motivo: Finaliza jogo e exibe tela de game over com estatísticas
   'game:over': { finalScore: number; stats: GameStats };
@@ -111,7 +119,11 @@ export type GameEventMap = {
   
   // Emitido em: Player.ts quando nível/XP do jogador muda
   // Motivo: UIManager atualizar barra de XP e nível na tela
-  'player:level-changed': { level: number; currentXP: number; xpToNext: number; progress: number };
+  'player:level-changed': { level: number; currentXP?: number; xpToNext?: number; progress?: number };
+  
+  // Emitido em: Player.ts quando experiência do jogador muda
+  // Motivo: HudSystem atualizar barra de experiência
+  'player:experience-changed': { experience: number; experienceToNext: number };
   
   // Emitido em: Player.ts quando jogador sobe de nível
   // Motivo: Criar efeitos especiais e tocar som de level up

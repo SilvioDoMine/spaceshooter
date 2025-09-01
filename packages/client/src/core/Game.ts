@@ -15,6 +15,7 @@ import { VirtualJoystickSystem } from '../systems/VirtualJoystickSystem';
 import { CameraSystem } from '../systems/CameraSystem';
 import { SpawnEffectSystem } from '../systems/SpawnEffectSystem';
 import { UIManager } from '../managers/UIManager';
+import { HudSystem } from '../ui/HudSystem';
 
 /**
  * Game - Core game class that manages all systems and lifecycle
@@ -56,6 +57,7 @@ export class Game {
   private cameraSystem!: CameraSystem;
   private spawnEffectSystem!: SpawnEffectSystem;
   private uiManager!: UIManager;
+  private hudSystem!: HudSystem;
 
   constructor() {
     this.eventBus = new EventBus();
@@ -141,6 +143,7 @@ export class Game {
     if (this.virtualJoystickSystem) this.virtualJoystickSystem.dispose();
     if (this.spawnEffectSystem) this.spawnEffectSystem.dispose();
     if (this.cameraSystem) this.cameraSystem.dispose();
+    if (this.hudSystem) this.hudSystem.dispose();
     
     assetManager.dispose();
     
@@ -182,6 +185,7 @@ export class Game {
     this.virtualJoystickSystem = new VirtualJoystickSystem(this.eventBus);
     this.cameraSystem = new CameraSystem(this.eventBus, this.renderingSystem.camera);
     this.spawnEffectSystem = new SpawnEffectSystem(this.eventBus, this.renderingSystem.scene);
+    this.hudSystem = new HudSystem(this.eventBus);
     
     // Setup world bounds synchronization
     this.setupWorldBoundsSynchronization();

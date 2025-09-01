@@ -92,6 +92,10 @@ export class GameStateManager implements Subject {
     this.eventBus.on('game:paused', () => this.pauseGame());
     this.eventBus.on('game:resumed', () => this.resumeGame());
     
+    // Eventos do HudSystem
+    this.eventBus.on('game:pause', () => this.pauseGame());
+    this.eventBus.on('game:resume', () => this.resumeGame());
+    
     // Listen to game:over from Player and change state
     this.eventBus.on('game:over', (data) => {
       console.log('🔚 GameStateManager received game:over with stats:', data.stats);
