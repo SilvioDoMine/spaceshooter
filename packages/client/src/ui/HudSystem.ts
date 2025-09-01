@@ -166,26 +166,60 @@ export class HudSystem {
     this.elements.fullscreenButton?.addEventListener('click', () => {
       this.toggleFullscreen();
     });
+
+    // Listen for fullscreen changes to update button icon
+    this.setupFullscreenListeners();
   }
 
   private toggleFullscreen(): void {
     const doc = document as any;
-    const docEl = document.documentElement;
-    if (!doc.fullscreenElement && !doc.webkitFullscreenElement && !doc.mozFullScreenElement && !doc.msFullscreenElement) {
+    const docEl = document.documentElement as any;
+    
+    // Check if we're currently in fullscreen mode
+    const isFullscreen = !!(
+      doc.fullscreenElement || 
+      doc.webkitFullscreenElement || 
+      doc.webkitCurrentFullScreenElement || // Safari uses this property
+      doc.mozFullScreenElement || 
+      doc.msFullscreenElement
+    );
+    
+    if (!isFullscreen) {
+      // Enter fullscreen mode
+      console.log('🖥️ Entering fullscreen mode...');
+      
       if (docEl.requestFullscreen) {
-        docEl.requestFullscreen();
-      } else if ((docEl as any).webkitRequestFullscreen) {
-        (docEl as any).webkitRequestFullscreen();
-      } else if ((docEl as any).mozRequestFullScreen) {
-        (docEl as any).mozRequestFullScreen();
-      } else if ((docEl as any).msRequestFullscreen) {
-        (docEl as any).msRequestFullscreen();
+        docEl.requestFullscreen().catch((err: any) => {
+          console.error('Failed to enter fullscreen mode:', err);
+        });
+      } else if (docEl.webkitRequestFullscreen) {
+        // Safari desktop
+        docEl.webkitRequestFullscreen();
+      } else if (docEl.webkitRequestFullScreen) {
+        // Safari mobile (different capitalization)
+        docEl.webkitRequestFullScreen();
+      } else if (docEl.mozRequestFullScreen) {
+        docEl.mozRequestFullScreen();
+      } else if (docEl.msRequestFullscreen) {
+        docEl.msRequestFullscreen();
+      } else {
+        console.warn('Fullscreen API not supported on this browser/device');
+        alert('Fullscreen não suportado neste navegador');
+        return;
       }
     } else {
+      // Exit fullscreen mode
+      console.log('🖥️ Exiting fullscreen mode...');
+      
       if (doc.exitFullscreen) {
-        doc.exitFullscreen();
+        doc.exitFullscreen().catch((err: any) => {
+          console.error('Failed to exit fullscreen mode:', err);
+        });
       } else if (doc.webkitExitFullscreen) {
         doc.webkitExitFullscreen();
+      } else if (doc.webkitCancelFullScreen) {
+        // Safari mobile
+        doc.webkitCancelFullScreen();
       } else if (doc.mozCancelFullScreen) {
         doc.mozCancelFullScreen();
       } else if (doc.msExitFullscreen) {
@@ -193,6 +227,52 @@ export class HudSystem {
       }
     }
   }
+
+  private setupFullscreenListeners(): void {
+    const doc = document as any;
+    
+    // Listen to all possible fullscreen change events for cross-browser compatibility
+    const fullscreenChangeEvents = [
+      'fullscreenchange',
+      'webkitfullscreenchange',
+      'mozfullscreenchange',
+      'MSFullscreenChange'
+    ];
+    
+    const updateFullscreenButton = () => {
+      const isFullscreen = !!(
+        doc.fullscreenElement || 
+        doc.webkitFullscreenElement || 
+        doc.webkitCurrentFullScreenElement ||
+        doc.mozFullScreenElement || 
+        doc.msFullscreenElement
+      );
+      
+      if (this.elements.fullscreenButton) {
+        const iconElement = this.elements.fullscreenButton.querySelector('.notch-icon');
+        if (iconElement) {
+          if (isFullscreen) {
+            iconElement.textContent = '⧉'; // Exit fullscreen icon (smaller window)
+            this.elements.fullscreenButton.title = 'Sair da tela cheia';
+          } else {
+            iconElement.textContent = '⛶'; // Enter fullscreen icon (expand)
+            this.elements.fullscreenButton.title = 'Tela cheia';
+          }
+        }
+      }
+      
+      console.log(`🖥️ Fullscreen state changed: ${isFullscreen ? 'ON' : 'OFF'}`);
+    };
+    
+    // Add listeners for all browser variations
+    fullscreenChangeEvents.forEach(eventName => {
+      document.addEventListener(eventName, updateFullscreenButton);
+    });
+    
+    // Initial button state
+    updateFullscreenButton();
+  }
+
   // Keyboard shortcut para pause (ESC key)
   // (deve estar dentro de setupEventListeners, não após toggleFullscreen)
 
