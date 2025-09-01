@@ -19,6 +19,7 @@ export class HudSystem {
     ammoCount: HTMLElement | null;
     scoreCount: HTMLElement | null;
     pauseButton: HTMLElement | null;
+    fullscreenButton: HTMLElement | null;
   };
   
   private gameState = {
@@ -39,7 +40,8 @@ export class HudSystem {
       levelProgressFill: document.getElementById('level-progress-fill'),
       ammoCount: document.getElementById('ammo-count'),
       scoreCount: document.getElementById('score-count'),
-      pauseButton: document.getElementById('pause-notch')
+      pauseButton: document.getElementById('pause-notch'),
+      fullscreenButton: document.getElementById('fullscreen-notch')
     };
 
     this.setupEventListeners();
@@ -48,8 +50,7 @@ export class HudSystem {
       this.elements.levelProgressFill.style.width = '0%';
     }
     this.updateDisplay();
-
-  this.setupPauseResetOnNewGame();
+    this.setupPauseResetOnNewGame();
     // Escuta eventos de UI para manter sincronizado com UISystem
     this.eventBus.on('ui:update-level', (data: { level: number; currentXP: number; xpToNext: number; progress: number }) => {
       this.gameState.level = data.level;
@@ -70,69 +71,39 @@ export class HudSystem {
       this.togglePause();
     });
 
-    // Game state updates
-    this.eventBus.on('player:level-changed', async (data) => {
-  // Antes de atualizar o nível, anima a barra até 100% se necessário
-  // (Removido: updateLevelProgressDisplay não existe mais, só ui:update-level controla a barra)
-  this.gameState.level = data.level;
-  this.updateLevelDisplay();
-    });
-
-    this.eventBus.on('player:experience-changed', (data) => {
-  this.gameState.experience = data.experience;
-  this.gameState.experienceToNext = data.experienceToNext;
-  // updateLevelProgressDisplay removido, agora só ui:update-level controla a barra
-    });
-
-    this.eventBus.on('player:ammo-changed', (data) => {
-      this.gameState.ammo = data.current;
-      this.gameState.maxAmmo = data.max;
-      this.updateAmmoDisplay();
-    });
-
-    this.eventBus.on('player:score-changed', (data) => {
-      this.gameState.score = data.score;
-      this.updateScoreDisplay();
-    });
-
-    this.eventBus.on('game:paused', () => {
-      this.gameState.isPaused = true;
-      this.updatePauseButton();
-    });
-
-    this.eventBus.on('game:resumed', () => {
-      this.gameState.isPaused = false;
-      this.updatePauseButton();
-    });
-
-    // Debug updates from existing debug system
-    this.eventBus.on('debug:update', (data) => {
-      if (data.level !== undefined) {
-        this.gameState.level = data.level;
-        this.updateLevelDisplay();
-      }
-      if (data.score !== undefined) {
-        this.gameState.score = data.score;
-        this.updateScoreDisplay();
-      }
-      if (data.ammo !== undefined) {
-        const match = data.ammo.match(/(\d+)\/(\d+)/);
-        if (match) {
-          this.gameState.ammo = parseInt(match[1]);
-          this.gameState.maxAmmo = parseInt(match[2]);
-          this.updateAmmoDisplay();
-        }
-      }
-    });
-
-    // Keyboard shortcut for pause (ESC key)
-    document.addEventListener('keydown', (event) => {
-      if (event.code === 'Escape') {
-        this.togglePause();
-        event.preventDefault();
-      }
+    // Fullscreen button
+    this.elements.fullscreenButton?.addEventListener('click', () => {
+      this.toggleFullscreen();
     });
   }
+
+  private toggleFullscreen(): void {
+    const doc = document as any;
+    const docEl = document.documentElement;
+    if (!doc.fullscreenElement && !doc.webkitFullscreenElement && !doc.mozFullScreenElement && !doc.msFullscreenElement) {
+      if (docEl.requestFullscreen) {
+        docEl.requestFullscreen();
+      } else if ((docEl as any).webkitRequestFullscreen) {
+        (docEl as any).webkitRequestFullscreen();
+      } else if ((docEl as any).mozRequestFullScreen) {
+        (docEl as any).mozRequestFullScreen();
+      } else if ((docEl as any).msRequestFullscreen) {
+        (docEl as any).msRequestFullscreen();
+      }
+    } else {
+      if (doc.exitFullscreen) {
+        doc.exitFullscreen();
+      } else if (doc.webkitExitFullscreen) {
+        doc.webkitExitFullscreen();
+      } else if (doc.mozCancelFullScreen) {
+        doc.mozCancelFullScreen();
+      } else if (doc.msExitFullscreen) {
+        doc.msExitFullscreen();
+      }
+    }
+  }
+  // Keyboard shortcut para pause (ESC key)
+  // (deve estar dentro de setupEventListeners, não após toggleFullscreen)
 
   private togglePause(): void {
     if (this.gameState.isPaused) {
