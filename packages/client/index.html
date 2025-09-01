@@ -74,7 +74,7 @@
         #debug-panel {
             position: absolute;
             top: 10px;
-            right: 10px;
+            left: 10px;
             background: rgba(0, 0, 0, 0.85);
             color: #00ff00;
             font-family: 'Courier New', monospace;
@@ -84,8 +84,10 @@
             border-radius: 3px;
             min-width: 200px;
             max-width: 250px;
+            max-height: 80vh;
             z-index: 1000;
             display: none;
+            overflow: hidden;
         }
         
         #debug-panel.visible {
@@ -117,6 +119,33 @@
 
         #debug-panel.collapsed {
             height: auto;
+        }
+
+        #debug-panel .debug-content {
+            max-height: calc(80vh - 40px);
+            overflow-y: auto;
+            overflow-x: hidden;
+            scrollbar-width: thin;
+            scrollbar-color: #00ff00 rgba(0, 0, 0, 0.3);
+        }
+
+        #debug-panel .debug-content::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #debug-panel .debug-content::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 3px;
+        }
+
+        #debug-panel .debug-content::-webkit-scrollbar-thumb {
+            background: #00ff00;
+            border-radius: 3px;
+            box-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+        }
+
+        #debug-panel .debug-content::-webkit-scrollbar-thumb:hover {
+            background: #00aa00;
         }
 
         #debug-panel.collapsed .debug-content {
@@ -201,11 +230,14 @@
         /* Responsive adjustments */
         @media (max-width: 768px) {
             #debug-panel {
-                top: 5px;
-                right: 5px;
                 min-width: 180px;
                 max-width: 200px;
                 font-size: 9px;
+                max-height: 70vh;
+            }
+            
+            #debug-panel .debug-content {
+                max-height: calc(70vh - 35px);
             }
         }
 
@@ -214,6 +246,11 @@
                 min-width: 160px;
                 max-width: 180px;
                 font-size: 8px;
+                max-height: 60vh;
+            }
+            
+            #debug-panel .debug-content {
+                max-height: calc(60vh - 30px);
             }
         }
 
@@ -1232,7 +1269,7 @@
     </div>
     
     <div id="debug-panel">
-        <h3>DEBUG (Click OPEN/CLOSE - U toggle)</h3>
+        <h3>DEBUG (Click/U)</h3>
         <div class="debug-content">
         <div class="debug-section">
             <h4>Performance</h4>

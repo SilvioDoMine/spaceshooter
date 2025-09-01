@@ -35,6 +35,7 @@ interface DebugSettings {
   playerSize: number;
   position?: { x: number; y: number };
   isCollapsed?: boolean;
+  positionBeforeCollapse?: { x: number; y: number };
 }
 
 export class DebugSystem {
@@ -50,7 +51,7 @@ export class DebugSystem {
   // localStorage key for debug settings
   private static readonly STORAGE_KEY = 'spaceshooter_debug_settings';
   
-  // Default debug settings
+  // Default debug settings - positioned at top left (flexible positioning)
   private static readonly DEFAULT_SETTINGS: DebugSettings = {
     godModeEnabled: false,
     infiniteAmmoEnabled: false,
@@ -61,8 +62,9 @@ export class DebugSystem {
     timeScale: 1.0,
     isPaused: false,
     playerSize: PLAYER_CONFIG.size,
-    position: { x: 10, y: 10 },
-    isCollapsed: true
+    position: { x: 10, y: 10 }, // Simple top left corner
+    isCollapsed: true,
+    positionBeforeCollapse: undefined
   };
   
   // Debug states
@@ -84,6 +86,7 @@ export class DebugSystem {
   // Collapse functionality
   private isCollapsed: boolean = true;
   private clickTimeout: number | null = null;
+  private positionBeforeCollapse: { x: number; y: number } | undefined = undefined;
   
   // Collision debugging
   private mousePosition: { x: number; y: number } = { x: 0, y: 0 };
@@ -116,8 +119,17 @@ export class DebugSystem {
         this.timeScale = settings.timeScale;
         this.isPaused = settings.isPaused;
         this.playerSize = settings.playerSize;
-        this.panelPosition = settings.position || DebugSystem.DEFAULT_SETTINGS.position!;
+        // Validate loaded position is within current viewport bounds
+        const loadedPosition = settings.position || DebugSystem.DEFAULT_SETTINGS.position!;
+        const maxX = Math.max(0, window.innerWidth - 250); // Leave space for panel width
+        const maxY = Math.max(0, window.innerHeight - 200); // Leave space for panel height (flexible)
+        
+        this.panelPosition = {
+          x: Math.max(0, Math.min(maxX, loadedPosition.x)),
+          y: Math.max(0, Math.min(maxY, loadedPosition.y)) // Allow any position within bounds
+        };
         this.isCollapsed = settings.isCollapsed || false;
+        this.positionBeforeCollapse = settings.positionBeforeCollapse;
         console.log('🔧 Debug settings loaded from localStorage:', settings);
       } else {
         this.resetToDefaults();
@@ -141,7 +153,8 @@ export class DebugSystem {
         isPaused: this.isPaused,
         playerSize: this.playerSize,
         position: this.panelPosition,
-        isCollapsed: this.isCollapsed
+        isCollapsed: this.isCollapsed,
+        positionBeforeCollapse: this.positionBeforeCollapse
       };
       localStorage.setItem(DebugSystem.STORAGE_KEY, JSON.stringify(settings));
     } catch (error) {
@@ -159,8 +172,11 @@ export class DebugSystem {
     this.timeScale = DebugSystem.DEFAULT_SETTINGS.timeScale;
     this.isPaused = DebugSystem.DEFAULT_SETTINGS.isPaused;
     this.playerSize = DebugSystem.DEFAULT_SETTINGS.playerSize;
-    this.panelPosition = DebugSystem.DEFAULT_SETTINGS.position!;
+    
+    // Simple default position - top left, can be moved anywhere
+    this.panelPosition = { x: 10, y: 10 };
     this.isCollapsed = DebugSystem.DEFAULT_SETTINGS.isCollapsed!;
+    this.positionBeforeCollapse = undefined;
   }
 
   public resetAllSettings(): void {
@@ -719,9 +735,10 @@ export class DebugSystem {
   }
 
   private handleTouchStart(touch: Touch): void {
+    // Longer delay for touch to accommodate mobile tap gestures
     this.clickTimeout = window.setTimeout(() => {
       this.startDragging(touch);
-    }, 150);
+    }, 300); // Increased from 150ms to 300ms for mobile
   }
 
   private startDragging(event: MouseEvent | Touch): void {
@@ -743,7 +760,7 @@ export class DebugSystem {
     let newX = event.clientX - this.dragOffset.x;
     let newY = event.clientY - this.dragOffset.y;
 
-    // Simple bounds - keep panel completely inside viewport
+    // Simple bounds checking - keep panel completely inside viewport
     const panelRect = this.debugPanel.getBoundingClientRect();
     const maxX = window.innerWidth - panelRect.width;
     const maxY = window.innerHeight - panelRect.height;
@@ -784,15 +801,58 @@ export class DebugSystem {
   }
 
   private toggleCollapse(): void {
+    if (this.isCollapsed) {
+      // About to expand - store current position (collapsed position)
+      this.positionBeforeCollapse = { ...this.panelPosition };
+      
+      // Check if expanding would cause panel to go outside viewport
+      this.adjustPositionForExpansion();
+    } else {
+      // About to collapse - restore to original collapsed position
+      if (this.positionBeforeCollapse) {
+        this.panelPosition = { ...this.positionBeforeCollapse };
+        this.applyPanelPosition();
+      }
+    }
+    
     this.isCollapsed = !this.isCollapsed;
     this.applyCollapsedState();
     
-    if (!this.isCollapsed) {
-      // When expanding, check if panel is at bottom edge and adjust
-      this.checkBottomEdgeAndAdjust();
+    this.saveSettings();
+  }
+
+  private adjustPositionForExpansion(): void {
+    if (!this.debugPanel) return;
+    
+    // Get more accurate dimensions based on viewport
+    const isMobile = window.innerWidth <= 768;
+    const estimatedExpandedHeight = Math.min(
+      isMobile ? window.innerHeight * 0.7 : window.innerHeight * 0.8,
+      500 // Maximum reasonable height
+    );
+    const estimatedExpandedWidth = isMobile ? 200 : 250;
+    
+    let adjustedX = this.panelPosition.x;
+    let adjustedY = this.panelPosition.y;
+    
+    // Check if panel would extend beyond bottom of screen
+    if (this.panelPosition.y + estimatedExpandedHeight > window.innerHeight) {
+      // Move panel up so it fits, with some padding
+      adjustedY = Math.max(10, window.innerHeight - estimatedExpandedHeight - 10);
     }
     
-    this.saveSettings();
+    // Check if panel would extend beyond right edge of screen  
+    if (this.panelPosition.x + estimatedExpandedWidth > window.innerWidth) {
+      // Move panel left so it fits, with some padding
+      adjustedX = Math.max(10, window.innerWidth - estimatedExpandedWidth - 10);
+    }
+    
+    // Apply temporary adjustment for expansion
+    if (adjustedX !== this.panelPosition.x || adjustedY !== this.panelPosition.y) {
+      this.panelPosition = { x: adjustedX, y: adjustedY };
+      this.applyPanelPosition();
+      console.log(`🔧 Debug panel position adjusted for expansion: (${adjustedX}, ${adjustedY})`);
+    }
   }
 
   private applyCollapsedState(): void {
@@ -805,24 +865,6 @@ export class DebugSystem {
     }
   }
 
-  private checkBottomEdgeAndAdjust(): void {
-    if (!this.debugPanel) return;
-
-    // Get panel dimensions after expanding
-    setTimeout(() => {
-      if (!this.debugPanel) return;
-      
-      const rect = this.debugPanel.getBoundingClientRect();
-      const bottomOverflow = (rect.bottom) - window.innerHeight;
-      
-      if (bottomOverflow > 0) {
-        // Panel extends beyond bottom, move it up
-        this.panelPosition.y = Math.max(0, this.panelPosition.y - bottomOverflow);
-        this.applyPanelPosition();
-        this.saveSettings();
-      }
-    }, 10); // Small delay to let CSS apply
-  }
 
   private setupMouseCollisionDetection(): void {
     let debugCounter = 0; // Counter to limit debug logs
