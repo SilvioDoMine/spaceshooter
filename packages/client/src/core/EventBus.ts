@@ -4,7 +4,7 @@ import { JoystickInput } from "../systems/VirtualJoystickSystem";
 
 export type GameEventMap = {
   // Emitido em: Enemy.ts ao spawnar um boss
-  'boss:spawned': { bossId: string; boss: any };
+  'boss:spawned': { bossId: string; boss: any; config?: any };
   // ========== BOSS EVENTS ==========
   // Emitido em: Enemy.ts ao derrotar um boss
   'boss:defeated': { enemyId: string };
@@ -145,6 +145,26 @@ export type GameEventMap = {
   // Emitido em: WaveSystem.ts quando um inimigo de onda é spawnado
   // Motivo: EntitySystem precisa rastrear inimigos da onda
   'wave:enemy-spawned': { enemy: any; config: any; waveDescription: string };
+
+  // ========== SPAWN EFFECT EVENTS ==========
+  // Emitido em: Enemy.ts quando solicita efeito de spawn
+  // Motivo: SpawnEffectSystem precisa criar efeito de buraco negro
+  'spawn:request-effect': { 
+    position: { x: number; y: number; z: number }; 
+    onComplete?: () => void; 
+    id?: string 
+  };
+  
+  // Emitido em: SpawnEffectSystem para limpar todos os efeitos
+  // Motivo: Game cleanup ou mudança de estado
+  'spawn:clear-effects': {};
+
+  // ========== CAMERA EVENTS ==========
+  // Emitido em: WaveSystem para obter informações da câmera
+  // Motivo: Spawn de inimigos precisa da posição atual da câmera
+  'camera:get-info': { 
+    callback: (info: { position: { x: number; y: number; z: number }; viewportSize: { width: number; height: number } }) => void 
+  };
 
   // ========== VICTORY EVENTS ==========
   // Emitido em: WaveSystem.ts quando o jogador sobrevive 6 minutos

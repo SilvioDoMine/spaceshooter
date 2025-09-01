@@ -79,6 +79,17 @@ export class CameraSystem {
       
       this.viewportSize = this.calculateViewportSize();
     });
+
+    // Responder a solicitações de informações da câmera
+    this.eventBus.on('camera:get-info', (data) => {
+      const cameraPos = this.getCameraPosition();
+      const viewportSize = this.getViewportSize();
+      console.log(`📷 CameraSystem: Providing camera info - position: (${cameraPos.x.toFixed(2)}, ${cameraPos.y.toFixed(2)}), viewport: ${viewportSize.width.toFixed(1)}x${viewportSize.height.toFixed(1)}`);
+      data.callback({
+        position: cameraPos,
+        viewportSize: viewportSize
+      });
+    });
   }
 
   private calculateViewportSize(): { width: number; height: number } {
@@ -212,6 +223,28 @@ export class CameraSystem {
    */
   public getViewportSize(): { width: number; height: number } {
     return { ...this.viewportSize };
+  }
+
+  /**
+   * Obtém a posição atual da câmera
+   */
+  public getCameraPosition(): { x: number; y: number; z: number } {
+    return { ...this.currentPosition };
+  }
+
+  /**
+   * Obtém as bordas visíveis da câmera na tela atual
+   */
+  public getVisibleBounds(): { minX: number; maxX: number; minY: number; maxY: number } {
+    const halfWidth = this.viewportSize.width / 2;
+    const halfHeight = this.viewportSize.height / 2;
+    
+    return {
+      minX: this.currentPosition.x - halfWidth,
+      maxX: this.currentPosition.x + halfWidth,
+      minY: this.currentPosition.y - halfHeight,
+      maxY: this.currentPosition.y + halfHeight
+    };
   }
 
   /**

@@ -13,6 +13,7 @@ import { BackgroundSystem } from '../systems/BackgroundSystem';
 import { DebugSystem } from '../systems/DebugSystem';
 import { VirtualJoystickSystem } from '../systems/VirtualJoystickSystem';
 import { CameraSystem } from '../systems/CameraSystem';
+import { SpawnEffectSystem } from '../systems/SpawnEffectSystem';
 import { UIManager } from '../managers/UIManager';
 
 /**
@@ -53,6 +54,7 @@ export class Game {
   private debugSystem!: DebugSystem;
   private virtualJoystickSystem!: VirtualJoystickSystem;
   private cameraSystem!: CameraSystem;
+  private spawnEffectSystem!: SpawnEffectSystem;
   private uiManager!: UIManager;
 
   constructor() {
@@ -137,6 +139,7 @@ export class Game {
     if (this.backgroundSystem) this.backgroundSystem.dispose();
     if (this.debugSystem) this.debugSystem.dispose();
     if (this.virtualJoystickSystem) this.virtualJoystickSystem.dispose();
+    if (this.spawnEffectSystem) this.spawnEffectSystem.dispose();
     if (this.cameraSystem) this.cameraSystem.dispose();
     
     assetManager.dispose();
@@ -178,6 +181,7 @@ export class Game {
     this.debugSystem = new DebugSystem(this.eventBus);
     this.virtualJoystickSystem = new VirtualJoystickSystem(this.eventBus);
     this.cameraSystem = new CameraSystem(this.eventBus, this.renderingSystem.camera);
+    this.spawnEffectSystem = new SpawnEffectSystem(this.eventBus, this.renderingSystem.scene);
     
     // Setup world bounds synchronization
     this.setupWorldBoundsSynchronization();
@@ -232,6 +236,7 @@ export class Game {
     if (this.gameStateManager.isPlaying()) {
       this.cameraSystem.update(deltaTime);
       this.backgroundSystem.update(deltaTime);
+      this.spawnEffectSystem.update(deltaTime);
       this.entitySystem.update(deltaTime); // EntitySystem now includes WaveSystem
       this.particleSystem.update(deltaTime);
       this.xpOrbSystem.update(deltaTime);

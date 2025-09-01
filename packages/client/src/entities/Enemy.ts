@@ -538,7 +538,63 @@ export class Enemy extends Entity {
   }
 
   /**
-   * Spawn enemy with wave-based configuration (health/speed multipliers)
+   * Calcula uma posição de spawn na tela do player (visível)
+   */
+  private static getScreenSpawnPosition(
+    cameraPosition: { x: number; y: number; z: number },
+    viewportSize: { width: number; height: number }
+  ): Position {
+    // Calcular os limites da tela
+    const halfWidth = viewportSize.width / 2;
+    const halfHeight = viewportSize.height / 2;
+    
+    // Spawn dentro da tela visível, com margem das bordas
+    const marginX = viewportSize.width * 0.1; // 10% de margem horizontal
+    const marginY = viewportSize.height * 0.1; // 10% de margem vertical
+    
+    // Posição aleatória dentro da área visível
+    const x = cameraPosition.x + (Math.random() - 0.5) * (viewportSize.width - marginX * 2);
+    const y = cameraPosition.y + (Math.random() - 0.5) * (viewportSize.height - marginY * 2);
+    
+    console.log(`🌀 Enemy spawn position calculated: (${x.toFixed(2)}, ${y.toFixed(2)}) relative to camera (${cameraPosition.x.toFixed(2)}, ${cameraPosition.y.toFixed(2)})`);
+    
+    return { x, y };
+  }
+
+  /**
+   * Spawn enemy with wave-based configuration using screen-based positioning
+   */
+  public static spawnEnemyWithWaveConfigOnScreen(
+    eventBus: EventBus, 
+    waveConfig: EnemyWaveConfig,
+    cameraPosition: { x: number; y: number; z: number },
+    viewportSize: { width: number; height: number }
+  ): Promise<Enemy> {
+    return new Promise((resolve) => {
+      const currentTime = Date.now();
+      const enemyId = `enemy_${currentTime}_${Math.random()}`;
+      const enemyType = waveConfig.type;
+      
+      // Calcular posição na tela
+      const spawnPosition = Enemy.getScreenSpawnPosition(cameraPosition, viewportSize);
+      
+      // Solicitar efeito de spawn
+      console.log(`🌀 Requesting spawn effect for ${enemyType} at position (${spawnPosition.x.toFixed(2)}, ${spawnPosition.y.toFixed(2)})`);
+      eventBus.emit('spawn:request-effect', {
+        position: { x: spawnPosition.x, y: spawnPosition.y, z: 0 },
+        id: enemyId,
+        onComplete: () => {
+          // Criar inimigo após o efeito
+          const enemy = new Enemy(eventBus, enemyId, enemyType, spawnPosition, waveConfig);
+          console.log(`🌊 Wave enemy spawned with effect: ${enemyType} at screen position (${spawnPosition.x.toFixed(1)}, ${spawnPosition.y.toFixed(1)})`);
+          resolve(enemy);
+        }
+      });
+    });
+  }
+
+  /**
+   * Spawn enemy with wave-based configuration (legacy method - mantido para compatibilidade)
    */
   public static spawnEnemyWithWaveConfig(eventBus: EventBus, waveConfig: EnemyWaveConfig): Enemy {
     const currentTime = Date.now();
