@@ -383,14 +383,14 @@ export const ENEMY_CONFIG = {
     // Boss atira projéteis grandes e lentos
     projectile: {
       canShoot: true,
-      speed: 12,             // Mais lento que do jogador
+      speed: 2,             // Mais lento que do jogador
       damage: 25,           // Dano alto
       lifetime: 5000,       // 5 segundos
-      size: 0.2,            // Projétil grande
-      radius: 0.15,         // Hitbox maior
+      size: 0.1,            // Projétil grande
+      radius: 0.07,         // Hitbox maior
       color: 0xff0040,      // Vermelho escuro
       cooldown: 2.0,        // Atira a cada 2 segundos
-      shootRange: 2.5,      // Só atira se jogador estiver próximo
+      shootRange: 5,      // Só atira se jogador estiver próximo
       targetType: 'player'  // Atira no jogador
     } as ProjectileConfig
   }

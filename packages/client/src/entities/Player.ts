@@ -471,8 +471,13 @@ export class Player extends Entity {
             const dy = enemyPos.y - playerPos.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
             
-            // Only consider enemies within weapon range
-            if (dist <= this.weaponRange && dist < minDist) {
+            // Calculate edge-to-edge distance instead of center-to-center
+            const enemyRadius = enemy.getRadius ? enemy.getRadius() : 0.25; // Default enemy radius
+            const playerRadius = PLAYER_CONFIG.radius || 0.15; // Player radius
+            const edgeToEdgeDistance = dist - enemyRadius - playerRadius;
+            
+            // Only consider enemies within weapon range (edge-to-edge)
+            if (edgeToEdgeDistance <= this.weaponRange && dist < minDist) {
               minDist = dist;
               closestEnemy = enemy;
             }

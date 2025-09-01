@@ -2,8 +2,9 @@ import * as THREE from 'three';
 import { Entity, Position } from './Entity';
 import { EventBus } from '../core/EventBus';
 import { assetManager } from '../services/AssetManager';
-import { ENEMY_CONFIG } from '@spaceshooter/shared';
+import { ENEMY_CONFIG, PLAYER_CONFIG } from '@spaceshooter/shared';
 import type { Enemy as EnemyData, EnemyWaveConfig, BossWaveConfig } from '@spaceshooter/shared';
+import { EnemyRangeIndicator } from '../effects/EnemyRangeIndicator';
 
 export class Enemy extends Entity {
   /**
@@ -24,6 +25,9 @@ export class Enemy extends Entity {
   
   // Sistema de tiro
   private lastShotTime: number = 0;
+  
+  // Range indicator
+  private rangeIndicator?: EnemyRangeIndicator;
 
   constructor(
     eventBus: EventBus,
@@ -92,11 +96,32 @@ export class Enemy extends Entity {
     const radius = this.config.radius || (this.config.size || 0.3);
     this.createCollisionVisualizer(radius);
     
+    // Create range indicator if enemy can shoot
+    if (this.config.projectile?.canShoot && this.config.projectile.shootRange) {
+      this.rangeIndicator = new EnemyRangeIndicator(
+        this.eventBus, 
+        this.config.projectile.shootRange,
+        this.config.color
+      );
+      
+      // Add range indicator to scene
+      const rangeMesh = this.rangeIndicator.getMesh();
+      if (rangeMesh) {
+        this.eventBus.emit('scene:add-object', { object: rangeMesh });
+      }
+    }
+    
     this.eventBus.emit('scene:add-object', { object: this.object });
   }
 
   protected onUpdate(deltaTime: number): void {
     if (!this.isActive) return;
+    
+    // Update range indicator position
+    if (this.rangeIndicator) {
+      this.rangeIndicator.setPosition(this.position.x, this.position.y, 0);
+      this.rangeIndicator.update(deltaTime);
+    }
 
     // Persegue o jogador
     const game = (window as any).game;
@@ -159,6 +184,12 @@ export class Enemy extends Entity {
     });
     
     console.log(`Enemy ${this.enemyType} escaped! -${escapePenalty} HP`);
+    
+    // Cleanup range indicator
+    if (this.rangeIndicator) {
+      this.rangeIndicator.dispose();
+      this.rangeIndicator = undefined;
+    }
     
     this.destroy();
   }
@@ -258,6 +289,12 @@ export class Enemy extends Entity {
     });
 
     console.log(`Enemy ${this.enemyType} destroyed! +${scorePoints} points`);
+
+    // Cleanup range indicator
+    if (this.rangeIndicator) {
+      this.rangeIndicator.dispose();
+      this.rangeIndicator = undefined;
+    }
 
     this.destroy();
   }
@@ -441,9 +478,15 @@ export class Enemy extends Entity {
     const dy = playerPos.y - this.position.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
 
-    // Verifica se está dentro do alcance
-    if (projectileConfig.shootRange && distance > projectileConfig.shootRange) {
-      return;
+    // Calculate edge-to-edge distance for shooting range check
+    if (projectileConfig.shootRange) {
+      const playerRadius = PLAYER_CONFIG.radius || 0.15;
+      const enemyRadius = this.config.radius || 0.25;
+      const edgeToEdgeDistance = distance - playerRadius - enemyRadius;
+      
+      if (edgeToEdgeDistance > projectileConfig.shootRange) {
+        return;
+      }
     }
 
     // Calcula direção para o jogador
