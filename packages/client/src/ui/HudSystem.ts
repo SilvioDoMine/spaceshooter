@@ -21,6 +21,9 @@ export class HudSystem {
     pauseButton: HTMLElement | null;
     fullscreenButton: HTMLElement | null;
     timerText: HTMLElement | null;
+    bossBar: HTMLElement | null;
+    bossText: HTMLElement | null;
+    bossProgressFill: HTMLElement | null;
   };
   
   private gameState = {
@@ -46,7 +49,10 @@ export class HudSystem {
       scoreCount: document.getElementById('score-count'),
       pauseButton: document.getElementById('pause-notch'),
       fullscreenButton: document.getElementById('fullscreen-notch'),
-      timerText: document.getElementById('timer-text')
+      timerText: document.getElementById('timer-text'),
+      bossBar: document.getElementById('boss-bar'),
+      bossText: document.getElementById('boss-text'),
+      bossProgressFill: document.getElementById('boss-progress-fill')
     };
 
     // Timer: resetar e iniciar ao começar o jogo
@@ -64,6 +70,20 @@ export class HudSystem {
     // Timer: resetar ao terminar
     this.eventBus.on('game:over', () => {
       this.stopTimer();
+      this.hideBossBar();
+    });
+
+    // Boss events
+    this.eventBus.on('boss:spawned', (data: { bossId: string; boss: any }) => {
+      this.showBossBar();
+    });
+
+    this.eventBus.on('boss:defeated', (data: { enemyId: string }) => {
+      this.hideBossBar();
+    });
+
+    this.eventBus.on('boss:damage-taken', (data: { health: number; maxHealth: number }) => {
+      this.updateBossBar(data.health, data.maxHealth);
     });
 
     this.setupEventListeners();
@@ -83,6 +103,15 @@ export class HudSystem {
       if (this.elements.levelProgressFill) {
         this.elements.levelProgressFill.style.width = `${Math.max(0, Math.min(data.progress, 100))}%`;
       }
+    });
+
+    // Escuta eventos de munição e score
+    this.eventBus.on('ui:update-ammo', (data: { current: number; max: number }) => {
+      this.setAmmo(data.current, data.max);
+    });
+
+    this.eventBus.on('ui:update-score', (data: { score: number }) => {
+      this.setScore(data.score);
     });
     console.log('🎮 HUD System initialized');
   }
@@ -252,6 +281,29 @@ export class HudSystem {
 
   public getGameState() {
     return { ...this.gameState };
+  }
+
+  // Boss bar methods
+  public showBossBar(): void {
+    if (this.elements.bossBar) {
+      this.elements.bossBar.style.display = 'block';
+      console.log('👹 Boss health bar shown in HUD');
+    }
+  }
+
+  public hideBossBar(): void {
+    if (this.elements.bossBar) {
+      this.elements.bossBar.style.display = 'none';
+      console.log('👹 Boss health bar hidden from HUD');
+    }
+  }
+
+  public updateBossBar(health: number, maxHealth: number): void {
+    if (this.elements.bossProgressFill) {
+      const healthPercentage = Math.max(0, health / maxHealth);
+      this.elements.bossProgressFill.style.width = `${healthPercentage * 100}%`;
+      console.log(`👹 Boss health updated: ${health}/${maxHealth} (${(healthPercentage * 100).toFixed(1)}%)`);
+    }
   }
 
   public dispose(): void {

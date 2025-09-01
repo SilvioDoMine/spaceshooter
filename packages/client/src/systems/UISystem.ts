@@ -35,11 +35,7 @@ export class UISystem {
   private skillOptions: any[] = [];
   private skillModalKeyHandler: ((event: KeyboardEvent) => void) | null = null;
   private htmlSkillModal: UISkillModal;
-  // Boss health bar
-  private bossHealthBarGroup?: THREE.Group;
-  private bossHealthBar?: THREE.Mesh;
-  private bossHealthBarBg?: THREE.Mesh;
-  private bossNameText?: THREE.Sprite;
+  // Boss health bar removido - agora gerenciado pelo HUD HTML
 
   // Canvas global não mais necessário - cada sprite tem seu próprio canvas
   
@@ -111,23 +107,9 @@ export class UISystem {
       this.resetUI();
     });
 
-    // Remover barra do boss ao terminar o jogo
-    this.eventBus.on('game:over', () => {
-      this.hideBossHealthBar();
-    });
+    // Boss health bar removida - agora gerenciada pelo HUD HTML
 
-    // Boss events
-    this.eventBus.on('boss:spawned', (data: { bossId: string; boss: any }) => {
-      this.showBossHealthBar(data.boss);
-    });
-
-    this.eventBus.on('boss:defeated', (data: { enemyId: string }) => {
-      this.hideBossHealthBar();
-    });
-
-    this.eventBus.on('boss:damage-taken', (data: { health: number; maxHealth: number }) => {
-      this.updateBossHealthBar(data.health, data.maxHealth);
-    });
+    // Boss events removidos - agora gerenciados pelo HUD HTML
 
     // Wave system events
   // Removido: eventos de wave timer (timer agora só no HUD HTML)
@@ -367,98 +349,7 @@ export class UISystem {
   return { current: this.currentAmmo, max: this.maxAmmo };
   }
 
-  // Boss health bar methods
-  public showBossHealthBar(boss: any): void {
-    if (this.bossHealthBarGroup) {
-      this.hideBossHealthBar();
-    }
+  // Boss health bar methods removidos - agora gerenciados pelo HUD HTML
 
-    const aspect = window.innerWidth / window.innerHeight;
-    this.bossHealthBarGroup = new THREE.Group();
-
-    // Boss name text
-    this.bossNameText = this.createTextSprite('BOSS', '#ff0080');
-    this.bossNameText.position.set(0, -0.6, 0);
-    this.bossNameText.scale.setScalar(0.12);
-    this.bossHealthBarGroup.add(this.bossNameText);
-
-    // Health bar background
-    const barWidth = Math.min(aspect * 0.8, 1.2); // Barra bem grande
-    const barHeight = 0.04;
-    const bgGeometry = new THREE.PlaneGeometry(barWidth, barHeight);
-    const bgMaterial = new THREE.MeshBasicMaterial({ 
-      color: 0x333333,
-      transparent: true,
-      opacity: 0.8
-    });
-    this.bossHealthBarBg = new THREE.Mesh(bgGeometry, bgMaterial);
-    this.bossHealthBarBg.position.set(0, -0.7, 0);
-    this.bossHealthBarGroup.add(this.bossHealthBarBg);
-
-    // Health bar foreground (red)
-    const fgGeometry = new THREE.PlaneGeometry(barWidth, barHeight);
-    const fgMaterial = new THREE.MeshBasicMaterial({ 
-      color: 0xff0000,
-      transparent: true,
-      opacity: 0.9
-    });
-    this.bossHealthBar = new THREE.Mesh(fgGeometry, fgMaterial);
-    this.bossHealthBar.position.set(0, -0.7, 0.001);
-    this.bossHealthBarGroup.add(this.bossHealthBar);
-
-    this.hudGroup.add(this.bossHealthBarGroup);
-    console.log('👹 Boss health bar displayed in HUD');
-  }
-
-  public updateBossHealthBar(health: number, maxHealth: number): void {
-    if (!this.bossHealthBar || !this.bossHealthBarBg) return;
-
-    const healthPercentage = Math.max(0, health / maxHealth);
-    
-    // Update health bar scale
-    this.bossHealthBar.scale.x = healthPercentage;
-    
-    // Adjust position to keep it left-aligned
-    const aspect = window.innerWidth / window.innerHeight;
-    const barWidth = Math.min(aspect * 0.8, 1.2);
-    this.bossHealthBar.position.x = -barWidth * 0.5 * (1 - healthPercentage);
-    
-    console.log(`👹 Boss health updated: ${health}/${maxHealth} (${(healthPercentage * 100).toFixed(1)}%)`);
-  }
-
-  public hideBossHealthBar(): void {
-    if (this.bossHealthBarGroup) {
-      this.hudGroup.remove(this.bossHealthBarGroup);
-      
-      // Dispose materials and geometries
-      this.bossHealthBarGroup.traverse((object) => {
-        if (object instanceof THREE.Mesh || object instanceof THREE.Sprite) {
-          if (object.geometry) object.geometry.dispose();
-          if (object.material) {
-            if (Array.isArray(object.material)) {
-              object.material.forEach(material => material.dispose());
-            } else {
-              object.material.dispose();
-            }
-          }
-        }
-      });
-      
-      this.bossHealthBarGroup = undefined;
-      this.bossHealthBar = undefined;
-      this.bossHealthBarBg = undefined;
-      this.bossNameText = undefined;
-      
-      console.log('👹 Boss health bar hidden from HUD');
-    }
-  }
-
-  private getWaveTimerText(): string {
-  // Removido: texto de wave timer
-  return '';
-  }
-
-  private updateWaveTimer(gameTime: number, waveDescription: string = '', timeFrozen: boolean = false, totalDuration: number = 360): void {
-  // Removido: lógica de atualização do wave timer
-  }
+  // Wave timer methods removidos - agora gerenciados pelo HUD HTML
 }
