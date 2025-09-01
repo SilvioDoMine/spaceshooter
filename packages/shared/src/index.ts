@@ -379,7 +379,7 @@ export const ENEMY_CONFIG = {
     health: 2000,            // 50 hits para destruir - muito resistente
     speed: 0.2,             // Bem lento
     size: 1.3,              // Grande
-    radius: 1.0,            // Hitbox maior
+    radius: 0.8,            // Hitbox maior
     color: 0xff0080,        // Rosa/Magenta para diferenciação
     spawnRate: 60000,       // A cada 60 segundos (muito raro)
     xpRange: { min: 150, max: 250 }, // XP aleatório entre 150-250 (boss recompensa alta)
