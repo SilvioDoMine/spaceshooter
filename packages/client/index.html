@@ -848,11 +848,12 @@
         /* Left Side Notches */
         #left-notches {
             position: absolute;
-            left: -20px;
+            left: -25px;
             top: 80px;
             display: flex;
             flex-direction: column;
             gap: 15px;
+            align-items: flex-start;
         }
 
         .hud-notch {
@@ -861,12 +862,15 @@
             background: linear-gradient(135deg, rgba(0, 20, 40, 0.9), rgba(0, 10, 30, 0.95));
             border: 2px solid;
             border-radius: 25px;
-            padding: 8px 15px;
-            padding-left: 30px;
-            min-width: 100px;
+            padding: 8px 18px;
+            min-width: 90px;
             pointer-events: auto;
             box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
             transition: all 0.3s ease;
+        }
+
+         #left-notches .hud-notch {
+            justify-content: end;
         }
 
         #ammo-notch {
@@ -905,6 +909,7 @@
             display: flex;
             flex-direction: column;
             gap: 15px;
+            align-items: flex-end;
         }
 
         #pause-notch {
@@ -940,14 +945,20 @@
             }
 
             #left-notches {
-                left: -20px;
-                top: 70px;
-                gap: 12px;
+                left: -10px;
+                top: 60px;
+                gap: 10px;
+            }
+
+            #right-notches {
+                right: -10px;
+                top: 60px;
+                gap: 10px;
             }
 
             .hud-notch {
-                padding: 6px 12px;
-                min-width: 80px;
+                padding: 5px 10px;
+                min-width: 65px;
             }
 
             .notch-icon {
@@ -988,8 +999,18 @@
             </div>
         </div>
 
-        <!-- Left Side Notches -->
+        <!-- Left Side Notches (agora: pausa e fullscreen) -->
         <div id="left-notches">
+            <div class="hud-notch" id="pause-notch" title="Pause Game">
+                <div class="notch-icon">❚❚</div>
+            </div>
+            <div class="hud-notch" id="fullscreen-notch" title="Tela cheia">
+                <div class="notch-icon" style="padding: 0px; margin:0px;">⛶</div>
+            </div>
+        </div>
+
+        <!-- Right Side Notches (agora: munição e ouro) -->
+        <div id="right-notches">
             <div class="hud-notch" id="ammo-notch">
                 <div class="notch-icon">🔫</div>
                 <div class="notch-value" id="ammo-count">30</div>
@@ -997,17 +1018,6 @@
             <div class="hud-notch" id="score-notch">
                 <div class="notch-icon">💰</div>
                 <div class="notch-value" id="score-count">0</div>
-            </div>
-        </div>
-
-        <!-- Right Side Controls -->
-        <!-- Right Side Notch (Pause) -->
-        <div id="right-notches">
-            <div class="hud-notch" id="pause-notch" title="Pause Game">
-                <div class="notch-icon">❚❚</div>
-            </div>
-            <div class="hud-notch" id="fullscreen-notch" title="Tela cheia">
-                <div class="notch-icon" style="font-weight: 900">⛶</div>
             </div>
         </div>
     </div>
