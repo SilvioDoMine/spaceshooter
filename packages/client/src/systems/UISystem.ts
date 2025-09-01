@@ -29,11 +29,8 @@ export class UISystem {
   private renderer!: THREE.WebGLRenderer;
   // UI Elements
   private hudGroup!: THREE.Group;
-  private scoreText?: THREE.Sprite;
-  private ammoText?: THREE.Sprite;
-  private levelText?: THREE.Sprite;
-  private xpBar?: THREE.Mesh;
-  private xpBarBg?: THREE.Mesh;
+  // Removidos overlays 3D de score, ammo e level
+  // Removidos xpBar e xpBarBg (barra de XP 3D)
   private skillModal?: THREE.Group;
   private skillOptions: any[] = [];
   private skillModalKeyHandler: ((event: KeyboardEvent) => void) | null = null;
@@ -115,13 +112,7 @@ export class UISystem {
 
   // Removido: não há mais barra de vida no HUD
 
-    this.eventBus.on('ui:update-ammo', (data: { current: number; max: number }) => {
-      this.updateAmmo(data.current, data.max);
-    });
-
-    this.eventBus.on('ui:update-score', (data: { score: number }) => {
-      this.updateScore(data.score);
-    });
+  // Removidos listeners de update-ammo e update-score (HUD HTML agora cuida disso)
 
     this.eventBus.on('ui:update-level', (data: { level: number; currentXP: number; xpToNext: number; progress: number }) => {
       this.updateLevel(data.level, data.currentXP, data.xpToNext, data.progress);
@@ -189,47 +180,13 @@ export class UISystem {
   private createUIElements(): void {
     const aspect = window.innerWidth / window.innerHeight;
     const baseScale = 0.15;
-    // Score (top-left)
-    this.scoreText = this.createTextSprite(`Score: ${this.currentScore}`);
-    this.scoreText.position.set(-aspect * 0.9, 0.85, 0);
-    this.scoreText.scale.setScalar(baseScale);
-    this.hudGroup.add(this.scoreText);
-    // Ammo (top-right)
-    this.ammoText = this.createTextSprite(`Ammo: ${this.currentAmmo}/${this.maxAmmo}`);
-    this.ammoText.position.set(aspect * 0.9, 0.85, 0);
-    this.ammoText.scale.setScalar(baseScale);
-    this.hudGroup.add(this.ammoText);
-    // Level text (top-center, below score/ammo)
-    this.levelText = this.createTextSprite(`Level ${this.currentLevel}`);
-    this.levelText.position.set(0, 0.7, 0);
-    this.levelText.scale.setScalar(baseScale * 0.7);
-    this.hudGroup.add(this.levelText);
+  // Removidos overlays 3D de score, ammo e level
     // Wave timer (above level text)
     this.waveTimerText = this.createTextSprite(this.getWaveTimerText());
     this.waveTimerText.position.set(0, 0.9, 0);
     this.waveTimerText.scale.setScalar(baseScale * 0.6);
     this.hudGroup.add(this.waveTimerText);
-    // XP bar background (below level text)
-    const xpBarWidth = Math.min(aspect * 0.3, 0.5);
-    const xpBarBgGeometry = new THREE.PlaneGeometry(xpBarWidth, 0.025);
-    const xpBarBgMaterial = new THREE.MeshBasicMaterial({ 
-      color: 0x222244,
-      transparent: true,
-      opacity: 0.8
-    });
-    this.xpBarBg = new THREE.Mesh(xpBarBgGeometry, xpBarBgMaterial);
-    this.xpBarBg.position.set(0, 0.6, 0);
-    this.hudGroup.add(this.xpBarBg);
-    // XP bar (foreground)
-    const xpBarGeometry = new THREE.PlaneGeometry(xpBarWidth, 0.025);
-    const xpBarMaterial = new THREE.MeshBasicMaterial({ 
-      color: 0x4444ff,
-      transparent: true,
-      opacity: 0.9
-    });
-    this.xpBar = new THREE.Mesh(xpBarGeometry, xpBarMaterial);
-    this.xpBar.position.set(0, 0.6, 0.001);
-    this.hudGroup.add(this.xpBar);
+  // Removida barra de XP 3D
   }
   
   private createTextSprite(text: string, color: string = '#ffffff'): THREE.Sprite {
@@ -373,67 +330,20 @@ export class UISystem {
     this.xpProgress = 0;
     
     // Update all UI elements
-    if (this.scoreText) {
-      this.updateTextSprite(this.scoreText, `Score: ${this.currentScore}`);
-    }
-    
-  if (this.ammoText) {
-      this.updateTextSprite(this.ammoText, `Ammo: ${this.currentAmmo}/${this.maxAmmo}`);
-    }
-    
-    if (this.levelText) {
-      this.updateTextSprite(this.levelText, `Level ${this.currentLevel}`, '#ffffff');
-    }
+  // Removidos overlays 3D de score, ammo e level
     
     // Update health bar
   // healthBar removido
     
     // Update XP bar
-    if (this.xpBar) {
-      this.xpBar.scale.x = Math.max(0, this.xpProgress / 100);
-    }
+  // Removida barra de XP 3D
   }
   
-  public updateScore(score: number): void {
-    if (this.scoreText === undefined) {
-      console.warn('Score text not initialized yet, skipping update');
-      return;
-    }
-
-    this.currentScore = score;
-    this.updateTextSprite(this.scoreText, `Score: ${score}`, '#ffffff');
-  }
-  
-  public addScore(points: number): void {
-    if (this.scoreText === undefined) {
-      console.warn('Score text not initialized yet, skipping update');
-      return;
-    }
-
-    this.currentScore += points;
-    this.updateTextSprite(this.scoreText, `Score: ${this.currentScore}`);
-  }
+  // Removidos métodos de atualização de score
   
   // updateHealth removido: barra de vida do HUD não existe mais
   
-  public updateAmmo(current: number, max: number): void {    
-    // Update ammo text with color
-    const ammoPercent = (current / max) * 100;
-    let ammoColor = '#ffffff';
-    if (ammoPercent < 30) ammoColor = '#ffff00';
-    if (ammoPercent === 0) ammoColor = '#ff0000';
-
-    if (this.ammoText === undefined) {
-      console.warn('Ammo text not initialized yet, skipping update');
-      return;
-    }
-
-    this.updateTextSprite(
-      this.ammoText,
-      `Ammo: ${current}/${max}`,
-      ammoColor
-    );
-  }
+  // Removido método de atualização de ammo
   
   public updateLevel(level: number, currentXP: number, xpToNext: number, progress: number): void {
     this.currentLevel = level;
@@ -442,19 +352,9 @@ export class UISystem {
     this.xpProgress = progress;
     
     // Update level text
-    if (this.levelText) {
-      this.updateTextSprite(this.levelText, `Level ${level}`, '#ffffff');
-    }
+  // Removido overlay 3D de level
     
-    // Update XP bar
-    if (this.xpBar) {
-      const xpBarScale = Math.max(0, progress / 100);
-      this.xpBar.scale.x = xpBarScale;
-      
-      // Update XP bar position to keep it left-aligned
-      const barWidth = Math.min(window.innerWidth / window.innerHeight * 0.3, 0.5);
-      this.xpBar.position.x = -barWidth * 0.5 * (1 - xpBarScale);
-    }
+  // Removida barra de XP 3D
   }
   
   public showLevelUpEffect(oldLevel: number, newLevel: number): void {
@@ -526,30 +426,15 @@ export class UISystem {
     const baseScale = 0.15;
 
     if (
-      this.scoreText === undefined 
-      || this.ammoText === undefined
-      || this.levelText === undefined
-      || this.waveTimerText === undefined
-      || this.xpBar === undefined
-      || this.xpBarBg === undefined
+      this.waveTimerText === undefined
     ) {
       console.warn('One or more UI elements not initialized yet, skipping update');
       return;
     }
 
     // Update positions
-    this.scoreText.position.x = -aspect * 0.9;
-    this.scoreText.scale.setScalar(baseScale);
-    this.ammoText.position.x = aspect * 0.9;
-    this.ammoText.scale.setScalar(baseScale);
-    this.levelText.scale.setScalar(baseScale * 0.7);
     this.waveTimerText.scale.setScalar(baseScale * 0.6);
-    // Update XP bar width
-    const barWidth = Math.min(aspect * 0.3, 0.5);
-    const originalWidth = Math.min(window.innerWidth / window.innerHeight * 0.3, 0.5);
-    this.xpBarBg.scale.x = barWidth / originalWidth;
-    this.xpBar.scale.x = (barWidth / originalWidth) * (this.xpProgress / 100);
-    this.xpBar.position.x = -barWidth * 0.5 * (1 - (this.xpProgress / 100));
+    // Removida barra de XP 3D
   }
   
   
