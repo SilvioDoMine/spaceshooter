@@ -4,7 +4,7 @@ import { EventBus } from '../core/EventBus';
 import { RenderingSystem } from '../systems/RenderingSystem';
 import { assetManager } from '../services/AssetManager';
 import { ProjectileSystem } from '../systems/ProjectileSystem';
-import { PLAYER_CONFIG, DEFAULT_WORLD_BOUNDS, WorldBounds, PROJECTILE_CONFIG, calculateLevelFromXP, getXPToNextLevel, getLevelProgress, PlayerSkill, SkillType, generateSkillOptions, calculateDamageMultiplier, calculateAttackSpeedMultiplier, hasMultiShot, calculateMaxHealthBonus, calculateAmmoCapacityBonus, DEBUG_CONFIG } from '@spaceshooter/shared';
+import { PLAYER_CONFIG, DEFAULT_WORLD_BOUNDS, WorldBounds, PROJECTILE_CONFIG, calculateLevelFromXP, getXPToNextLevel, getLevelProgress, PlayerSkill, SkillType, generateSkillOptions, calculateDamageMultiplier, calculateAttackSpeedMultiplier, hasMultiShot, calculateMaxHealthBonus, calculateAmmoCapacityBonus, DEBUG_CONFIG, calculateProjectileLifetime } from '@spaceshooter/shared';
 import { CompoundCollisionShape, CollisionUtils } from '../utils/CollisionUtils';
 import { RangeIndicator } from '../effects/RangeIndicator';
 
@@ -700,29 +700,37 @@ export class Player extends Entity {
     }
     
 
+    // Calcular lifetime baseado no range do player
+    const calculatedLifetime = calculateProjectileLifetime(this.weaponRange, PROJECTILE_CONFIG.speed);
+    const projectileConfig = {
+      lifetime: calculatedLifetime
+    };
+    
+    console.log(`🎯 Projectile will expire in ${calculatedLifetime}ms (range: ${this.weaponRange}, speed: ${PROJECTILE_CONFIG.speed})`);
+
     // Verifica se o player tem a skill de projéteis fantasmas
     const hasGhost = this.stats.skills.some(skill => skill.type === 'ghost_projectiles');
 
     // Se tiver, projétil atravessa inimigos e é translúcido
     if (hasGhost) {
       // Projétil principal
-      this.projectileSystem.createProjectile('player', projectilePosition, projectileVelocity, projectileDamage, 0, 0, false, 0, true);
+      this.projectileSystem.createProjectile('player', projectilePosition, projectileVelocity, projectileDamage, 0, 0, false, 0, true, projectileConfig);
       // Multi-shot também é fantasma
       if (hasMultiShot(this.stats.skills)) {
         setTimeout(() => {
           if (this.isActive) {
-            this.projectileSystem.createProjectile('player', projectilePosition, projectileVelocity, projectileDamage, 0, 0, false, 0, true);
+            this.projectileSystem.createProjectile('player', projectilePosition, projectileVelocity, projectileDamage, 0, 0, false, 0, true, projectileConfig);
           }
         }, 50);
       }
     } else {
       // Projétil normal
-      this.projectileSystem.createProjectile('player', projectilePosition, projectileVelocity, projectileDamage, 0, maxRicochets, false, ricochetLevel);
+      this.projectileSystem.createProjectile('player', projectilePosition, projectileVelocity, projectileDamage, 0, maxRicochets, false, ricochetLevel, false, projectileConfig);
       // Multi-shot normal
       if (hasMultiShot(this.stats.skills)) {
         setTimeout(() => {
           if (this.isActive) {
-            this.projectileSystem.createProjectile('player', projectilePosition, projectileVelocity, projectileDamage, 0, maxRicochets, false, ricochetLevel);
+            this.projectileSystem.createProjectile('player', projectilePosition, projectileVelocity, projectileDamage, 0, maxRicochets, false, ricochetLevel, false, projectileConfig);
           }
         }, 50);
       }

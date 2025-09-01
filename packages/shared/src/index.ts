@@ -283,10 +283,21 @@ export interface ProjectileConfig {
 export const PROJECTILE_CONFIG = {
   speed: 20,                // Unidades por segundo
   damage: 5,               // Dano por hit
-  lifetime: 3000,           // 3 segundos em milliseconds
+  lifetime: 3000,           // 3 segundos em milliseconds (usado para inimigos)
   size: 0.1,                // Raio visual
   radius: 0.05              // Raio da hitbox
 };
+
+/**
+ * Calcula o lifetime do projétil baseado no range do player
+ * Para que o projétil expire quando sair da área de targeting
+ */
+export function calculateProjectileLifetime(playerRange: number, projectileSpeed: number): number {
+  // Tempo em segundos para percorrer a distância do range
+  const timeInSeconds = playerRange / projectileSpeed;
+  // Converter para milliseconds
+  return Math.round(timeInSeconds * 1000);
+}
 
 /**
  * Configurações dos tipos de inimigos
