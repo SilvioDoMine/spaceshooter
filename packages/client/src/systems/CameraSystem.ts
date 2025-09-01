@@ -34,9 +34,9 @@ export class CameraSystem {
     this.worldBounds = getAdaptiveWorldBounds(this.camera.aspect);
     this.cameraConfig = { ...DEFAULT_CAMERA_CONFIG };
     
-    // Posição inicial da câmera
-    this.currentPosition = { x: 0, y: 0, z: 5 };
-    this.targetPosition = { x: 0, y: 0, z: 5 };
+    // Posição inicial da câmera ajustada para melhor visão do range do player
+    this.currentPosition = { x: 0, y: 0, z: 7 }; // Aumentar distância para melhor visão
+    this.targetPosition = { x: 0, y: 0, z: 7 };
     
     // Calcular o tamanho do viewport baseado na câmera
     this.viewportSize = this.calculateViewportSize();

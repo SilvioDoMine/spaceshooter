@@ -227,6 +227,12 @@ export const PLAYER_CONFIG = {
   level: 1,               // Nível inicial
   currentXP: 0,           // XP inicial
   skills: [] as PlayerSkill[], // Skills iniciais vazias
+  // Configurações de arma/targeting
+  weapon: {
+    range: 2.0,           // Range de targeting automático
+    autoTarget: true,     // Auto targeting ativado
+    showRange: true       // Range visual ativado por padrão
+  },
   // Compound collision shape em valores relativos (0-1 baseado no size)
   // Essas coordenadas são multiplicadas pelo 'size' para obter valores absolutos
   collisionShape: {
@@ -1178,3 +1184,14 @@ export function shouldSpawnBoss(gameTime: number): BossWaveConfig | null {
 export function isGameVictorious(gameTime: number): boolean {
   return gameTime >= WAVE_SYSTEM_CONFIG.totalDuration;
 }
+
+/**
+ * Configurações de debug/desenvolvimento
+ */
+export const DEBUG_CONFIG = {
+  showPlayerRange: false,     // Mostrar range de ataque do player
+  showEnemyRanges: false,     // Mostrar ranges de ataque dos inimigos
+  showCollisionBoxes: false,  // Mostrar hitboxes
+  showFPS: false,            // Mostrar FPS counter
+  showGameInfo: false        // Mostrar informações de debug do jogo
+};

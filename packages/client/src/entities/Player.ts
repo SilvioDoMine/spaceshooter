@@ -4,8 +4,9 @@ import { EventBus } from '../core/EventBus';
 import { RenderingSystem } from '../systems/RenderingSystem';
 import { assetManager } from '../services/AssetManager';
 import { ProjectileSystem } from '../systems/ProjectileSystem';
-import { PLAYER_CONFIG, DEFAULT_WORLD_BOUNDS, WorldBounds, PROJECTILE_CONFIG, calculateLevelFromXP, getXPToNextLevel, getLevelProgress, PlayerSkill, SkillType, generateSkillOptions, calculateDamageMultiplier, calculateAttackSpeedMultiplier, hasMultiShot, calculateMaxHealthBonus, calculateAmmoCapacityBonus } from '@spaceshooter/shared';
+import { PLAYER_CONFIG, DEFAULT_WORLD_BOUNDS, WorldBounds, PROJECTILE_CONFIG, calculateLevelFromXP, getXPToNextLevel, getLevelProgress, PlayerSkill, SkillType, generateSkillOptions, calculateDamageMultiplier, calculateAttackSpeedMultiplier, hasMultiShot, calculateMaxHealthBonus, calculateAmmoCapacityBonus, DEBUG_CONFIG } from '@spaceshooter/shared';
 import { CompoundCollisionShape, CollisionUtils } from '../utils/CollisionUtils';
+import { RangeIndicator } from '../effects/RangeIndicator';
 
 export interface PlayerStats {
   health: number;
@@ -57,6 +58,13 @@ export class Player extends Entity {
   private healthBarSceneParent?: THREE.Scene;
   private healthBarSegments: THREE.Mesh[] = [];
   private healthBarText?: THREE.Sprite;
+
+  // Auto-targeting system
+  private weaponRange: number = PLAYER_CONFIG.weapon.range;
+  private autoTargetEnabled: boolean = PLAYER_CONFIG.weapon.autoTarget;
+  private currentTarget: any = null; // Enemy reference
+  private rangeIndicator?: RangeIndicator; // Made optional to avoid undefined access
+  private autoShootTimer: number = 0;
 
   constructor(
     eventBus: EventBus,
@@ -219,6 +227,16 @@ export class Player extends Entity {
   this.createHealthBar3D();
 
     this.renderingSystem.addToScene(this.object);
+    
+    // Initialize range indicator after scene is ready
+    this.rangeIndicator = new RangeIndicator(this.eventBus);
+    this.rangeIndicator.setRadius(this.weaponRange);
+    
+    // Add range indicator to scene
+    const rangeMesh = this.rangeIndicator.getMesh();
+    if (rangeMesh) {
+      this.renderingSystem.addToScene(rangeMesh);
+    }
   }
 
   private createCompoundCollisionVisualizers(): void {
@@ -427,8 +445,17 @@ export class Player extends Entity {
       }
     }
 
-    // TIRO AUTOMÁTICO AO PARAR (usar realDelta para rotação)
-    if (!this.isMoving && (this.infiniteAmmoEnabled || this.stats.ammo > 0) && this.shotTimer <= 0) {
+    // Update range indicator position
+    if (this.rangeIndicator) {
+      if (Math.random() < 0.01) { // Log ocasional
+        console.log(`🎯 Player position being sent: (${this.position.x}, ${this.position.y}, ${this.position.z})`);
+      }
+      this.rangeIndicator.setPosition(this.position.x, this.position.y, this.position.z);
+      this.rangeIndicator.update(deltaTime);
+    }
+
+    // AUTO-TARGETING SYSTEM with configurable range
+    if (this.autoTargetEnabled && (this.infiniteAmmoEnabled || this.stats.ammo > 0) && this.shotTimer <= 0) {
       if (game && typeof game.getEntitySystem === 'function') {
         const entitySystem = game.getEntitySystem();
         if (entitySystem && typeof entitySystem.getEnemies === 'function') {
@@ -436,17 +463,24 @@ export class Player extends Entity {
           let closestEnemy: any = null;
           let minDist = Infinity;
           const playerPos = this.getPosition();
+          
           enemiesMap.forEach((enemy: any) => {
             if (!enemy.isEntityActive || !enemy.isEntityActive()) return;
             const enemyPos = enemy.getPosition();
             const dx = enemyPos.x - playerPos.x;
             const dy = enemyPos.y - playerPos.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < minDist) {
+            
+            // Only consider enemies within weapon range
+            if (dist <= this.weaponRange && dist < minDist) {
               minDist = dist;
               closestEnemy = enemy;
             }
           });
+          
+          // Update current target
+          this.currentTarget = closestEnemy;
+          
           if (closestEnemy && typeof closestEnemy.getPosition === 'function') {
             // Rotaciona para o inimigo mais próximo de forma suave
             const enemyPos = closestEnemy.getPosition();
@@ -1357,6 +1391,43 @@ export class Player extends Entity {
     this.healthBarSceneParent = undefined;
     this.healthBarSegments = [];
     this.healthBarText = undefined;
+    
+    // Dispose range indicator
+    if (this.rangeIndicator) {
+      this.rangeIndicator.dispose();
+    }
+    
     this.renderingSystem.removeFromScene(this.object);
+  }
+
+  // Weapon range system methods
+  public setWeaponRange(range: number): void {
+    this.weaponRange = range;
+    if (this.rangeIndicator) {
+      this.rangeIndicator.setRadius(range);
+    }
+    this.eventBus.emit('player:range-changed', { range });
+  }
+
+  public getWeaponRange(): number {
+    return this.weaponRange;
+  }
+
+  public setAutoTargetEnabled(enabled: boolean): void {
+    this.autoTargetEnabled = enabled;
+  }
+
+  public isAutoTargetEnabled(): boolean {
+    return this.autoTargetEnabled;
+  }
+
+  public getCurrentTarget(): any {
+    return this.currentTarget;
+  }
+
+  public setRangeIndicatorVisible(visible: boolean): void {
+    if (this.rangeIndicator) {
+      this.rangeIndicator.setVisible(visible);
+    }
   }
 }

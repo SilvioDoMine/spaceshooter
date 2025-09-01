@@ -22,6 +22,8 @@ interface DebugSettings {
   infiniteAmmoEnabled: boolean;
   showCollisions: boolean;
   showJoystick: boolean;
+  showPlayerRange: boolean;
+  showEnemyRanges: boolean;
   timeScale: number;
   isPaused: boolean;
   playerSize: number;
@@ -48,6 +50,8 @@ export class DebugSystem {
     infiniteAmmoEnabled: false,
     showCollisions: false,
     showJoystick: false, // Hidden by default
+    showPlayerRange: false, // Hidden by default
+    showEnemyRanges: false, // Hidden by default
     timeScale: 1.0,
     isPaused: false,
     playerSize: PLAYER_CONFIG.size,
@@ -60,6 +64,8 @@ export class DebugSystem {
   private infiniteAmmoEnabled: boolean = false;
   private showCollisions: boolean = false;
   private showJoystick: boolean = false;
+  private showPlayerRange: boolean = false;
+  private showEnemyRanges: boolean = false;
   private timeScale: number = 1.0;
   private isPaused: boolean = false;
   private playerSize: number = PLAYER_CONFIG.size;
@@ -89,6 +95,8 @@ export class DebugSystem {
         this.infiniteAmmoEnabled = settings.infiniteAmmoEnabled || false;
         this.showCollisions = settings.showCollisions;
         this.showJoystick = settings.showJoystick !== undefined ? settings.showJoystick : true;
+        this.showPlayerRange = settings.showPlayerRange !== undefined ? settings.showPlayerRange : false;
+        this.showEnemyRanges = settings.showEnemyRanges !== undefined ? settings.showEnemyRanges : false;
         this.timeScale = settings.timeScale;
         this.isPaused = settings.isPaused;
         this.playerSize = settings.playerSize;
@@ -111,6 +119,8 @@ export class DebugSystem {
         infiniteAmmoEnabled: this.infiniteAmmoEnabled,
         showCollisions: this.showCollisions,
         showJoystick: this.showJoystick,
+        showPlayerRange: this.showPlayerRange,
+        showEnemyRanges: this.showEnemyRanges,
         timeScale: this.timeScale,
         isPaused: this.isPaused,
         playerSize: this.playerSize,
@@ -128,6 +138,8 @@ export class DebugSystem {
     this.infiniteAmmoEnabled = DebugSystem.DEFAULT_SETTINGS.infiniteAmmoEnabled;
     this.showCollisions = DebugSystem.DEFAULT_SETTINGS.showCollisions;
     this.showJoystick = DebugSystem.DEFAULT_SETTINGS.showJoystick;
+    this.showPlayerRange = DebugSystem.DEFAULT_SETTINGS.showPlayerRange;
+    this.showEnemyRanges = DebugSystem.DEFAULT_SETTINGS.showEnemyRanges;
     this.timeScale = DebugSystem.DEFAULT_SETTINGS.timeScale;
     this.isPaused = DebugSystem.DEFAULT_SETTINGS.isPaused;
     this.playerSize = DebugSystem.DEFAULT_SETTINGS.playerSize;
@@ -162,6 +174,16 @@ export class DebugSystem {
     const joystickCheckbox = document.getElementById('debug-show-joystick') as HTMLInputElement;
     if (joystickCheckbox) {
       joystickCheckbox.checked = this.showJoystick;
+    }
+
+    const playerRangeCheckbox = document.getElementById('debug-show-player-range') as HTMLInputElement;
+    if (playerRangeCheckbox) {
+      playerRangeCheckbox.checked = this.showPlayerRange;
+    }
+
+    const enemyRangesCheckbox = document.getElementById('debug-show-enemy-ranges') as HTMLInputElement;
+    if (enemyRangesCheckbox) {
+      enemyRangesCheckbox.checked = this.showEnemyRanges;
     }
 
     // Update time slider
@@ -516,6 +538,34 @@ export class DebugSystem {
         this.showJoystick = target.checked;
         this.saveSettings();
         this.eventBus.emit('debug:joystick-toggle', { visible: this.showJoystick });
+      });
+    }
+
+    // Player range visibility checkbox
+    const playerRangeCheckbox = document.getElementById('debug-show-player-range') as HTMLInputElement;
+    if (playerRangeCheckbox) {
+      playerRangeCheckbox.addEventListener('change', (event) => {
+        const target = event.target as HTMLInputElement;
+        this.showPlayerRange = target.checked;
+        this.saveSettings();
+        this.eventBus.emit('debug:range-visibility-changed', { 
+          showPlayerRange: this.showPlayerRange,
+          showEnemyRanges: this.showEnemyRanges
+        });
+      });
+    }
+
+    // Enemy ranges visibility checkbox
+    const enemyRangesCheckbox = document.getElementById('debug-show-enemy-ranges') as HTMLInputElement;
+    if (enemyRangesCheckbox) {
+      enemyRangesCheckbox.addEventListener('change', (event) => {
+        const target = event.target as HTMLInputElement;
+        this.showEnemyRanges = target.checked;
+        this.saveSettings();
+        this.eventBus.emit('debug:range-visibility-changed', { 
+          showPlayerRange: this.showPlayerRange,
+          showEnemyRanges: this.showEnemyRanges
+        });
       });
     }
 

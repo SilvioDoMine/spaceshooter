@@ -338,9 +338,17 @@ export type GameEventMap = {
   // Motivo: Permite debugar joystick no desktop
   'debug:joystick-toggle': { visible: boolean };
 
+  // Emitido em: DebugSystem.ts quando visibilidade dos ranges é alterada
+  // Motivo: Coordenação entre sistema de debug e indicadores de range
+  'debug:range-visibility-changed': { showPlayerRange: boolean; showEnemyRanges: boolean };
+
   // Emitido em: shared config quando tamanho do player muda
   // Motivo: Player precisa ajustar seu tamanho dinamicamente
   'player:size-changed': { newSize: number };
+  
+  // Emitido quando o range do player muda
+  // Motivo: RangeIndicator precisa ajustar o raio
+  'player:range-changed': { range: number };
 };
 
 export class EventBus {
