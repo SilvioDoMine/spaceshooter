@@ -32,7 +32,7 @@ export class HudSystem {
       levelProgressFill: document.getElementById('level-progress-fill'),
       ammoCount: document.getElementById('ammo-count'),
       scoreCount: document.getElementById('score-count'),
-      pauseButton: document.getElementById('pause-button')
+      pauseButton: document.getElementById('pause-notch')
     };
 
     this.setupEventListeners();
