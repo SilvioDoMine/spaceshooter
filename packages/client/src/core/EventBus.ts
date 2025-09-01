@@ -222,6 +222,16 @@ export type GameEventMap = {
     noSkillTrigger?: boolean 
   };
   
+  // Emitido em: ProjectileSystem para collision detection de projéteis de inimigos  
+  // Motivo: Verificar colisão de projéteis de inimigos com player
+  'collision:projectile-player': {
+    projectileId: string;
+    position: { x: number; y: number };
+    damage: number;
+    radius: number;
+    ownerId: string;
+  };
+
   // Emitido em: ProjectileSystem para continuous collision detection de projéteis de inimigos
   // Motivo: Verificar colisão de projéteis de inimigos com player ao longo do caminho
   'collision:projectile-player-continuous': {
@@ -412,6 +422,7 @@ export class EventBus {
     'collision:check',
     'collision:projectile-enemy',
     'collision:projectile-enemy-continuous',
+    'collision:projectile-player',
     'collision:projectile-player-continuous',
     'collision:powerup-player',
     'entity:shoot',

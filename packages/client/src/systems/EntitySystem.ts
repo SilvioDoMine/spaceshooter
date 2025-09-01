@@ -596,7 +596,7 @@ export class EntitySystem {
     }
   }
 
-  private handleProjectileSkillEffects(hitEnemy: any, hitEnemyId: string, isDead: boolean, data: any): void {
+  private handleProjectileSkillEffects(hitEnemy: any, _hitEnemyId: string, _isDead: boolean, data: any): void {
     // --- Skill: Tri Shot ---
     if (
       this.player &&

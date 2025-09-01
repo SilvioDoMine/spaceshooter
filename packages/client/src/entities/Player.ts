@@ -4,7 +4,7 @@ import { EventBus } from '../core/EventBus';
 import { RenderingSystem } from '../systems/RenderingSystem';
 import { assetManager } from '../services/AssetManager';
 import { ProjectileSystem } from '../systems/ProjectileSystem';
-import { PLAYER_CONFIG, DEFAULT_WORLD_BOUNDS, WorldBounds, PROJECTILE_CONFIG, calculateLevelFromXP, getXPToNextLevel, getLevelProgress, PlayerSkill, SkillType, generateSkillOptions, calculateDamageMultiplier, calculateAttackSpeedMultiplier, hasMultiShot, calculateMaxHealthBonus, calculateAmmoCapacityBonus, DEBUG_CONFIG, calculateProjectileLifetime } from '@spaceshooter/shared';
+import { PLAYER_CONFIG, DEFAULT_WORLD_BOUNDS, WorldBounds, PROJECTILE_CONFIG, calculateLevelFromXP, getXPToNextLevel, getLevelProgress, PlayerSkill, SkillType, generateSkillOptions, calculateDamageMultiplier, calculateAttackSpeedMultiplier, hasMultiShot, calculateMaxHealthBonus, calculateAmmoCapacityBonus, calculateProjectileLifetime } from '@spaceshooter/shared';
 import { CompoundCollisionShape, CollisionUtils } from '../utils/CollisionUtils';
 import { RangeIndicator } from '../effects/RangeIndicator';
 
@@ -35,7 +35,6 @@ export class Player extends Entity {
   private gameStartTime: number;
   private godModeEnabled: boolean = false;
   private infiniteAmmoEnabled: boolean = false;
-  private boundingBox: THREE.Box3 = new THREE.Box3();
   private playerShipModel?: THREE.Group;
   private collisionShape: CompoundCollisionShape;
   private collisionVisualizers: THREE.LineLoop[] = [];
@@ -64,7 +63,6 @@ export class Player extends Entity {
   private autoTargetEnabled: boolean = PLAYER_CONFIG.weapon.autoTarget;
   private currentTarget: any = null; // Enemy reference
   private rangeIndicator?: RangeIndicator; // Made optional to avoid undefined access
-  private autoShootTimer: number = 0;
 
   constructor(
     eventBus: EventBus,
@@ -301,6 +299,18 @@ export class Player extends Entity {
     return this.collisionShape;
   }
 
+  /**
+   * Override getRadius to return the largest collision circle radius
+   * This is mainly for compatibility with auto-targeting calculations
+   */
+  public getRadius(): number {
+    if (this.collisionShape.circles.length === 0) {
+      return PLAYER_CONFIG.radius || 0.15; // Fallback to config
+    }
+    // Return the radius of the largest collision circle
+    return Math.max(...this.collisionShape.circles.map(circle => circle.radius));
+  }
+
   public getAbsoluteCollisionCircles() {
     return CollisionUtils.getAbsoluteCollisionCircles(this.position, this.collisionShape, this.currentRotation);
   }
@@ -458,9 +468,9 @@ export class Player extends Entity {
     // Update range indicator position
     if (this.rangeIndicator) {
       if (Math.random() < 0.01) { // Log ocasional
-        console.log(`🎯 Player position being sent: (${this.position.x}, ${this.position.y}, ${this.position.z})`);
+        console.log(`🎯 Player position being sent: (${this.position.x}, ${this.position.y}, 0)`);
       }
-      this.rangeIndicator.setPosition(this.position.x, this.position.y, this.position.z);
+      this.rangeIndicator.setPosition(this.position.x, this.position.y, 0);
       this.rangeIndicator.update(deltaTime);
     }
 
@@ -483,7 +493,7 @@ export class Player extends Entity {
             
             // Calculate edge-to-edge distance instead of center-to-center
             const enemyRadius = enemy.getRadius ? enemy.getRadius() : 0.25; // Default enemy radius
-            const playerRadius = PLAYER_CONFIG.radius || 0.15; // Player radius
+            const playerRadius = this.getRadius(); // Use actual collision shape radius
             const edgeToEdgeDistance = dist - enemyRadius - playerRadius;
             
             // Only consider enemies within weapon range (edge-to-edge)
