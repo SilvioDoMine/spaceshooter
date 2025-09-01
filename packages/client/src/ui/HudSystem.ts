@@ -155,10 +155,10 @@ export class HudSystem {
   private updatePauseButton(): void {
     if (this.elements.pauseButton) {
       if (this.gameState.isPaused) {
-        this.elements.pauseButton.textContent = '▶️';
+        this.elements.pauseButton.textContent = '▶';
         this.elements.pauseButton.title = 'Resume Game';
       } else {
-        this.elements.pauseButton.textContent = '⏸️';
+        this.elements.pauseButton.textContent = '❚❚';
         this.elements.pauseButton.title = 'Pause Game';
       }
     }
