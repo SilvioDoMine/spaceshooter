@@ -13,15 +13,27 @@ export class SpawnEffect {
   private eventBus: EventBus;
   private onComplete: (() => void) | null = null;
 
-  // Shader para efeito de buraco negro
+  // Shader para efeito de distorção temporal
   private vertexShader = `
     varying vec2 vUv;
     varying vec3 vPosition;
+    uniform float uTime;
+    uniform float uProgress;
     
     void main() {
       vUv = uv;
       vPosition = position;
-      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      
+      // Distorção temporal no vértice
+      vec3 distortedPosition = position;
+      float dist = length(position.xy);
+      float warpFactor = uProgress * 0.3;
+      
+      // Ondulação temporal
+      distortedPosition.z += sin(dist * 5.0 - uTime * 4.0) * warpFactor * 0.1;
+      distortedPosition.xy *= (1.0 - warpFactor * 0.2);
+      
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(distortedPosition, 1.0);
     }
   `;
 
@@ -34,59 +46,31 @@ export class SpawnEffect {
     varying vec2 vUv;
     varying vec3 vPosition;
     
-    // Função de ruído
-    float random(vec2 st) {
-      return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123);
-    }
-    
-    // Função para criar espiral
-    float spiral(vec2 uv, float time) {
-      vec2 center = vec2(0.5, 0.5);
-      vec2 toCenter = center - uv;
-      float distance = length(toCenter);
-      float angle = atan(toCenter.y, toCenter.x);
-      
-      // Criar espiral
-      float spiral = sin(angle * 6.0 - time * 8.0 + distance * 20.0);
-      
-      return spiral;
-    }
-    
     void main() {
       vec2 uv = vUv;
       vec2 center = vec2(0.5, 0.5);
       float dist = distance(uv, center);
       
-      // Efeito de buraco negro - distorção radial
-      float blackHoleStrength = uProgress * uIntensity;
-      float warp = blackHoleStrength / (dist * dist + 0.1);
+      // Efeito de ripple visível mas suave
+      float ripple1 = sin(dist * 18.0 - uTime * 7.0);
+      float ripple2 = sin(dist * 30.0 - uTime * 10.0) * 0.7;
       
-      // Rotacionar UVs em direção ao centro
-      vec2 toCenter = center - uv;
-      float angle = atan(toCenter.y, toCenter.x);
-      float rotatedAngle = angle + warp * uTime * 3.0;
+      float rippleEffect = (ripple1 + ripple2) * 0.4 + 0.6;
       
-      // Nova posição distorcida
-      vec2 warpedUv = center + vec2(cos(rotatedAngle), sin(rotatedAngle)) * dist;
+      // Gradiente radial mais definido
+      float radial = 1.0 - smoothstep(0.1, 0.7, dist);
       
-      // Espiral
-      float spiralPattern = spiral(warpedUv, uTime);
+      // Pulso temporal mais visível
+      float pulse = sin(uTime * 4.0) * 0.15 + 0.85;
       
-      // Gradiente radial
-      float radialGrad = 1.0 - smoothstep(0.0, 0.5, dist);
+      // Combinar efeitos 
+      float intensity = radial * rippleEffect * pulse * uProgress * uIntensity;
       
-      // Combinar efeitos
-      float finalAlpha = radialGrad * spiralPattern * uProgress;
-      finalAlpha = max(finalAlpha, radialGrad * 0.3 * uProgress); // Garantir visibilidade mínima
+      // Cor branca brilhante
+      vec3 finalColor = uColor * intensity;
       
-      // Cor com intensidade baseada na distância
-      vec3 finalColor = uColor * (1.0 + warp * 2.0);
-      
-      // Efeito de borda brilhante
-      float edge = smoothstep(0.4, 0.5, dist) * (1.0 - smoothstep(0.5, 0.6, dist));
-      finalColor += edge * vec3(0.5, 0.8, 1.0) * uProgress * 2.0;
-      
-      gl_FragColor = vec4(finalColor, finalAlpha);
+      // Alpha mais alto para ser visível mas ainda sutil
+      gl_FragColor = vec4(finalColor, intensity * 0.6);
     }
   `;
 
@@ -96,28 +80,28 @@ export class SpawnEffect {
   }
 
   private createMesh(): void {
-    // Geometria circular para o efeito (maior para ser mais visível)
-    const geometry = new THREE.PlaneGeometry(3.0, 3.0, 32, 32);
+    // Geometria circular pequena mas visível
+    const geometry = new THREE.PlaneGeometry(2.0, 2.0, 24, 24);
     
-    // Material com shader personalizado
+    // Material com shader personalizado para distorção temporal
     this.material = new THREE.ShaderMaterial({
       vertexShader: this.vertexShader,
       fragmentShader: this.fragmentShader,
       uniforms: {
         uTime: { value: 0.0 },
         uProgress: { value: 0.0 },
-        uColor: { value: new THREE.Color(0xff4400) }, // Cor laranja brilhante para ser mais visível
-        uIntensity: { value: 2.0 }
+        uColor: { value: new THREE.Color(0xffffff) }, // Cor branca
+        uIntensity: { value: 0.8 } // Aumentar intensidade para ficar visível
       },
       transparent: true,
-      blending: THREE.AdditiveBlending,
+      blending: THREE.AdditiveBlending, // Volta pro blending aditivo pra ser mais visível
       depthWrite: false,
-      side: THREE.DoubleSide // Renderizar ambos os lados
+      side: THREE.DoubleSide
     });
 
     this.mesh = new THREE.Mesh(geometry, this.material);
-    this.mesh.renderOrder = 100; // Renderizar por cima de outros elementos
-    this.mesh.position.z = 0.1; // Posicionar ligeiramente à frente
+    this.mesh.renderOrder = 10; // Renderizar na frente
+    this.mesh.position.z = 0.1; // Posicionar ligeiramente na frente
   }
 
   public start(position: { x: number; y: number; z: number }, onComplete?: () => void): void {
