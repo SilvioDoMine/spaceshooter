@@ -103,7 +103,7 @@ export class XPOrbSystem {
   private glowGeometry!: THREE.SphereGeometry;
   
   // Configuration
-  private readonly MERGE_DISTANCE = 0.0; // Distance for auto-merge (mais restritivo)
+  private readonly MERGE_DISTANCE = 0.1; // Distance for auto-merge (mais restritivo)
   private readonly COLLECT_DISTANCE = 0.8; // Distance for collection (igual aos power ups)
   private readonly GRID_SIZE = 4; // Spatial grid cell size
   // Removed MAX_ORBS_PER_ENEMY - now controlled by enemy configuration
