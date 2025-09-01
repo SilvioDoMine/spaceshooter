@@ -554,16 +554,29 @@ export class EntitySystem {
     const playerCollisionShape = this.player.getCollisionShape();
 
     // Check continuous collision along the projectile's path against compound player shape
-    // For now, we'll use a simplified approach with player radius
-    const playerRadius = this.player.getRadius();
+    // Use the proper compound collision shape instead of simplified radius
+    let hit = false;
     
-    if (CollisionUtils.checkContinuousCollision(
-      data.startPosition,
-      data.endPosition,
-      data.radius,
-      playerPos,
-      playerRadius
-    )) {
+    // Check collision against each circle in the compound shape
+    for (const circle of playerCollisionShape.circles) {
+      const circleWorldPos = {
+        x: playerPos.x + circle.offset.x,
+        y: playerPos.y + circle.offset.y
+      };
+      
+      if (CollisionUtils.checkContinuousCollision(
+        data.startPosition,
+        data.endPosition,
+        data.radius,
+        circleWorldPos,
+        circle.radius
+      )) {
+        hit = true;
+        break;
+      }
+    }
+    
+    if (hit) {
       // Remove projectile
       this.projectileSystem.removeProjectile(data.projectileId);
 
