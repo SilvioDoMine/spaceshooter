@@ -5,6 +5,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Space Shooter</title>
     <style>
+        /* Timer notch discreto abaixo da HUD de level */
+        #stage-timer.timer-notch {
+            position: absolute;
+            top: 62px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255,255,255,0.18);
+            color: #f1f1f1;
+            font-size: 1.1rem;
+            font-family: 'Inter', Arial, sans-serif;
+            padding: 5px 22px;
+            border-radius: 18px;
+            box-shadow: none;
+            border: none;
+            min-width: 70px;
+            text-align: center;
+            letter-spacing: 1px;
+            z-index: 20;
+            font-weight: 500;
+            pointer-events: none;
+            opacity: 0.92;
+        }
+        #stage-timer #timer-text {
+            font-variant-numeric: tabular-nums;
+            font-size: 1.08em;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
         * {
             margin: 0;
             padding: 0;
@@ -997,6 +1025,11 @@
                     <div class="level-shine"></div>
                 </div>
             </div>
+        </div>
+
+        <!-- Timer discreto abaixo da HUD de level -->
+        <div id="stage-timer" class="timer-notch">
+            <span id="timer-text">00:00</span>
         </div>
 
         <!-- Left Side Notches (agora: pausa e fullscreen) -->

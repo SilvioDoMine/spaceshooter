@@ -20,6 +20,7 @@ export class HudSystem {
     scoreCount: HTMLElement | null;
     pauseButton: HTMLElement | null;
     fullscreenButton: HTMLElement | null;
+    timerText: HTMLElement | null;
   };
   
   private gameState = {
@@ -32,17 +33,38 @@ export class HudSystem {
     isPaused: false
   };
 
+  private timerInterval: number | null = null;
+  private timerSeconds: number = 0;
+  private timerRunning: boolean = false;
+
   constructor(eventBus: EventBus) {
     this.eventBus = eventBus;
-    
     this.elements = {
       levelText: document.getElementById('level-text'),
       levelProgressFill: document.getElementById('level-progress-fill'),
       ammoCount: document.getElementById('ammo-count'),
       scoreCount: document.getElementById('score-count'),
       pauseButton: document.getElementById('pause-notch'),
-      fullscreenButton: document.getElementById('fullscreen-notch')
+      fullscreenButton: document.getElementById('fullscreen-notch'),
+      timerText: document.getElementById('timer-text')
     };
+
+    // Timer: resetar e iniciar ao começar o jogo
+    this.eventBus.on('game:started', () => {
+      this.resetTimer();
+      this.startTimer();
+    });
+    // Timer: pausar e continuar
+    this.eventBus.on('game:paused', () => {
+      this.pauseTimer();
+    });
+    this.eventBus.on('game:resumed', () => {
+      this.resumeTimer();
+    });
+    // Timer: resetar ao terminar
+    this.eventBus.on('game:over', () => {
+      this.stopTimer();
+    });
 
     this.setupEventListeners();
     // Garante barra zerada ao iniciar
@@ -63,6 +85,46 @@ export class HudSystem {
       }
     });
     console.log('🎮 HUD System initialized');
+  }
+
+  // Timer HUD
+  private startTimer() {
+    if (this.timerInterval) clearInterval(this.timerInterval);
+    this.timerRunning = true;
+    this.timerInterval = window.setInterval(() => {
+      if (this.timerRunning) {
+        this.timerSeconds++;
+        this.updateTimerDisplay();
+      }
+    }, 1000);
+  }
+
+  private pauseTimer() {
+    this.timerRunning = false;
+  }
+
+  private resumeTimer() {
+    this.timerRunning = true;
+  }
+
+  private stopTimer() {
+    if (this.timerInterval) clearInterval(this.timerInterval);
+    this.timerInterval = null;
+    this.timerRunning = false;
+  }
+
+  private resetTimer() {
+    this.stopTimer();
+    this.timerSeconds = 0;
+    this.updateTimerDisplay();
+  }
+
+  private updateTimerDisplay() {
+    if (this.elements.timerText) {
+      const min = Math.floor(this.timerSeconds / 60).toString().padStart(2, '0');
+      const sec = (this.timerSeconds % 60).toString().padStart(2, '0');
+      this.elements.timerText.textContent = `${min}:${sec}`;
+    }
   }
 
   private setupEventListeners(): void {
