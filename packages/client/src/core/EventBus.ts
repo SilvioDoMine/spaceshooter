@@ -192,6 +192,16 @@ export type GameEventMap = {
   // Motivo: EntitySystem dar pontos e XP ao jogador
   'enemy:destroyed': { points: number; xp: number; xpOrbCount: number; enemyType: string; enemyId: string; position: { x: number; y: number; z: number } };
 
+  // Emitido em: Enemy.ts quando inimigo atira
+  // Motivo: EntitySystem criar projétil do inimigo através do ProjectileSystem
+  'entity:shoot': { 
+    ownerId: string; 
+    position: { x: number; y: number }; 
+    velocity: { x: number; y: number }; 
+    damage: number; 
+    config: any 
+  };
+
   // ========== COLLISION EVENTS ==========
   // Emitido em: Enemy.ts:117 para verificar colisão de inimigo
   // Motivo: Sistema de colisão verificar se inimigo colidiu com jogador
@@ -380,6 +390,7 @@ export class EventBus {
     'collision:check',
     'collision:projectile-enemy',
     'collision:powerup-player',
+    'entity:shoot',
     'debug:update',
     'player:health-changed',
     'player:ammo-changed',

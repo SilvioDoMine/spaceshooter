@@ -229,7 +229,7 @@ export const PLAYER_CONFIG = {
   skills: [] as PlayerSkill[], // Skills iniciais vazias
   // Configurações de arma/targeting
   weapon: {
-    range: 2.0,           // Range de targeting automático
+    range: 3.0,           // Range de targeting automático
     autoTarget: true,     // Auto targeting ativado
     showRange: true       // Range visual ativado por padrão
   },
@@ -325,7 +325,7 @@ export const ENEMY_CONFIG = {
     spawnRate: 1000,        // A cada 1 segundo
     xpDrop: 10,             // XP dado quando morto
     xpOrbCount: 10,         // Número de orbes de XP que dropa
-    diesOnPlayerCollision: true,
+    diesOnPlayerCollision: false,
     // Não atira por enquanto
     projectile: {
       canShoot: false
@@ -373,13 +373,13 @@ export const ENEMY_CONFIG = {
   boss: {
     health: 2000,            // 50 hits para destruir - muito resistente
     speed: 0.2,             // Bem lento
-    size: 2,                // Grande
-    radius: 1.3,            // Hitbox maior
+    size: 1.3,              // Grande
+    radius: 1.0,            // Hitbox maior
     color: 0xff0080,        // Rosa/Magenta para diferenciação
     spawnRate: 60000,       // A cada 60 segundos (muito raro)
     xpDrop: 200,            // Muito XP
     xpOrbCount: 200,        // Muitos orbes de XP
-    diesOnPlayerCollision: true,
+    diesOnPlayerCollision: false,
     // Boss atira projéteis grandes e lentos
     projectile: {
       canShoot: true,
@@ -390,7 +390,7 @@ export const ENEMY_CONFIG = {
       radius: 0.15,         // Hitbox maior
       color: 0xff0040,      // Vermelho escuro
       cooldown: 2.0,        // Atira a cada 2 segundos
-      shootRange: 8.0,      // Só atira se jogador estiver próximo
+      shootRange: 2.5,      // Só atira se jogador estiver próximo
       targetType: 'player'  // Atira no jogador
     } as ProjectileConfig
   }
