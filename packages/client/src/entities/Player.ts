@@ -254,12 +254,12 @@ export class Player extends Entity {
       const segments = 32;
       const vertices = [];
       
-      // Create circle vertices
+      // Create circle vertices centered at origin (offset will be applied via position)
       for (let i = 0; i <= segments; i++) {
         const theta = (i / segments) * Math.PI * 2;
         vertices.push(
-          Math.cos(theta) * circle.radius + circle.offset.x,
-          Math.sin(theta) * circle.radius + circle.offset.y,
+          Math.cos(theta) * circle.radius,
+          Math.sin(theta) * circle.radius,
           0
         );
       }
@@ -275,6 +275,9 @@ export class Player extends Entity {
       });
       
       const visualizer = new THREE.LineLoop(geometry, material);
+      
+      // Set initial position (will be updated by updateCollisionVisualizersRotation)
+      visualizer.position.set(circle.offset.x, circle.offset.y, 0);
       
       // Set initial visibility based on current debug state
       const game = (window as any).game;
@@ -368,18 +371,25 @@ export class Player extends Entity {
   }
 
   private updateCollisionVisualizersRotation(): void {
-    // Get the rotated collision circles and update the visualizer positions
-    const rotatedCircles = CollisionUtils.getAbsoluteCollisionCircles(
-      { x: 0, y: 0 }, // Use origin since visualizers are children of player object
-      this.collisionShape, 
-      this.currentRotation
-    );
-    
+    // Since collision visualizers are children of the player object, they inherit the parent's rotation
+    // We only need to apply the offset positions WITHOUT additional rotation
+    // The rotation is already applied to the parent object
     this.collisionVisualizers.forEach((visualizer, index) => {
-      if (index < rotatedCircles.length) {
-        const circle = rotatedCircles[index];
-        visualizer.position.x = circle.pos.x;
-        visualizer.position.y = circle.pos.y;
+      if (index < this.collisionShape.circles.length) {
+        const circle = this.collisionShape.circles[index];
+        
+        // Set position to the UNROTATED offset - the parent object rotation will handle the rest
+        // This matches what the collision system expects since it applies rotation in getAbsoluteCollisionCircles
+        visualizer.position.set(circle.offset.x, circle.offset.y, 0);
+        
+        // Debug: log first few updates to verify position is correct
+        if (index === 0 && Math.random() < 0.01) {
+          console.log('🔄 Collision visualizer debug (no rotation applied to child):', {
+            circleOffset: circle.offset,
+            visualizerLocalPos: { x: visualizer.position.x, y: visualizer.position.y },
+            parentRotation: this.object.rotation.z
+          });
+        }
       }
     });
   }

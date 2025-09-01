@@ -238,18 +238,41 @@ export const PLAYER_CONFIG = {
   collisionShape: {
     circles: [
       // Center/cockpit circle
-      { offset: { x: -0.17, y: -0.67 }, radius: 0.83, name: 'cockpit' },
+      { offset: { x: -0.17, y: -0.67 }, radius: 0.73, name: 'cockpit' },
       // Front nose
-      { offset: { x: -0.17, y: 1.73 }, radius: 0.53, name: 'nose_far' },
-      { offset: { x: -0.17, y: 0.67 }, radius: 0.53, name: 'nose_close' },
+      { offset: { x: -0.17, y: 2.1 }, radius: 0.20, name: 'nose1' },
+      { offset: { x: -0.17, y: 1.8 }, radius: 0.20, name: 'nose2' },
+      { offset: { x: -0.17, y: 1.5 }, radius: 0.20, name: 'nose3' },
+      { offset: { x: -0.17, y: 1.1 }, radius: 0.23, name: 'nose4' },
+      { offset: { x: -0.17, y: 0.8 }, radius: 0.25, name: 'nose5' },
+      { offset: { x: -0.17, y: 0.4 }, radius: 0.28, name: 'nose6' },
+      // { offset: { x: -0.17, y: 0.67 }, radius: 0.53, name: 'nose_close' },
       // Left wing
-      { offset: { x: -2.33, y: -0.67 }, radius: 0.53, name: 'left_wing_far' },
-      { offset: { x: -1.33, y: -0.67 }, radius: 0.53, name: 'left_wing_close' },
+      { offset: { x: -2.5, y: -0.75 }, radius: 0.23, name: 'left_wing1' },
+      { offset: { x: -2.1, y: -0.75 }, radius: 0.19, name: 'left_wing2' },
+      { offset: { x: -1.8, y: -0.75 }, radius: 0.19, name: 'left_wing3' },
+      { offset: { x: -1.5, y: -0.75 }, radius: 0.19, name: 'left_wing4' },
+      { offset: { x: -1.2, y: -0.75 }, radius: 0.19, name: 'left_wing5' },
+      { offset: { x: -0.9, y: -0.75 }, radius: 0.19, name: 'left_wing6' },
+      // { offset: { x: -1.33, y: -0.67 }, radius: 0.53, name: 'left_wing_close' },
       // Right wing
-      { offset: { x: 1.83, y: -0.67 }, radius: 0.53, name: 'right_wing_far' },
-      { offset: { x: 1.00, y: -0.67 }, radius: 0.53, name: 'right_wing_close' },
+      { offset: { x: 2.1, y: -0.75 }, radius: 0.23, name: 'right_wing1' },
+      { offset: { x: 1.8, y: -0.75 }, radius: 0.19, name: 'right_wing2' },
+      { offset: { x: 1.5, y: -0.75 }, radius: 0.19, name: 'right_wing3' },
+      { offset: { x: 1.2, y: -0.75 }, radius: 0.19, name: 'right_wing4' },
+      { offset: { x: 0.9, y: -0.75 }, radius: 0.19, name: 'right_wing5' },
+      { offset: { x: 0.6, y: -0.75 }, radius: 0.19, name: 'right_wing6' },
+      // { offset: { x: 1.00, y: -0.67 }, radius: 0.53, name: 'right_wing_close' },
       // Rear engine
-      { offset: { x: -0.17, y: -2.33 }, radius: 0.83, name: 'engine' }
+      { offset: { x: -0.17, y: -2.5 }, radius: 0.20, name: 'engine1' },
+      { offset: { x: -0.17, y: -2.2 }, radius: 0.23, name: 'engine2' },
+      { offset: { x: -0.17, y: -1.9 }, radius: 0.24, name: 'engine3' },
+      { offset: { x: -0.17, y: -1.6 }, radius: 0.24, name: 'engine4' },
+      { offset: { x: -0.14, y: -1.9 }, radius: 0.24, name: 'engine5' },
+      // Rear engine left notch
+      { offset: { x: -0.8, y: -2 }, radius: 0.30, name: 'engine_left' },
+      // Rear engine right notch
+      { offset: { x: 0.5, y: -2 }, radius: 0.30, name: 'engine_right' },
     ]
   }
 };

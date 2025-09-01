@@ -17,6 +17,12 @@ interface DebugData {
   playerAmmo?: string;
 }
 
+interface CollisionDebugInfo {
+  mouseHover: string;
+  collisionStatus: string;
+  colliderName: string;
+}
+
 interface DebugSettings {
   godModeEnabled: boolean;
   infiniteAmmoEnabled: boolean;
@@ -78,6 +84,16 @@ export class DebugSystem {
   // Collapse functionality
   private isCollapsed: boolean = true;
   private clickTimeout: number | null = null;
+  
+  // Collision debugging
+  private mousePosition: { x: number; y: number } = { x: 0, y: 0 };
+  private collisionDebugInfo: CollisionDebugInfo = {
+    mouseHover: 'None',
+    collisionStatus: 'N/A',
+    colliderName: 'N/A'
+  };
+  private mouseEventListener: ((event: MouseEvent) => void) | null = null;
+  private checkCounter: number = 0;
 
   constructor(eventBus: EventBus) {
     this.eventBus = eventBus;
@@ -259,6 +275,9 @@ export class DebugSystem {
 
     // Setup drag functionality
     this.setupDragFunctionality();
+
+    // Setup mouse collision detection
+    this.setupMouseCollisionDetection();
 
     // Start performance monitoring
     this.startPerformanceMonitoring();
@@ -805,7 +824,204 @@ export class DebugSystem {
     }, 10); // Small delay to let CSS apply
   }
 
+  private setupMouseCollisionDetection(): void {
+    let debugCounter = 0; // Counter to limit debug logs
+    
+    this.mouseEventListener = (event: MouseEvent) => {
+      // Debug: Log first few mouse events to see if they're being triggered
+      if (debugCounter < 5) {
+        console.log('🐭 Mouse event triggered:', { x: event.clientX, y: event.clientY, visible: this.isVisible });
+        debugCounter++;
+      }
+      
+      if (!this.isVisible) {
+        // Clear collision debug info when debug panel is not visible
+        this.updateCollisionDebugInfo('Panel Hidden', 'N/A', 'N/A');
+        return;
+      }
+      
+      // Get canvas element to convert screen coordinates to world coordinates
+      const canvas = document.querySelector('canvas');
+      if (!canvas) {
+        if (debugCounter < 3) {
+          console.log('❌ No canvas found');
+        }
+        this.updateCollisionDebugInfo('No Canvas', 'N/A', 'N/A');
+        return;
+      }
+      
+      const rect = canvas.getBoundingClientRect();
+      const canvasX = event.clientX - rect.left;
+      const canvasY = event.clientY - rect.top;
+      
+      // Convert to normalized coordinates (-1 to 1)
+      const normalizedX = (canvasX / canvas.clientWidth) * 2 - 1;
+      const normalizedY = -(canvasY / canvas.clientHeight) * 2 + 1;
+      
+      // Store mouse position for collision detection
+      this.mousePosition = { x: normalizedX, y: normalizedY };
+      
+      // Debug: Show coordinates being calculated for first few events
+      if (debugCounter < 5) {
+        console.log('📍 Mouse coordinates:', {
+          screen: { x: event.clientX, y: event.clientY },
+          canvas: { x: canvasX, y: canvasY },
+          normalized: this.mousePosition
+        });
+      }
+      
+      // Check collision with player colliders
+      this.checkPlayerColliderHover();
+    };
+    
+    document.addEventListener('mousemove', this.mouseEventListener);
+    console.log('✅ Mouse collision detection setup complete');
+  }
+
+  private checkPlayerColliderHover(): void {
+    // Debug: Log first few calls to this method
+    if (this.checkCounter < 3) {
+      console.log('🔍 checkPlayerColliderHover called:', this.checkCounter);
+      this.checkCounter++;
+    }
+    
+    // Get player entity from global game instance
+    const game = (window as any).game;
+    if (!game) {
+      this.updateCollisionDebugInfo('No Game', '❌ GAME NOT LOADED', 'N/A');
+      return;
+    }
+    
+    try {
+      const entitySystem = game.getEntitySystem();
+      if (!entitySystem) {
+        this.updateCollisionDebugInfo('No EntitySystem', '❌ ENTITY SYSTEM MISSING', 'N/A');
+        return;
+      }
+      
+      const player = entitySystem.getPlayer();
+      if (!player) {
+        if (this.checkCounter < 5) {
+          console.log('❌ Player not found in EntitySystem');
+        }
+        this.updateCollisionDebugInfo('No Player', '❌ PLAYER NOT FOUND', 'N/A');
+        return;
+      }
+      
+      if (this.checkCounter < 5) {
+        console.log('✅ Player found:', player);
+      }
+      
+      // Get player's absolute collision circles
+      const collisionCircles = player.getAbsoluteCollisionCircles();
+      if (!collisionCircles || collisionCircles.length === 0) {
+        this.updateCollisionDebugInfo('No Colliders', '❌ NO COLLISION CIRCLES', 'N/A');
+        return;
+      }
+      
+      // Debug info - log occasionally to see what's happening
+      if (Math.random() < 0.01) { // 1% chance to log
+        console.log('🎯 Collision Debug Info:', {
+          mouseNormalized: this.mousePosition,
+          playerColliders: collisionCircles.length,
+          firstCollider: collisionCircles[0]
+        });
+      }
+      
+      // Convert mouse position to world coordinates
+      const renderingSystem = game.getRenderingSystem();
+      if (!renderingSystem) {
+        this.updateCollisionDebugInfo('No RenderingSystem', '❌ RENDERING SYSTEM MISSING', 'N/A');
+        return;
+      }
+      
+      const camera = renderingSystem.camera;
+      if (!camera) {
+        this.updateCollisionDebugInfo('No Camera', '❌ CAMERA MISSING', 'N/A');
+        return;
+      }
+      
+      // Get camera position from the camera system 
+      const cameraSystem = game.getCameraSystem();
+      if (!cameraSystem) return;
+      
+      // Use camera info to properly convert screen to world coordinates
+      const cameraPos = cameraSystem.getCameraPosition();
+      const viewportSize = cameraSystem.getViewportSize();
+      
+      // Convert normalized coordinates to world coordinates
+      const worldX = cameraPos.x + (this.mousePosition.x * viewportSize.width / 2);
+      const worldY = cameraPos.y + (this.mousePosition.y * viewportSize.height / 2);
+      
+      // Debug log world coordinates occasionally
+      if (Math.random() < 0.005) { // 0.5% chance to log
+        console.log('🌍 World Coordinates:', {
+          worldMouse: { x: worldX, y: worldY },
+          cameraPos,
+          viewportSize,
+          normalizedMouse: this.mousePosition
+        });
+      }
+      
+      // Check each collision circle
+      let hoveredCollider = null;
+      let hoveredDistance = Infinity;
+      let isInsideCollider = false;
+      
+      for (let i = 0; i < collisionCircles.length; i++) {
+        const circle = collisionCircles[i];
+        const dx = worldX - circle.pos.x;
+        const dy = worldY - circle.pos.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        if (distance <= circle.radius && distance < hoveredDistance) {
+          hoveredCollider = circle;
+          hoveredDistance = distance;
+          isInsideCollider = true;
+        }
+      }
+      
+      if (hoveredCollider) {
+        const colliderName = hoveredCollider.name || `Collider ${collisionCircles.indexOf(hoveredCollider)}`;
+        const statusText = isInsideCollider ? '✅ INSIDE COLLIDER' : '🎯 HOVERING';
+        const distanceInfo = `${hoveredDistance.toFixed(2)}/${hoveredCollider.radius.toFixed(2)}`;
+        this.updateCollisionDebugInfo('Player Collider', statusText, `${colliderName} (${distanceInfo})`);
+        
+        if (this.checkCounter < 10) {
+          console.log('🎯 COLLISION FOUND!', { colliderName, statusText, distanceInfo });
+        }
+      } else {
+        this.updateCollisionDebugInfo('Searching...', `Mouse: ${worldX.toFixed(1)}, ${worldY.toFixed(1)}`, `${collisionCircles.length} colliders`);
+        
+        if (this.checkCounter < 10) {
+          console.log('🔍 No collision found. Mouse world pos:', { worldX, worldY }, 'Colliders:', collisionCircles.length);
+        }
+      }
+      
+    } catch (error) {
+      // Game not fully initialized yet or other error
+      console.error('🚨 Error in checkPlayerColliderHover:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.updateCollisionDebugInfo('Error', `❌ ${errorMessage}`, 'N/A');
+    }
+  }
+  
+  private updateCollisionDebugInfo(mouseHover: string, collisionStatus: string, colliderName: string): void {
+    this.collisionDebugInfo = { mouseHover, collisionStatus, colliderName };
+    
+    // Update debug display
+    this.updateDebugValue('debug-collision-hover', mouseHover);
+    this.updateDebugValue('debug-collision-status', collisionStatus);
+    this.updateDebugValue('debug-collider-name', colliderName);
+  }
+
   public dispose(): void {
+    // Remove mouse event listener
+    if (this.mouseEventListener) {
+      document.removeEventListener('mousemove', this.mouseEventListener);
+      this.mouseEventListener = null;
+    }
+    
     // Clear localStorage on dispose if needed
     // Note: we don't clear settings here as they should persist
     // Individual event listeners will be cleaned up automatically

@@ -375,7 +375,7 @@ export class ProjectileSystem {
     });
     // Forçar renderização se necessário
     if (this.renderingSystem) {
-      this.renderingSystem.requestRender();
+      this.renderingSystem.render();
     }
   }
 
