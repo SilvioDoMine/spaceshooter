@@ -45,21 +45,8 @@ export class UISystem {
   
   // State
   private currentScore: number = 0;
-  private currentHealth: number = 100;
-  private maxHealth: number = 100;
   private currentAmmo: number = 30;
   private maxAmmo: number = 30;
-  private currentLevel: number = 1;
-  private currentXP: number = 0;
-  private xpToNext: number = 100;
-  private xpProgress: number = 0;
-  
-  // Wave timer
-  private waveTimerText?: THREE.Sprite;
-  private currentWaveDescription: string = '';
-  private gameTime: number = 0;
-  private totalDuration: number = 360; // 6 minutes
-  private timeFrozen: boolean = false;
 
   private eventBus: EventBus;
 
@@ -114,13 +101,7 @@ export class UISystem {
 
   // Removidos listeners de update-ammo e update-score (HUD HTML agora cuida disso)
 
-    this.eventBus.on('ui:update-level', (data: { level: number; currentXP: number; xpToNext: number; progress: number }) => {
-      this.updateLevel(data.level, data.currentXP, data.xpToNext, data.progress);
-    });
-
-    this.eventBus.on('ui:level-up-effect', (data: { oldLevel: number; newLevel: number; currentXP: number }) => {
-      this.showLevelUpEffect(data.oldLevel, data.newLevel);
-    });
+  // Removido: update-level, level-up-effect (XP/nível agora só no HUD HTML)
 
     this.eventBus.on('ui:show-skill-selection', (data: { skillOptions: any[] }) => {
       this.showSkillSelectionModal(data.skillOptions);
@@ -149,44 +130,11 @@ export class UISystem {
     });
 
     // Wave system events
-    this.eventBus.on('wave:started', (data: { totalDuration: number }) => {
-      this.totalDuration = data.totalDuration;
-      this.gameTime = 0;
-      this.timeFrozen = false;
-      this.currentWaveDescription = 'Starting...';
-      this.updateWaveTimer(this.gameTime, this.currentWaveDescription, this.timeFrozen, this.totalDuration);
-    });
-
-    this.eventBus.on('wave:changed', (data: { wave: any; gameTime: number }) => {
-      this.currentWaveDescription = data.wave.description || '';
-      this.gameTime = data.gameTime;
-      this.updateWaveTimer(this.gameTime, this.currentWaveDescription, this.timeFrozen, this.totalDuration);
-    });
-
-    this.eventBus.on('wave:boss-spawned', (data: { boss: any; gameTime: number }) => {
-      this.timeFrozen = true;
-      this.gameTime = data.gameTime;
-      this.currentWaveDescription = data.boss.description || 'Boss Fight';
-      this.updateWaveTimer(this.gameTime, this.currentWaveDescription, this.timeFrozen, this.totalDuration);
-    });
-
-    this.eventBus.on('boss:defeated', () => {
-      this.hideBossHealthBar();
-      this.timeFrozen = false;
-      this.updateWaveTimer(this.gameTime, this.currentWaveDescription, this.timeFrozen, this.totalDuration);
-    });
+  // Removido: eventos de wave timer (timer agora só no HUD HTML)
   }
 
   private createUIElements(): void {
-    const aspect = window.innerWidth / window.innerHeight;
-    const baseScale = 0.15;
-  // Removidos overlays 3D de score, ammo e level
-    // Wave timer (above level text)
-    this.waveTimerText = this.createTextSprite(this.getWaveTimerText());
-    this.waveTimerText.position.set(0, 0.9, 0);
-    this.waveTimerText.scale.setScalar(baseScale * 0.6);
-    this.hudGroup.add(this.waveTimerText);
-  // Removida barra de XP 3D
+  // Removidos overlays 3D de score, ammo, level, XP e wave timer
   }
   
   private createTextSprite(text: string, color: string = '#ffffff'): THREE.Sprite {
@@ -319,15 +267,9 @@ export class UISystem {
     console.log('🔄 Resetting UI to initial values');
     
     // Reset all values to initial state
-    this.currentScore = 0;
-    this.currentHealth = 100;
-    this.maxHealth = 100;
-    this.currentAmmo = 30;
-    this.maxAmmo = 30;
-    this.currentLevel = 1;
-    this.currentXP = 0;
-    this.xpToNext = 100;
-    this.xpProgress = 0;
+  this.currentScore = 0;
+  this.currentAmmo = 30;
+  this.maxAmmo = 30;
     
     // Update all UI elements
   // Removidos overlays 3D de score, ammo e level
@@ -346,47 +288,11 @@ export class UISystem {
   // Removido método de atualização de ammo
   
   public updateLevel(level: number, currentXP: number, xpToNext: number, progress: number): void {
-    this.currentLevel = level;
-    this.currentXP = currentXP;
-    this.xpToNext = xpToNext;
-    this.xpProgress = progress;
-    
-    // Update level text
-  // Removido overlay 3D de level
-    
-  // Removida barra de XP 3D
+  // Removido: update de level/XP (HUD HTML cuida disso)
   }
   
   public showLevelUpEffect(oldLevel: number, newLevel: number): void {
-    // Create a temporary level up text that fades out
-    const levelUpText = this.createTextSprite(`LEVEL UP! ${newLevel}`, '#ffff00');
-    levelUpText.position.set(0, 0.2, 0.1);
-    levelUpText.scale.setScalar(0.25);
-    this.hudGroup.add(levelUpText);
-    
-    // Animate the level up text
-    let opacity = 1.0;
-    let scale = 0.25;
-    const animate = () => {
-      opacity -= 0.02;
-      scale += 0.002;
-      
-      if (levelUpText.material && 'opacity' in levelUpText.material) {
-        (levelUpText.material as any).opacity = opacity;
-      }
-      levelUpText.scale.setScalar(scale);
-      
-      if (opacity > 0) {
-        requestAnimationFrame(animate);
-      } else {
-        this.hudGroup.remove(levelUpText);
-        // Dispose of the temporary text
-        if (levelUpText.material) {
-          (levelUpText.material as THREE.Material).dispose();
-        }
-      }
-    };
-    animate();
+  // Removido: efeito visual de level up (HUD HTML cuida disso)
   }
   
   public showSkillSelectionModal(skillOptions: any[]): void {
@@ -423,18 +329,7 @@ export class UISystem {
     this.camera.updateProjectionMatrix();
     
     // Reposicionar elementos com escala fixa
-    const baseScale = 0.15;
-
-    if (
-      this.waveTimerText === undefined
-    ) {
-      console.warn('One or more UI elements not initialized yet, skipping update');
-      return;
-    }
-
-    // Update positions
-    this.waveTimerText.scale.setScalar(baseScale * 0.6);
-    // Removida barra de XP 3D
+  // Removido: ajuste de wave timer e barra de XP 3D
   }
   
   
@@ -469,7 +364,7 @@ export class UISystem {
   // getHealth removido: barra de vida do HUD não existe mais
   
   public getAmmo(): { current: number; max: number } {
-    return { current: this.currentAmmo, max: this.maxAmmo };
+  return { current: this.currentAmmo, max: this.maxAmmo };
   }
 
   // Boss health bar methods
@@ -559,26 +454,11 @@ export class UISystem {
   }
 
   private getWaveTimerText(): string {
-    const remainingTime = Math.max(0, this.totalDuration - this.gameTime);
-    const minutes = Math.floor(remainingTime / 60);
-    const seconds = Math.floor(remainingTime % 60);
-    const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-    
-    if (this.timeFrozen) {
-      return `⏰ BOSS FIGHT - ${this.currentWaveDescription}`;
-    }
-    
-    return `${timeStr} - ${this.currentWaveDescription}`;
+  // Removido: texto de wave timer
+  return '';
   }
 
   private updateWaveTimer(gameTime: number, waveDescription: string = '', timeFrozen: boolean = false, totalDuration: number = 360): void {
-    this.gameTime = gameTime;
-    this.currentWaveDescription = waveDescription;
-    this.timeFrozen = timeFrozen;
-    this.totalDuration = totalDuration;
-    
-    if (this.waveTimerText) {
-      this.updateTextSprite(this.waveTimerText, this.getWaveTimerText(), '#ffffff');
-    }
+  // Removido: lógica de atualização do wave timer
   }
 }
