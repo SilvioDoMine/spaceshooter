@@ -24,7 +24,7 @@ export class Enemy extends Entity {
   private healthBarForeground?: THREE.Mesh;
   
   // Sistema de tiro
-  private lastShotTime: number = 0;
+  private lastShotTime: number = 0; // Agora representa o tempo do jogo
   
   // Range indicator
   private rangeIndicator?: EnemyRangeIndicator;
@@ -114,7 +114,7 @@ export class Enemy extends Entity {
     this.eventBus.emit('scene:add-object', { object: this.object });
   }
 
-  protected onUpdate(deltaTime: number): void {
+  protected onUpdate(deltaTime: number, gameTime?: number): void {
     if (!this.isActive) return;
     
     // Update range indicator position
@@ -152,7 +152,11 @@ export class Enemy extends Entity {
     this.updateHealthBarPosition();
 
     // Sistema de tiro (se configurado)
-    this.tryShoot(deltaTime);
+    if (gameTime !== undefined) {
+      this.tryShoot(deltaTime, gameTime);
+    } else {
+      this.tryShoot(deltaTime);
+    }
 
     this.checkPlayerCollision();
   }
@@ -443,14 +447,14 @@ export class Enemy extends Entity {
     this.eventBus.emit('scene:remove-object', { object: this.object });
   }
 
-  private tryShoot(deltaTime: number): void {
+  private tryShoot(deltaTime: number, gameTime?: number): void {
     // Verifica se essa entidade pode atirar
     const projectileConfig = this.config.projectile;
     if (!projectileConfig || !projectileConfig.canShoot) {
       return;
     }
 
-    const currentTime = Date.now() / 1000; // em segundos
+    const currentTime = gameTime !== undefined ? gameTime : Date.now() / 1000;
     const cooldownTime = projectileConfig.cooldown || 2.0;
 
     // Verifica cooldown
@@ -512,14 +516,16 @@ export class Enemy extends Entity {
         }
       });
 
-      this.lastShotTime = currentTime;
+  this.lastShotTime = currentTime;
       console.log(`💥 ${this.enemyType} shot at player! Distance: ${distance.toFixed(2)}`);
     }
   }
 
   public static spawnEnemy(eventBus: EventBus): Enemy {
-    const currentTime = Date.now();
-    const enemyId = `enemy_${currentTime}_${Math.random()}`;
+  // Use gameTime para ID se disponível, senão fallback para Date.now()
+  const game = (window as any).game;
+  const gameTime = game && typeof game.getGameTime === 'function' ? game.getGameTime() : Date.now() / 1000;
+  const enemyId = `enemy_${gameTime}_${Math.random()}`;
     const rand = Math.random();
     let enemyType: EnemyData['type'];
     if (rand < 0.7) {
@@ -553,8 +559,9 @@ export class Enemy extends Entity {
   }
 
   public static spawnBoss(eventBus: EventBus): Enemy {
-    const currentTime = Date.now();
-    const bossId = `boss_${currentTime}_${Math.random()}`;
+  const game = (window as any).game;
+  const gameTime = game && typeof game.getGameTime === 'function' ? game.getGameTime() : Date.now() / 1000;
+  const bossId = `boss_${gameTime}_${Math.random()}`;
     const enemyType: EnemyData['type'] = 'boss';
     
     // Spawn boss em uma borda aleatória do mapa
