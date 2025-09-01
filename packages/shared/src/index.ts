@@ -285,7 +285,7 @@ export const PROJECTILE_CONFIG = {
   damage: 5,               // Dano por hit
   lifetime: 3000,           // 3 segundos em milliseconds (usado para inimigos)
   size: 0.1,                // Raio visual
-  radius: 0.05              // Raio da hitbox
+  radius: 0.1              // Raio da hitbox
 };
 
 /**
@@ -333,10 +333,6 @@ export const ENEMY_CONFIG = {
     spawnRate: 1000,        // A cada 1 segundo
     xpRange: { min: 8, max: 15 }, // XP aleatório entre 8-15
     diesOnPlayerCollision: false,
-    // Não atira por enquanto
-    projectile: {
-      canShoot: false
-    } as Partial<ProjectileConfig>
   },
   fast: {
     health: 10,             // 1 hit para destruir
@@ -368,7 +364,7 @@ export const ENEMY_CONFIG = {
       damage: 15,           // Dano médio
       lifetime: 4000,       // 4 segundos
       size: 0.04,           // Projétil pequeno
-      radius: 0.06,         // Hitbox pequena
+      radius: 0.04,         // Hitbox pequena
       color: 0x8800ff,      // Roxo como o inimigo
       cooldown: 5.0,        // Atira a cada 3 segundos
       shootRange: 6.0,      // Só atira se jogador estiver próximo
@@ -376,7 +372,7 @@ export const ENEMY_CONFIG = {
     } as ProjectileConfig
   },
   boss: {
-    health: 2000,            // 50 hits para destruir - muito resistente
+    health: 1000,            // 50 hits para destruir - muito resistente
     speed: 0.2,             // Bem lento
     size: 1.3,              // Grande
     radius: 0.8,            // Hitbox maior
@@ -391,7 +387,7 @@ export const ENEMY_CONFIG = {
       damage: 25,           // Dano alto
       lifetime: 5000,       // 5 segundos
       size: 0.1,            // Projétil grande
-      radius: 0.07,         // Hitbox maior
+      radius: 0.08,         // Hitbox maior
       color: 0xff0040,      // Vermelho escuro
       cooldown: 2.0,        // Atira a cada 2 segundos
       shootRange: 5,        // Só atira se jogador estiver próximo

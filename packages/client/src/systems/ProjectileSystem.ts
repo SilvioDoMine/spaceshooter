@@ -131,7 +131,7 @@ export class ProjectileSystem {
 
     // Create collision visualizer for projectile
     const collisionVisualizer = CollisionDebugHelper.createCollisionVisualizer(
-      config.size
+      config.radius // Usar radius para colisão, não size
     );
     collisionVisualizer.position.set(position.x, position.y, 0);
     // Set initial visibility based on current debug state
@@ -373,6 +373,10 @@ export class ProjectileSystem {
         projectile.collisionVisualizer.visible = this.collisionDebugEnabled;
       }
     });
+    // Forçar renderização se necessário
+    if (this.renderingSystem) {
+      this.renderingSystem.requestRender();
+    }
   }
 
   private handleRicochet(originalProjectile: ProjectileData, hitTargetId: string): void {
