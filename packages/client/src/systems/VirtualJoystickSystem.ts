@@ -112,14 +112,16 @@ export class VirtualJoystickSystem {
     // Listen for touches anywhere on the screen
     document.addEventListener('touchstart', (e) => {
       if (!this.isVisible() || this.isDragging) return;
-      
+
       const touch = e.touches[0];
       const targetElement = e.target as Element;
-      
-      // Don't interfere with other UI elements
+
+      // Não interferir com elementos interativos da HUD
       if (targetElement && (
         targetElement.closest('#debug-panel') ||
-        targetElement.closest('#virtual-joystick')
+        targetElement.closest('#virtual-joystick') ||
+        targetElement.closest('#game-hud') ||
+        targetElement.closest('.hud-notch')
       )) {
         return;
       }

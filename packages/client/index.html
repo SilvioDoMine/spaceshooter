@@ -897,40 +897,25 @@
             text-shadow: 0 0 5px rgba(255, 255, 255, 0.8);
         }
 
-        /* Right Side Controls */
-        #right-controls {
+        /* Right Side Notch (Pause) */
+        #right-notches {
             position: absolute;
-            right: 20px;
-            top: 20px;
+            right: -20px;
+            top: 80px;
             display: flex;
-            gap: 10px;
+            flex-direction: column;
+            gap: 15px;
         }
 
-        #pause-button {
-            background: linear-gradient(135deg, rgba(0, 20, 40, 0.9), rgba(0, 10, 30, 0.95));
-            border: 2px solid #00ffff;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            font-size: 20px;
-            color: #00ffff;
-            cursor: pointer;
-            pointer-events: auto;
-            transition: all 0.3s ease;
+        #pause-notch {
+            border-color: #00ffff;
             box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            cursor: pointer;
         }
 
-        #pause-button:hover {
-            transform: scale(1.1);
-            background: linear-gradient(135deg, rgba(0, 40, 80, 0.9), rgba(0, 20, 60, 0.95));
+        #pause-notch:hover {
+            transform: scale(1.05);
             box-shadow: 0 0 20px rgba(0, 255, 255, 0.6);
-        }
-
-        #pause-button:active {
-            transform: scale(0.95);
         }
 
         /* Mobile Responsiveness */
@@ -1016,8 +1001,11 @@
         </div>
 
         <!-- Right Side Controls -->
-        <div id="right-controls">
-            <button id="pause-button" title="Pause Game">⏸️</button>
+        <!-- Right Side Notch (Pause) -->
+        <div id="right-notches">
+            <div class="hud-notch" id="pause-notch" title="Pause Game">
+                <div class="notch-icon">⏸️</div>
+            </div>
         </div>
     </div>
 
