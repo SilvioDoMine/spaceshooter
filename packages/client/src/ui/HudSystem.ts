@@ -5,6 +5,13 @@ import { EventBus } from '../core/EventBus';
  * Gerencia os elementos da interface do usuário overlay
  */
 export class HudSystem {
+  // Sempre resetar o estado de pausa ao iniciar novo jogo
+  private setupPauseResetOnNewGame() {
+    this.eventBus.on('game:started', () => {
+      this.gameState.isPaused = false;
+      this.updatePauseButton();
+    });
+  }
   private eventBus: EventBus;
   private elements: {
     levelText: HTMLElement | null;
@@ -41,6 +48,8 @@ export class HudSystem {
       this.elements.levelProgressFill.style.width = '0%';
     }
     this.updateDisplay();
+
+  this.setupPauseResetOnNewGame();
     // Escuta eventos de UI para manter sincronizado com UISystem
     this.eventBus.on('ui:update-level', (data: { level: number; currentXP: number; xpToNext: number; progress: number }) => {
       this.gameState.level = data.level;
