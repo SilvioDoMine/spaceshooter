@@ -375,6 +375,18 @@ export class ProjectileSystem {
     return this.projectiles.size;
   }
 
+  /**
+   * Adiciona um inimigo à lista de imunidade de um projétil (para evitar hits múltiplos)
+   * Usado principalmente para tri-shot evitar re-atingir o inimigo que trigou
+   */
+  public addHitEnemyToProjectile(projectileId: string, enemyId: string): void {
+    const projectile = this.projectiles.get(projectileId);
+    if (projectile && projectile.hitEnemies) {
+      projectile.hitEnemies.add(enemyId);
+      console.log(`🛡️ Added enemy ${enemyId} to projectile ${projectileId} hit immunity list`);
+    }
+  }
+
   private updateAllCollisionVisibility(): void {
     this.projectiles.forEach(projectile => {
       if (projectile.collisionVisualizer) {

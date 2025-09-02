@@ -242,11 +242,23 @@ export class EntitySystem {
   }
 
   private handleProjectileEnemyCollision(data: any): void {
+    // Get projectile to check for hit immunity list
+    const projectile = this.projectileSystem.getActiveProjectiles().get(data.projectileId);
+    const hitEnemies = projectile?.hitEnemies || new Set<string>();
+    
+    // Filter enemies excluding those already hit (for tri-shot immunity)
+    const eligibleEnemies = new Map();
+    this.enemies.forEach((enemy, id) => {
+      if (!hitEnemies.has(id)) {
+        eligibleEnemies.set(id, enemy);
+      }
+    });
+    
     // Use collision utility to find closest enemy that collides with projectile
     const collision = CollisionUtils.findClosestCollision(
       data.position,
       data.radius,
-      this.enemies,
+      eligibleEnemies,
       (enemy) => enemy.getRadius()
     );
 
@@ -262,6 +274,7 @@ export class EntitySystem {
         this.player.getSkillLevel('tri_shot') > 0 &&
         !data.noSkillTrigger // só ativa se não for ricochete/triangular
       ) {
+        console.log(`🎯 Tri-shot triggered on enemy ${hitEnemyId}, creating 3 projectiles with immunity to this enemy`);
         const enemyPos = hitEnemy.getPosition();
         const dx = enemyPos.x - data.position.x;
         const dy = enemyPos.y - data.position.y;
@@ -274,7 +287,8 @@ export class EntitySystem {
             x: Math.cos(angle) * projectileSpeed,
             y: Math.sin(angle) * projectileSpeed
           };
-          this.projectileSystem.createProjectile(
+          // Criar projétil tri-shot com proteção anti-loop
+          const triShotId = this.projectileSystem.createProjectile(
             'player',
             { x: enemyPos.x, y: enemyPos.y },
             velocity,
@@ -287,6 +301,9 @@ export class EntitySystem {
             undefined, // Use default projectile config
             false // Not ghost projectile
           );
+          
+          // Adicionar o inimigo que trigou o tri-shot à lista de imunidade
+          this.projectileSystem.addHitEnemyToProjectile(triShotId, hitEnemyId);
         });
         this.eventBus.emit('audio:play', { soundId: 'shoot', options: { volume: 0.25 } });
       }
@@ -509,12 +526,24 @@ export class EntitySystem {
     radius: number; 
     noSkillTrigger?: boolean 
   }): void {
+    // Get projectile to check for hit immunity list
+    const projectile = this.projectileSystem.getActiveProjectiles().get(data.projectileId);
+    const hitEnemies = projectile?.hitEnemies || new Set<string>();
+    
+    // Filter enemies excluding those already hit (for tri-shot immunity)
+    const eligibleEnemies = new Map();
+    this.enemies.forEach((enemy, id) => {
+      if (!hitEnemies.has(id)) {
+        eligibleEnemies.set(id, enemy);
+      }
+    });
+    
     // Use continuous collision detection to find closest enemy that collides with projectile
     const collision = CollisionUtils.findClosestContinuousCollision(
       data.startPosition,
       data.endPosition,
       data.radius,
-      this.enemies,
+      eligibleEnemies,
       (enemy) => enemy.getRadius()
     );
 
@@ -598,13 +627,14 @@ export class EntitySystem {
     }
   }
 
-  private handleProjectileSkillEffects(hitEnemy: any, _hitEnemyId: string, _isDead: boolean, data: any): void {
+  private handleProjectileSkillEffects(hitEnemy: any, hitEnemyId: string, _isDead: boolean, data: any): void {
     // --- Skill: Tri Shot ---
     if (
       this.player &&
       this.player.getSkillLevel &&
       this.player.getSkillLevel('tri_shot') > 0
     ) {
+      console.log(`🎯 Tri-shot triggered (continuous) on enemy ${hitEnemyId}, creating 3 projectiles with immunity`);
       const enemyPos = hitEnemy.getPosition();
       const dx = enemyPos.x - data.endPosition.x; // Use end position for tri-shot
       const dy = enemyPos.y - data.endPosition.y;
@@ -619,8 +649,8 @@ export class EntitySystem {
           y: Math.sin(angle) * projectileSpeed
         };
 
-        // Create tri-shot projectile
-        this.projectileSystem.createProjectile(
+        // Create tri-shot projectile with anti-loop protection
+        const triShotId = this.projectileSystem.createProjectile(
           'player',
           { x: enemyPos.x, y: enemyPos.y },
           velocity,
@@ -630,6 +660,9 @@ export class EntitySystem {
           { lifetime: 2000 },
           false // Not ghost projectile
         );
+        
+        // Adicionar o inimigo que trigou o tri-shot à lista de imunidade
+        this.projectileSystem.addHitEnemyToProjectile(triShotId, hitEnemyId);
       });
     }
 
