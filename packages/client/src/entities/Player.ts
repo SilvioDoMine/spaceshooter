@@ -733,35 +733,38 @@ export class Player extends Entity {
 
     // Calcular lifetime baseado no range do player
     const calculatedLifetime = calculateProjectileLifetime(this.weaponRange, PROJECTILE_CONFIG.speed);
+    
+    // Verifica se o player tem a skill de projéteis fantasmas
+    const hasGhost = this.stats.skills.some(skill => skill.type === 'ghost_projectiles');
+    
     const projectileConfig = {
-      lifetime: calculatedLifetime
+      lifetime: calculatedLifetime,
+      ...(hasGhost && { color: 0x88ccff }) // Cor azul translúcida para projéteis fantasma
     };
     
     console.log(`🎯 Projectile will expire in ${calculatedLifetime}ms (range: ${this.weaponRange}, speed: ${PROJECTILE_CONFIG.speed})`);
 
-    // Verifica se o player tem a skill de projéteis fantasmas
-    const hasGhost = this.stats.skills.some(skill => skill.type === 'ghost_projectiles');
-
     // Se tiver, projétil atravessa inimigos e é translúcido
     if (hasGhost) {
-      // Projétil principal
-      this.projectileSystem.createProjectile('player', projectilePosition, projectileVelocity, projectileDamage, 0, 0, false, 0, true, projectileConfig);
+      console.log(`👻 Creating ghost projectile at (${projectilePosition.x}, ${projectilePosition.y})`);
+      // Projétil principal - começa com noSkillTrigger: false para triggear skills no primeiro hit
+      this.projectileSystem.createProjectile('player', projectilePosition, projectileVelocity, projectileDamage, 0, 0, false, 0, false, projectileConfig, true);
       // Multi-shot também é fantasma
       if (hasMultiShot(this.stats.skills)) {
         setTimeout(() => {
           if (this.isActive) {
-            this.projectileSystem.createProjectile('player', projectilePosition, projectileVelocity, projectileDamage, 0, 0, false, 0, true, projectileConfig);
+            this.projectileSystem.createProjectile('player', projectilePosition, projectileVelocity, projectileDamage, 0, 0, false, 0, false, projectileConfig, true);
           }
         }, 50);
       }
     } else {
       // Projétil normal
-      this.projectileSystem.createProjectile('player', projectilePosition, projectileVelocity, projectileDamage, 0, maxRicochets, false, ricochetLevel, false, projectileConfig);
+      this.projectileSystem.createProjectile('player', projectilePosition, projectileVelocity, projectileDamage, 0, maxRicochets, false, ricochetLevel, false, projectileConfig, false);
       // Multi-shot normal
       if (hasMultiShot(this.stats.skills)) {
         setTimeout(() => {
           if (this.isActive) {
-            this.projectileSystem.createProjectile('player', projectilePosition, projectileVelocity, projectileDamage, 0, maxRicochets, false, ricochetLevel, false, projectileConfig);
+            this.projectileSystem.createProjectile('player', projectilePosition, projectileVelocity, projectileDamage, 0, maxRicochets, false, ricochetLevel, false, projectileConfig, false);
           }
         }, 50);
       }

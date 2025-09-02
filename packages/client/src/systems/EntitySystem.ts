@@ -283,7 +283,9 @@ export class EntitySystem {
             0, // maxRicochets
             false,
             0,
-            true // noSkillTrigger: não ativa ricochete nem tri_shot
+            true, // noSkillTrigger: não ativa ricochete nem tri_shot
+            undefined, // Use default projectile config
+            false // Not ghost projectile
           );
         });
         this.eventBus.emit('audio:play', { soundId: 'shoot', options: { volume: 0.25 } });
@@ -461,7 +463,8 @@ export class EntitySystem {
       false, // isRicochet
       0, // ricochetLevel
       false, // noSkillTrigger
-      config // projectileConfig
+      config, // projectileConfig
+      false // isGhostProjectile - enemy projectiles are not ghost
     );
   }
 
@@ -521,8 +524,7 @@ export class EntitySystem {
       const isDead = hitEnemy.takeDamage(data.damage);
 
       // Execute the same logic as regular collision but without double skill effects
-      // Remove projectile and trigger effects
-      this.projectileSystem.removeProjectile(data.projectileId);
+      // Let handleProjectileHit decide if projectile should be removed (important for ghost projectiles)
       this.projectileSystem.handleProjectileHit(data.projectileId, hitEnemyId);
 
       // Sound and particle effects
@@ -625,7 +627,8 @@ export class EntitySystem {
           data.damage,
           0, 0, false, 0,
           true, // noSkillTrigger to prevent infinite loops
-          { lifetime: 2000 }
+          { lifetime: 2000 },
+          false // Not ghost projectile
         );
       });
     }

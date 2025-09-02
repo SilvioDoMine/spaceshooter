@@ -19,6 +19,8 @@ export interface ProjectileData {
   isRicochet?: boolean;
   hitEnemies?: Set<string>; // Anti-loop protection
   ricochetLevel?: number; // Skill level for damage calculation
+  // Ghost projectile properties
+  isGhostProjectile?: boolean; // Se é projétil fantasma que deve atravessar
 }
 
 export class ProjectileSystem {
@@ -80,7 +82,8 @@ export class ProjectileSystem {
       radius?: number;
       color?: number;
       lifetime?: number;
-    }
+    },
+    isGhostProjectile: boolean = false
   ): string {
     const currentTime = Date.now();
     const projectileId = `projectile_${currentTime}_${Math.random()}`;
@@ -110,14 +113,14 @@ export class ProjectileSystem {
       // Criar material com cor customizada
       material = new THREE.MeshBasicMaterial({ 
         color: config.color,
-        transparent: noSkillTrigger,
-        opacity: noSkillTrigger ? 0.35 : 1.0
+        transparent: noSkillTrigger || isGhostProjectile,
+        opacity: (noSkillTrigger || isGhostProjectile) ? 0.35 : 1.0
       });
     } else {
       // Usar material padrão do jogador
       material = assetManager.getProjectileMaterial();
-      // Se for projétil fantasma, deixar translúcido
-      if (noSkillTrigger) {
+      // Se for projétil fantasma ou noSkillTrigger, deixar translúcido
+      if (noSkillTrigger || isGhostProjectile) {
         material = material.clone();
         if ('opacity' in material) {
           (material as any).transparent = true;
@@ -166,11 +169,14 @@ export class ProjectileSystem {
       maxRicochets,
       isRicochet,
       hitEnemies: new Set<string>(),
-      ricochetLevel
+      ricochetLevel,
+      isGhostProjectile
     });
 
     if (maxRicochets > 0) {
       console.log(`🟡 Projectile created with ricochet: ${projectileId} (${ricochetCount}/${maxRicochets} bounces, isRicochet: ${isRicochet})`);
+    } else if (isGhostProjectile) {
+      console.log(`👻 GHOST Projectile created: ${projectileId} by ${ownerId} (noSkillTrigger: ${noSkillTrigger})`);
     } else {
       console.log(`🔵 Projectile created: ${projectileId} by ${ownerId}`);
     }
@@ -307,7 +313,7 @@ export class ProjectileSystem {
   public handleProjectileHit(projectileId: string, targetId: string): void {
     const projectile = this.projectiles.get(projectileId);
     if (projectile) {
-      console.log(`🎯 Projectile ${projectileId} hit ${targetId} (isRicochet: ${projectile.isRicochet}, maxRicochets: ${projectile.maxRicochets}, noSkillTrigger: ${projectile.data.noSkillTrigger})`);
+      console.log(`🎯 Projectile ${projectileId} hit ${targetId} (isRicochet: ${projectile.isRicochet}, isGhost: ${projectile.isGhostProjectile}, noSkillTrigger: ${projectile.data.noSkillTrigger})`);
 
       // Add to hit enemies for anti-loop protection
       if (projectile.hitEnemies) {
@@ -320,16 +326,17 @@ export class ProjectileSystem {
       });
 
 
-      // Se for projétil fantasma, só atravessa após o primeiro hit: triga skills, depois vira noSkillTrigger
-      if (projectile.data.noSkillTrigger && !projectile.data["_ghostFirstHitDone"]) {
-        // Primeira colisão: triga skills normalmente, depois marca para atravessar
-        projectile.data["_ghostFirstHitDone"] = true;
-        // Reemite o mesmo projétil, mas agora com noSkillTrigger true
-        // (mantém mesh e posição, só muda flag)
-        // Não remove, deixa seguir
-        return;
-      } else if (projectile.data.noSkillTrigger && projectile.data["_ghostFirstHitDone"]) {
-        // Após o primeiro hit, só atravessa
+      // Se for projétil fantasma, atravessa todos os inimigos após o primeiro hit
+      if (projectile.isGhostProjectile) {
+        if (!projectile.data["_ghostFirstHitDone"]) {
+          // Primeira colisão: triga skills normalmente, depois marca para atravessar
+          projectile.data["_ghostFirstHitDone"] = true;
+          projectile.data.noSkillTrigger = true; // Agora não triga mais skills
+          console.log(`👻 Ghost projectile ${projectileId} first hit on ${targetId}, now will pass through all enemies`);
+        } else {
+          console.log(`👻 Ghost projectile ${projectileId} passing through ${targetId}`);
+        }
+        // Não remove o projétil, deixa continuar
         return;
       }
 
@@ -343,6 +350,7 @@ export class ProjectileSystem {
         }
       }
 
+      console.log(`🗑️ Removing projectile ${projectileId} (not ghost or ghost logic completed)`);
       this.removeProjectile(projectileId);
     }
   }
@@ -445,11 +453,13 @@ export class ProjectileSystem {
       originalProjectile.maxRicochets,
       true, // Mark as ricochet projectile
       ricochetLevel,
-      true // noSkillTrigger: ricochet projéteis não ativam skills
+      true, // noSkillTrigger: ricochet projéteis não ativam skills
+      undefined, // Use default projectile config
+      false // Ricochet is not ghost projectile
     );
   }
   
-  private findNearestEnemy(position: Position, excludeEnemies?: Set<string>): { id: string; position: Position } | null {
+  private findNearestEnemy(position: Position, _excludeEnemies?: Set<string>): { id: string; position: Position } | null {
     // Get all enemies from EntitySystem via global game reference
     const game = (window as any).game;
     if (!game || typeof game.getEntitySystem !== 'function') {
@@ -503,7 +513,7 @@ export class ProjectileSystem {
     return enemies.has(enemyId);
   }
   
-  private canRicochet(ownerId: string, impactPosition: Position, hitEnemies?: Set<string>): boolean {
+  private canRicochet(_ownerId: string, impactPosition: Position, hitEnemies?: Set<string>): boolean {
     const currentTime = Date.now();
     if (currentTime - this.lastRicochetTime >= this.ricochetCooldown) {
       // Clear old cache and find new target based on impact position
