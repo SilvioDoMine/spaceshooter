@@ -340,14 +340,20 @@ export class ProjectileSystem {
         return;
       }
 
-      // Só ativa ricochete se não for ricochete nem tri_shot
-      if (!projectile.data.noSkillTrigger && !projectile.isRicochet && projectile.maxRicochets && projectile.maxRicochets > 0 && (projectile.ricochetCount || 0) === 0) {
+      // Só ativa ricochete se não for tri_shot e ainda tiver ricochets disponíveis
+      const currentRicochetCount = projectile.ricochetCount || 0;
+      const canRicochetMore = !projectile.data.noSkillTrigger && projectile.maxRicochets && projectile.maxRicochets > 0 && currentRicochetCount < projectile.maxRicochets;
+      
+      if (canRicochetMore) {
+        console.log(`🔄 Checking ricochet for ${projectileId}: count=${currentRicochetCount}, max=${projectile.maxRicochets}`);
         if (this.canRicochet(projectile.data.ownerId, projectile.data.position, projectile.hitEnemies)) {
-          console.log(`🔄 Attempting ricochet for projectile ${projectileId}`);
+          console.log(`🔄 Attempting ricochet ${currentRicochetCount + 1}/${projectile.maxRicochets} for projectile ${projectileId}`);
           this.handleRicochet(projectile, targetId);
         } else {
           console.log(`⏱️ Ricochet blocked - no valid target or cooldown`);
         }
+      } else {
+        console.log(`🚫 Ricochet not possible: noSkillTrigger=${projectile.data.noSkillTrigger}, maxRicochets=${projectile.maxRicochets}, currentCount=${currentRicochetCount}`);
       }
 
       console.log(`🗑️ Removing projectile ${projectileId} (not ghost or ghost logic completed)`);
@@ -456,7 +462,8 @@ export class ProjectileSystem {
     
     console.log(`🎯 Creating ricochet projectile to enemy ${nearestEnemy.id} with ${Math.round(damageMultiplier * 100)}% damage (${ricochetDamage})`);
     
-    this.createProjectile(
+    // Cria o novo projétil ricochete e transfere a lista de inimigos já atingidos
+    const newProjectileId = this.createProjectile(
       originalProjectile.data.ownerId,
       ricochetPosition,
       ricochetVelocity,
@@ -469,9 +476,17 @@ export class ProjectileSystem {
       undefined, // Use default projectile config
       false // Ricochet is not ghost projectile
     );
+
+    // Transfere a lista de inimigos já atingidos para o novo projétil
+    const newProjectile = this.projectiles.get(newProjectileId);
+    if (newProjectile && originalProjectile.hitEnemies) {
+      newProjectile.hitEnemies = new Set(originalProjectile.hitEnemies);
+      // Adiciona o alvo recém atingido
+      newProjectile.hitEnemies.add(hitTargetId);
+    }
   }
   
-  private findNearestEnemy(position: Position, _excludeEnemies?: Set<string>): { id: string; position: Position } | null {
+  private findNearestEnemy(position: Position, excludeEnemies?: Set<string>): { id: string; position: Position } | null {
     // Get all enemies from EntitySystem via global game reference
     const game = (window as any).game;
     if (!game || typeof game.getEntitySystem !== 'function') {
@@ -488,10 +503,11 @@ export class ProjectileSystem {
     let nearestDistance = Infinity;
     
   enemies.forEach((enemy: any) => {
-      // // Skip enemies that have already been hit by this projectile chain
-      // if (excludeEnemies && excludeEnemies.has(enemy.getId())) {
-      //   return;
-      // }
+      // Skip enemies that have already been hit by this projectile chain
+      if (excludeEnemies && excludeEnemies.has(enemy.getId())) {
+        console.log(`⏭️ Skipping enemy ${enemy.getId()} - already hit by this projectile chain`);
+        return;
+      }
       
       const enemyPos = enemy.getPosition();
       const dx = enemyPos.x - position.x;
