@@ -54,6 +54,11 @@ export class WaveSystem {
       this.stopWaveSystem();
     });
 
+    this.eventBus.on('game:victory', () => {
+      console.log('🎉 WaveSystem: Victory achieved, stopping wave system');
+      this.stopWaveSystem();
+    });
+
     this.eventBus.on('game:paused', () => {
       console.log('⏸️ WaveSystem: Game paused');
       this.isActive = false;
@@ -82,16 +87,29 @@ export class WaveSystem {
   }
 
   private startWaveSystem(): void {
+    console.log('🌊 WaveSystem: Starting fresh wave system - resetting all state');
+    
+    // First, clear all existing enemies and bosses to ensure clean slate
+    this.eventBus.emit('wave:clear-enemies', {});
+    
+    // Reset all wave state completely
     this.isActive = true;
     this.currentWave = null;
     this.activeBoss = null;
     this.spawnedBossAtTimes.clear();
     
-    // Reset counters
+    // Reset all counters and timers
     this.enemySpawnTimers.clear();
     this.enemyCount.clear();
     
-    console.log('🌊 WaveSystem: Started - using centralized GameTimer');
+    console.log('🌊 WaveSystem: All state reset - fresh start with beginner enemies');
+    
+    // Force initial wave detection at time 0
+    if (this.gameTimer) {
+      this.updateCurrentWave(0);
+      console.log(`🌊 WaveSystem: Forced initial wave detection - currentWave: ${this.currentWave?.description || 'null'}`);
+    }
+    
     this.eventBus.emit('wave:started', { 
       totalDuration: WAVE_SYSTEM_CONFIG.totalDuration 
     });
@@ -145,12 +163,17 @@ export class WaveSystem {
   private updateCurrentWave(gameTime: number): void {
     const newWave = getCurrentWave(gameTime);
     
+    console.log(`🌊 WaveSystem: Checking wave at ${gameTime.toFixed(2)}s - Found: ${newWave?.description || 'null'}, Current: ${this.currentWave?.description || 'null'}`);
+    
     if (newWave && newWave !== this.currentWave) {
       this.currentWave = newWave;
-      console.log(`🌊 WaveSystem: New wave active - ${newWave.description}`);
+      console.log(`🌊 WaveSystem: NEW WAVE ACTIVATED - ${newWave.description} (${newWave.startTime}-${newWave.endTime}s)`);
       
       // Reset spawn timers for new wave
       this.enemySpawnTimers.clear();
+      
+      // Log enemy types for this wave
+      console.log(`🌊 WaveSystem: Wave enemy types:`, newWave.enemyTypes.map(e => `${e.type} (${e.spawnRate}ms interval, max ${e.maxConcurrent})`));
       
       // Notify UI
       this.eventBus.emit('wave:changed', {
@@ -161,7 +184,15 @@ export class WaveSystem {
   }
 
   private updateEnemySpawns(deltaTime: number): void {
-    if (!this.currentWave) return;
+    if (!this.currentWave) {
+      console.log(`⚠️ WaveSystem: No current wave set for enemy spawning`);
+      return;
+    }
+
+    // Log current wave being processed occasionally
+    if (Math.random() < 0.01) { 
+      console.log(`🌊 WaveSystem: Processing enemy spawns for wave "${this.currentWave.description}" with ${this.currentWave.enemyTypes.length} enemy types`);
+    }
 
     for (const enemyConfig of this.currentWave.enemyTypes) {
       this.updateEnemyTypeSpawn(enemyConfig, deltaTime);
