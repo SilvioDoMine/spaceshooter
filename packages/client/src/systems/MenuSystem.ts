@@ -33,6 +33,10 @@ export class MenuSystem {
       this.showGameOverScreen(data.stats);
     });
 
+    this.eventBus.on('game:victory-screen', (data) => {
+      this.showVictoryScreen(data.stats);
+    });
+
     this.eventBus.on('game:paused', () => {
       this.showPauseScreen();
     });
@@ -126,6 +130,56 @@ export class MenuSystem {
 
     this.container.style.display = 'flex';
     this.setupGameOverEvents();
+  }
+
+  /**
+   * Mostra a tela de vitória com estatísticas especiais
+   */
+  showVictoryScreen(stats: GameStats): void {
+    const timeFormatted = this.formatTime(stats.timeAlive);
+    const matchDurationFormatted = stats.matchDuration ? this.formatTime(stats.matchDuration) : 'N/A';
+    
+    this.container.innerHTML = `
+      <div class="menu-screen" id="victory">
+        <div class="menu-content">
+          <h1 class="victory-title">🎉 VITÓRIA! 🎉</h1>
+          <div class="victory-subtitle">Você sobreviveu aos 6 minutos!</div>
+          <div class="stats-container">
+            <div class="stat-item highlight">
+              <span class="stat-label">⏰ Tempo de Jogo:</span>
+              <span class="stat-value">06:00</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">⌛ Duração Real da Partida:</span>
+              <span class="stat-value">${matchDurationFormatted}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Pontuação Final:</span>
+              <span class="stat-value">${stats.score}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Inimigos Destruídos:</span>
+              <span class="stat-value">${stats.enemiesDestroyed}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Tiros Disparados:</span>
+              <span class="stat-value">${stats.shotsFired}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Precisão:</span>
+              <span class="stat-value">${stats.accuracy.toFixed(1)}%</span>
+            </div>
+          </div>
+          <div class="menu-buttons">
+            <button class="menu-button" id="restart-button">Jogar Novamente</button>
+            <button class="menu-button secondary" id="menu-button">Menu Principal</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    this.container.style.display = 'flex';
+    this.setupVictoryEvents();
   }
 
   /**
@@ -223,6 +277,51 @@ export class MenuSystem {
         color: #ff4444;
         text-shadow: 0 0 10px rgba(255, 68, 68, 0.5);
         letter-spacing: 2px;
+      }
+
+      .victory-title {
+        font-size: 2.5em;
+        margin: 0 0 30px 0;
+        color: #00ff00;
+        text-shadow: 0 0 20px rgba(0, 255, 0, 0.8);
+        letter-spacing: 2px;
+        animation: victoryGlow 2s ease-in-out infinite alternate;
+      }
+
+      .victory-subtitle {
+        color: #88ff88;
+        font-size: 1.2em;
+        margin: -20px 0 30px 0;
+        text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+        font-weight: bold;
+      }
+
+      @keyframes victoryGlow {
+        0% { 
+          text-shadow: 0 0 20px rgba(0, 255, 0, 0.8), 0 0 30px rgba(255, 255, 0, 0.3); 
+        }
+        100% { 
+          text-shadow: 0 0 30px rgba(0, 255, 0, 1), 0 0 50px rgba(255, 255, 0, 0.6); 
+        }
+      }
+
+      .stat-item.highlight {
+        background: rgba(0, 255, 0, 0.1);
+        border: 1px solid rgba(0, 255, 0, 0.3);
+        border-radius: 5px;
+        padding: 12px;
+        margin: 15px 0;
+      }
+
+      .stat-item.highlight .stat-label {
+        color: #88ff88;
+        font-weight: bold;
+      }
+
+      .stat-item.highlight .stat-value {
+        color: #00ff00;
+        font-weight: bold;
+        font-size: 1.2em;
       }
 
       .pause-title {
@@ -323,7 +422,7 @@ export class MenuSystem {
           padding: 25px;
         }
         
-        .game-title, .game-over-title, .pause-title {
+        .game-title, .game-over-title, .pause-title, .victory-title {
           font-size: 2.2em;
           margin-bottom: 25px;
         }
@@ -358,7 +457,7 @@ export class MenuSystem {
           overflow-y: auto;
         }
         
-        .game-title, .game-over-title, .pause-title {
+        .game-title, .game-over-title, .pause-title, .victory-title {
           font-size: 1.8em;
           margin: 0 0 20px 0;
           line-height: 1.2;
@@ -413,7 +512,7 @@ export class MenuSystem {
           justify-content: flex-start;
         }
         
-        .game-title, .game-over-title, .pause-title {
+        .game-title, .game-over-title, .pause-title, .victory-title {
           font-size: 1.8em;
           margin: 10px 0 20px 0;
         }
@@ -434,7 +533,7 @@ export class MenuSystem {
           margin: 0;
         }
         
-        .game-title, .game-over-title, .pause-title {
+        .game-title, .game-over-title, .pause-title, .victory-title {
           font-size: 1.4em;
           margin: 5px 0 15px 0;
           line-height: 1.1;
@@ -481,7 +580,7 @@ export class MenuSystem {
           overflow-y: auto;
         }
         
-        .game-title, .game-over-title, .pause-title {
+        .game-title, .game-over-title, .pause-title, .victory-title {
           font-size: 1.2em;
           margin: 5px 0 10px 0;
         }
@@ -705,7 +804,7 @@ export class MenuSystem {
           overflow-y: auto;
         }
 
-        .game-title, .game-over-title, .pause-title {
+        .game-title, .game-over-title, .pause-title, .victory-title {
           font-size: 1.4em;
           margin: 5px 0 10px 0;
           line-height: 1.1;
@@ -804,7 +903,7 @@ export class MenuSystem {
           font-size: 0.5em;
         }
 
-        .game-title, .game-over-title, .pause-title {
+        .game-title, .game-over-title, .pause-title, .victory-title {
           font-size: 1.2em;
           margin: 3px 0 8px 0;
         }
@@ -929,6 +1028,34 @@ export class MenuSystem {
         console.log('🏠 Menu button clicked/touched');
         this.eventBus.emit('menu:click', {
           type: 'gameOver',
+          action: 'exit'
+        });
+      });
+    }
+  }
+
+  /**
+   * Configura eventos para a tela de vitória
+   */
+  private setupVictoryEvents(): void {
+    const restartButton = document.getElementById('restart-button');
+    const menuButton = document.getElementById('menu-button');
+
+    if (restartButton) {
+      this.addButtonEvent(restartButton, () => {
+        console.log('🎉🔄 Victory Restart button clicked/touched');
+        this.eventBus.emit('menu:click', {
+          type: 'victory',
+          action: 'restart'
+        });
+      });
+    }
+
+    if (menuButton) {
+      this.addButtonEvent(menuButton, () => {
+        console.log('🎉🏠 Victory Menu button clicked/touched');
+        this.eventBus.emit('menu:click', {
+          type: 'victory',
           action: 'exit'
         });
       });

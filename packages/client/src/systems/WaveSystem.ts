@@ -1,5 +1,6 @@
 import { EventBus } from '../core/EventBus';
 import { Enemy } from '../entities/Enemy';
+import { GameTimer } from './GameTimer';
 import { 
   WAVE_SYSTEM_CONFIG, 
   WaveConfig, 
@@ -13,16 +14,13 @@ import {
 
 /**
  * WaveSystem - Gerencia ondas progressivas de inimigos e bosses
- * Substitui o sistema simples de spawn por um baseado em tempo com escalação
+ * Now uses centralized GameTimer for synchronized timing
  */
 export class WaveSystem {
   private eventBus: EventBus;
-  private gameStartTime: number = 0;
-  private gameTime: number = 0;
+  private gameTimer: GameTimer | null = null;
   private isActive: boolean = false;
   private currentWave: WaveConfig | null = null;
-  private timeFrozen: boolean = false;
-  private frozenTime: number = 0;
   
   // Tracking de spawn por tipo de inimigo
   private enemySpawnTimers: Map<string, number> = new Map();
@@ -32,9 +30,17 @@ export class WaveSystem {
   private activeBoss: Enemy | null = null;
   private spawnedBossAtTimes: Set<number> = new Set();
 
-  constructor(eventBus: EventBus) {
+  constructor(eventBus: EventBus, gameTimer?: GameTimer) {
     this.eventBus = eventBus;
+    this.gameTimer = gameTimer || null;
     this.setupEventHandlers();
+  }
+
+  /**
+   * Set GameTimer reference after both systems are created
+   */
+  public setGameTimer(gameTimer: GameTimer): void {
+    this.gameTimer = gameTimer;
   }
 
   private setupEventHandlers(): void {
@@ -76,12 +82,8 @@ export class WaveSystem {
   }
 
   private startWaveSystem(): void {
-    this.gameStartTime = Date.now();
-    this.gameTime = 0;
     this.isActive = true;
     this.currentWave = null;
-    this.timeFrozen = false;
-    this.frozenTime = 0;
     this.activeBoss = null;
     this.spawnedBossAtTimes.clear();
     
@@ -89,7 +91,7 @@ export class WaveSystem {
     this.enemySpawnTimers.clear();
     this.enemyCount.clear();
     
-    console.log('🌊 WaveSystem: Started - 6 minute survival mode');
+    console.log('🌊 WaveSystem: Started - using centralized GameTimer');
     this.eventBus.emit('wave:started', { 
       totalDuration: WAVE_SYSTEM_CONFIG.totalDuration 
     });
@@ -102,41 +104,26 @@ export class WaveSystem {
   }
 
   public update(deltaTime: number): void {
-    if (!this.isActive) return;
+    if (!this.isActive || !this.gameTimer) return;
 
-    // Update game time (freeze during boss fights)
-    if (!this.timeFrozen) {
-      this.gameTime += deltaTime;
-    } else {
-      this.frozenTime += deltaTime;
-    }
-
-    // Check for victory condition
-    if (isGameVictorious(this.gameTime)) {
-      console.log('🎉 WaveSystem: Victory achieved! 6 minutes survived');
-      this.eventBus.emit('game:victory', {
-        gameTime: this.gameTime,
-        frozenTime: this.frozenTime
-      });
-      return;
-    }
+    const gameTime = this.gameTimer.getGameTime();
 
     // Check for boss spawns
-    this.checkBossSpawns();
+    this.checkBossSpawns(gameTime);
 
     // Update current wave
-    this.updateCurrentWave();
+    this.updateCurrentWave(gameTime);
 
-    // Spawn enemies based on current wave
-    if (!this.activeBoss && this.currentWave) {
+    // Spawn enemies based on current wave (only if not in boss fight)
+    if (!this.activeBoss && this.currentWave && !this.gameTimer.isGameTimerFrozen()) {
       this.updateEnemySpawns(deltaTime);
     }
   }
 
-  private checkBossSpawns(): void {
-    const bossConfig = shouldSpawnBoss(this.gameTime);
+  private checkBossSpawns(gameTime: number): void {
+    const bossConfig = shouldSpawnBoss(gameTime);
     if (bossConfig && !this.spawnedBossAtTimes.has(bossConfig.time)) {
-      console.log(`👹 WaveSystem: Spawning boss at ${this.gameTime}s - ${bossConfig.description}`);
+      console.log(`👹 WaveSystem: Spawning boss at ${gameTime}s - ${bossConfig.description}`);
       
       // Mark this boss time as spawned
       this.spawnedBossAtTimes.add(bossConfig.time);
@@ -146,23 +133,17 @@ export class WaveSystem {
       
       // Spawn boss
       this.spawnBoss(bossConfig);
-      
-      // Freeze time if configured
-      if (bossConfig.freezeTime) {
-        this.timeFrozen = true;
-        console.log('⏰ WaveSystem: Time frozen for boss fight');
-      }
 
-      // Notify UI
+      // Notify UI - GameTimer will handle the freeze automatically via boss:spawned event
       this.eventBus.emit('wave:boss-spawned', {
         boss: bossConfig,
-        gameTime: this.gameTime
+        gameTime: gameTime
       });
     }
   }
 
-  private updateCurrentWave(): void {
-    const newWave = getCurrentWave(this.gameTime);
+  private updateCurrentWave(gameTime: number): void {
+    const newWave = getCurrentWave(gameTime);
     
     if (newWave && newWave !== this.currentWave) {
       this.currentWave = newWave;
@@ -174,7 +155,7 @@ export class WaveSystem {
       // Notify UI
       this.eventBus.emit('wave:changed', {
         wave: newWave,
-        gameTime: this.gameTime
+        gameTime: gameTime
       });
     }
   }
@@ -269,11 +250,11 @@ export class WaveSystem {
 
   // Public getters for UI
   public getGameTime(): number {
-    return this.gameTime;
+    return this.gameTimer?.getGameTime() || 0;
   }
 
-  public getFrozenTime(): number {
-    return this.frozenTime;
+  public getMatchDuration(): number {
+    return this.gameTimer?.getMatchDuration() || 0;
   }
 
   public getCurrentWave(): WaveConfig | null {
@@ -285,14 +266,14 @@ export class WaveSystem {
   }
 
   public isTimeFrozen(): boolean {
-    return this.timeFrozen;
+    return this.gameTimer?.isGameTimerFrozen() || false;
   }
 
   public getProgress(): number {
-    return Math.min(1, this.gameTime / WAVE_SYSTEM_CONFIG.totalDuration);
+    return this.gameTimer?.getGameProgress() || 0;
   }
 
   public getRemainingTime(): number {
-    return Math.max(0, WAVE_SYSTEM_CONFIG.totalDuration - this.gameTime);
+    return this.gameTimer?.getRemainingGameTime() || 0;
   }
 }

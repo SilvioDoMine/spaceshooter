@@ -36,9 +36,7 @@ export class HudSystem {
     isPaused: false
   };
 
-  private timerInterval: number | null = null;
-  private timerSeconds: number = 0;
-  private timerRunning: boolean = false;
+  private currentTimerDisplay: string = '00:00';
 
   constructor(eventBus: EventBus) {
     this.eventBus = eventBus;
@@ -55,21 +53,18 @@ export class HudSystem {
       bossProgressFill: document.getElementById('boss-progress-fill')
     };
 
-    // Timer: resetar e iniciar ao começar o jogo
-    this.eventBus.on('game:started', () => {
-      this.resetTimer();
-      this.startTimer();
+    // Listen to centralized GameTimer updates
+    this.eventBus.on('game-timer:update', (data: { gameTime: number; matchDuration: number; isGameTimerFrozen: boolean }) => {
+      this.updateTimerFromGameTimer(data.gameTime, data.isGameTimerFrozen);
     });
-    // Timer: pausar e continuar
-    this.eventBus.on('game:paused', () => {
-      this.pauseTimer();
+    
+    this.eventBus.on('game-timer:started', () => {
+      this.currentTimerDisplay = '00:00';
+      this.updateTimerDisplay();
     });
-    this.eventBus.on('game:resumed', () => {
-      this.resumeTimer();
-    });
+    
     // Timer: resetar ao terminar
     this.eventBus.on('game:over', () => {
-      this.stopTimer();
       this.hideBossBar();
     });
 
@@ -116,43 +111,23 @@ export class HudSystem {
     console.log('🎮 HUD System initialized');
   }
 
-  // Timer HUD
-  private startTimer() {
-    if (this.timerInterval) clearInterval(this.timerInterval);
-    this.timerRunning = true;
-    this.timerInterval = window.setInterval(() => {
-      if (this.timerRunning) {
-        this.timerSeconds++;
-        this.updateTimerDisplay();
-      }
-    }, 1000);
-  }
-
-  private pauseTimer() {
-    this.timerRunning = false;
-  }
-
-  private resumeTimer() {
-    this.timerRunning = true;
-  }
-
-  private stopTimer() {
-    if (this.timerInterval) clearInterval(this.timerInterval);
-    this.timerInterval = null;
-    this.timerRunning = false;
-  }
-
-  private resetTimer() {
-    this.stopTimer();
-    this.timerSeconds = 0;
+  // Timer HUD - now synchronized with GameTimer
+  private updateTimerFromGameTimer(gameTime: number, isGameTimerFrozen: boolean) {
+    const minutes = Math.floor(gameTime / 60);
+    const seconds = Math.floor(gameTime % 60);
+    this.currentTimerDisplay = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    
+    // Add freeze indicator when boss fight is active
+    if (isGameTimerFrozen) {
+      this.currentTimerDisplay += ' ⏸️';
+    }
+    
     this.updateTimerDisplay();
   }
 
   private updateTimerDisplay() {
     if (this.elements.timerText) {
-      const min = Math.floor(this.timerSeconds / 60).toString().padStart(2, '0');
-      const sec = (this.timerSeconds % 60).toString().padStart(2, '0');
-      this.elements.timerText.textContent = `${min}:${sec}`;
+      this.elements.timerText.textContent = this.currentTimerDisplay;
     }
   }
 

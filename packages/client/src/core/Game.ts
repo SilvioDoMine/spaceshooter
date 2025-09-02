@@ -16,6 +16,7 @@ import { CameraSystem } from '../systems/CameraSystem';
 import { SpawnEffectSystem } from '../systems/SpawnEffectSystem';
 import { UIManager } from '../managers/UIManager';
 import { HudSystem } from '../ui/HudSystem';
+import { GameTimer } from '../systems/GameTimer';
 
 /**
  * Game - Core game class that manages all systems and lifecycle
@@ -58,6 +59,7 @@ export class Game {
   private spawnEffectSystem!: SpawnEffectSystem;
   private uiManager!: UIManager;
   private hudSystem!: HudSystem;
+  private gameTimer!: GameTimer;
 
   constructor() {
     this.eventBus = new EventBus();
@@ -144,6 +146,7 @@ export class Game {
     if (this.spawnEffectSystem) this.spawnEffectSystem.dispose();
     if (this.cameraSystem) this.cameraSystem.dispose();
     if (this.hudSystem) this.hudSystem.dispose();
+    // GameTimer doesn't need disposal, it's event-based
     
     assetManager.dispose();
     
@@ -193,6 +196,12 @@ export class Game {
     // EntitySystem needs RenderingSystem for direct scene manipulation
     this.entitySystem = new EntitySystem(this.eventBus, this.renderingSystem);
     
+    // Initialize GameTimer after all dependent systems are created
+    this.gameTimer = new GameTimer(this.eventBus, this.gameStateManager);
+    
+    // Connect GameTimer to systems that need it
+    this.entitySystem.setGameTimer(this.gameTimer);
+    
     // BackgroundSystem needs RenderingSystem reference
     this.backgroundSystem.setRenderingSystem(this.renderingSystem);
     
@@ -238,6 +247,7 @@ export class Game {
 
     // Update systems directly - no events needed for core game loop
     if (this.gameStateManager.isPlaying()) {
+      this.gameTimer.update(deltaTime); // Update centralized timer first
       this.cameraSystem.update(deltaTime);
       this.backgroundSystem.update(deltaTime);
       this.spawnEffectSystem.update(deltaTime);

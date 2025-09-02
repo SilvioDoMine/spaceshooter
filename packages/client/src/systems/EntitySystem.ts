@@ -7,6 +7,7 @@ import { RenderingSystem } from './RenderingSystem';
 import { CollisionUtils } from '../utils/CollisionUtils';
 import { POWERUP_CONFIG, PROJECTILE_CONFIG } from '@spaceshooter/shared';
 import { WaveSystem } from './WaveSystem';
+import { GameTimer } from './GameTimer';
 
 export class EntitySystem {
   private eventBus: EventBus;
@@ -25,6 +26,13 @@ export class EntitySystem {
     this.projectileSystem = new ProjectileSystem(eventBus, renderingSystem);
     this.waveSystem = new WaveSystem(eventBus);
     this.setupEventHandlers();
+  }
+
+  /**
+   * Set GameTimer reference for synchronized timing
+   */
+  public setGameTimer(gameTimer: GameTimer): void {
+    this.waveSystem.setGameTimer(gameTimer);
   }
 
   private setupEventHandlers(): void {
