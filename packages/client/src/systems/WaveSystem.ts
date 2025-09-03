@@ -7,9 +7,7 @@ import {
   BossWaveConfig, 
   EnemyWaveConfig,
   getCurrentWave,
-  shouldSpawnBoss,
-  isGameVictorious,
-  ENEMY_CONFIG
+  shouldSpawnBoss
 } from '@spaceshooter/shared';
 
 /**
@@ -72,7 +70,7 @@ export class WaveSystem {
     this.eventBus.on('boss:defeated', (data) => {
       console.log('👹 WaveSystem: Boss defeated, resuming time');
       this.activeBoss = null;
-      this.timeFrozen = false;
+      // Note: GameTimer handles time unfreezing automatically via this event
     });
 
     this.eventBus.on('enemy:destroyed', (data) => {
@@ -107,7 +105,8 @@ export class WaveSystem {
     // Force initial wave detection at time 0
     if (this.gameTimer) {
       this.updateCurrentWave(0);
-      console.log(`🌊 WaveSystem: Forced initial wave detection - currentWave: ${this.currentWave?.description || 'null'}`);
+      const waveDesc = this.currentWave ? (this.currentWave as WaveConfig).description : 'null';
+      console.log(`🌊 WaveSystem: Forced initial wave detection - currentWave: ${waveDesc}`);
     }
     
     this.eventBus.emit('wave:started', { 

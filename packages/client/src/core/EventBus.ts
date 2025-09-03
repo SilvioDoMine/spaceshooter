@@ -178,10 +178,23 @@ export type GameEventMap = {
     callback: (info: { position: { x: number; y: number; z: number }; viewportSize: { width: number; height: number } }) => void 
   };
 
+  // ========== TIMER EVENTS ==========
+  // Emitido em: GameTimer.ts a cada update do timer
+  // Motivo: HudSystem precisa atualizar display do timer
+  'game-timer:update': { gameTime: number; matchDuration: number; isGameTimerFrozen: boolean };
+  
+  // Emitido em: GameTimer.ts quando o timer inicia
+  // Motivo: HudSystem precisa resetar display do timer
+  'game-timer:started': { totalGameDuration: number };
+
   // ========== VICTORY EVENTS ==========
-  // Emitido em: WaveSystem.ts quando o jogador sobrevive 6 minutos
+  // Emitido em: GameTimer.ts quando o jogador sobrevive 6 minutos
   // Motivo: GameStateManager precisa mostrar tela de vitória
-  'game:victory': { gameTime: number; frozenTime: number };
+  'game:victory': { gameTime: number; matchDuration: number };
+  
+  // Emitido em: Player.ts em resposta ao game:victory com stats reais
+  // Motivo: MenuSystem precisa exibir estatísticas reais na tela de vitória
+  'game:victory-stats': { stats: GameStats };
 
   // ========== ENEMY EVENTS ==========
   // Emitido em: Enemy.ts quando inimigo escapa
@@ -263,11 +276,11 @@ export type GameEventMap = {
   // ========== MENU EVENTS ==========
   // Emitido em: MenuSystem.ts:336,349,369,379,398,408 quando botão é clicado
   // Motivo: Navegar entre menus e executar ações do jogador
-  'menu:click': { type: 'main' | 'pause' | 'gameOver' | 'settings'; action: string };
+  'menu:click': { type: 'main' | 'pause' | 'gameOver' | 'victory' | 'settings'; action: string };
   
   // Eventos comentados no código - mantidos para compatibilidade futura
-  'menu:opened': { type: 'main' | 'pause' | 'gameOver' | 'settings' };
-  'menu:closed': { type: 'main' | 'pause' | 'gameOver' | 'settings' };
+  'menu:opened': { type: 'main' | 'pause' | 'gameOver' | 'victory' | 'settings' };
+  'menu:closed': { type: 'main' | 'pause' | 'gameOver' | 'victory' | 'settings' };
 
   // ========== UI EVENTS ==========
   // Emitido em: Player.ts:240, main2.ts:71,143,761,606 para atualizar HUD

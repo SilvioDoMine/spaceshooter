@@ -108,11 +108,6 @@ export class GameStateManager implements Subject {
     // Listen to game:victory from GameTimer
     this.eventBus.on('game:victory', (data: { gameTime: number; matchDuration: number }) => {
       console.log('🎉 GameStateManager received game:victory - 6 minutes survived!', data);
-      // Update stats with victory information
-      this.gameStats.matchDuration = data.matchDuration;
-      this.gameStats.isVictory = true;
-      this.updateTimeAlive();
-      this.calculateAccuracy();
       this.setState(GameStateEnum.VICTORY);
     });
     this.eventBus.on('game:exit', () => {
@@ -288,8 +283,11 @@ export class GameStateManager implements Subject {
       enemiesDestroyed: 0,
       shotsFired: 0,
       accuracy: 0,
-      enemiesEscaped: 0
+      enemiesEscaped: 0,
+      matchDuration: 0,
+      isVictory: false
     };
+    console.log('📊 GameStateManager: Stats reset for new game');
   }
 
   /**
@@ -297,7 +295,7 @@ export class GameStateManager implements Subject {
    */
   private updateTimeAlive(): void {
     if (this.gameStartTime > 0) {
-      this.gameStats.timeAlive = Date.now() - this.gameStartTime;
+      this.gameStats.timeAlive = (Date.now() - this.gameStartTime) / 1000; // Convert to seconds
     }
   }
 
@@ -311,6 +309,7 @@ export class GameStateManager implements Subject {
       this.gameStats.accuracy = 0;
     }
   }
+
 
   /**
    * Manipula mudanças de estado específicas
@@ -361,9 +360,6 @@ export class GameStateManager implements Subject {
         // Clear all temporary game objects like particles and XP orbs
         this.eventBus.emit('particles:clear', {});
         this.eventBus.emit('xp-orbs:clear', {});
-        
-        // Emit victory event for UI
-        this.eventBus.emit('game:victory-screen', { stats: this.gameStats });
         break;
     }
   }

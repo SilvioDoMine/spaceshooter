@@ -33,7 +33,8 @@ export class MenuSystem {
       this.showGameOverScreen(data.stats);
     });
 
-    this.eventBus.on('game:victory-screen', (data) => {
+    this.eventBus.on('game:victory-stats', (data) => {
+      // Show victory screen with real player stats
       this.showVictoryScreen(data.stats);
     });
 
@@ -136,7 +137,8 @@ export class MenuSystem {
    * Mostra a tela de vitória com estatísticas especiais
    */
   showVictoryScreen(stats: GameStats): void {
-    const timeFormatted = this.formatTime(stats.timeAlive);
+    console.log('🎉 MenuSystem: Showing victory screen with stats:', stats);
+    
     const matchDurationFormatted = stats.matchDuration ? this.formatTime(stats.matchDuration) : 'N/A';
     
     this.container.innerHTML = `
@@ -1187,7 +1189,6 @@ export class MenuSystem {
         // Check viewport bounds and adjust position
         const tooltipRect = tooltip.getBoundingClientRect();
         const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
         
         // Horizontal bounds checking
         if (left - tooltipRect.width / 2 < 10) {

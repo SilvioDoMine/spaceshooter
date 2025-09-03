@@ -157,6 +157,10 @@ export class Player extends Entity {
       this.onSlowMotionComplete();
     });
 
+    const unsubscribeVictory = this.eventBus.on('game:victory', (data) => {
+      this.emitVictoryStats(data.matchDuration);
+    });
+
     this.addCleanupFunction(unsubscribeInput);
     this.addCleanupFunction(unsubscribeScore);
     this.addCleanupFunction(unsubscribeXPGain);
@@ -168,6 +172,7 @@ export class Player extends Entity {
     this.addCleanupFunction(unsubscribeSizeChange);
     this.addCleanupFunction(unsubscribeInvulnerability);
     this.addCleanupFunction(unsubscribeSlowMotionComplete);
+    this.addCleanupFunction(unsubscribeVictory);
   }
 
   protected createVisual(): void {
@@ -1420,6 +1425,35 @@ export class Player extends Entity {
         enemiesEscaped: this.stats.enemiesEscaped,
         timeAlive: this.stats.timeAlive,
         accuracy: this.stats.accuracy
+      }
+    });
+  }
+
+  /**
+   * Emite estatísticas de vitória com dados reais do player
+   */
+  private emitVictoryStats(matchDuration: number): void {
+    // Calculate time alive like in the die() method (keep in milliseconds for formatTime)
+    const currentTime = Date.now();
+    this.stats.timeAlive = currentTime - this.gameStartTime;
+    
+    // Update accuracy before sending victory stats
+    this.updateAccuracy();
+
+    console.log('🎉 Player victory stats:', this.stats);
+    console.log('🎉 Match duration from GameTimer (seconds):', matchDuration);
+    console.log('🎉 Time alive calculated from Player (ms):', this.stats.timeAlive);
+
+    this.eventBus.emit('game:victory-stats', { 
+      stats: {
+        score: this.stats.score,
+        shotsFired: this.stats.shotsFired, 
+        enemiesDestroyed: this.stats.enemiesDestroyed,
+        enemiesEscaped: this.stats.enemiesEscaped,
+        timeAlive: 360000, // Always 6 minutes for victory (360000 ms = 6 minutes)
+        accuracy: this.stats.accuracy,
+        matchDuration: this.stats.timeAlive, // Real time duration in milliseconds
+        isVictory: true
       }
     });
   }
