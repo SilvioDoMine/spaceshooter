@@ -59,9 +59,16 @@ export class GameTimer {
     });
 
     this.eventBus.on('boss:defeated', (data: { enemyId: string }) => {
-      console.log(`⏰ GameTimer: Boss defeated (${data.enemyId}), resuming game timer`);
-      this.activeBossId = null;
-      this.isGameTimerFrozenForBoss = false;
+      console.log(`⏰ GameTimer: Boss defeated (${data.enemyId}), checking if it's the active boss (${this.activeBossId})`);
+      
+      // Only unfreeze if the defeated boss is the one that caused the freeze
+      if (this.activeBossId && data.enemyId === this.activeBossId) {
+        console.log(`⏰ GameTimer: CORRECT boss defeated - resuming game timer`);
+        this.activeBossId = null;
+        this.isGameTimerFrozenForBoss = false;
+      } else {
+        console.log(`⏰ GameTimer: Wrong enemy defeated - timer remains frozen for boss ${this.activeBossId}`);
+      }
     });
   }
 

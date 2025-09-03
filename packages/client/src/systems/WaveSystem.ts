@@ -70,11 +70,17 @@ export class WaveSystem {
       this.isActive = true;
     });
 
-    this.eventBus.on('boss:defeated', () => {
-      console.log('👹 WaveSystem: Boss defeated, resuming normal enemy spawning');
-      this.activeBoss = null;
-      this.isBossSpawning = false; // Reset boss spawning flag
-      // Note: GameTimer handles time unfreezing automatically via this event
+    this.eventBus.on('boss:defeated', (data: { enemyId: string }) => {
+      console.log(`👹 WaveSystem: Boss defeated (${data.enemyId}), checking if it's our active boss`);
+      
+      // Only reset if the defeated boss is our active boss
+      if (this.activeBoss && data.enemyId === this.activeBoss.getId()) {
+        console.log('👹 WaveSystem: CORRECT boss defeated, resuming normal enemy spawning');
+        this.activeBoss = null;
+        this.isBossSpawning = false; // Reset boss spawning flag and preemptive protection
+      } else {
+        console.log(`👹 WaveSystem: Wrong enemy defeated - keeping boss active (${this.activeBoss?.getId()})`);
+      }
     });
 
     this.eventBus.on('enemy:destroyed', (data) => {
@@ -131,6 +137,18 @@ export class WaveSystem {
 
     const gameTime = this.gameTimer.getGameTime();
 
+    // AGGRESSIVE PREEMPTIVE PROTECTION: Block spawning 1 second before boss times
+    // to prevent async callbacks from spawning enemies during boss spawn
+    const nearBossTime = Math.abs(gameTime - 179) < 1.0 || Math.abs(gameTime - 359) < 1.0;
+    if (nearBossTime && !this.isBossSpawning) {
+      console.log(`🛡️ WaveSystem: PREEMPTIVE PROTECTION activated at ${gameTime.toFixed(2)}s - blocking spawns before boss time`);
+      this.isBossSpawning = true;
+    } else if (!nearBossTime && this.isBossSpawning && !this.activeBoss) {
+      // Reset protection when we're no longer near boss time and no active boss
+      console.log(`✅ WaveSystem: PREEMPTIVE PROTECTION deactivated at ${gameTime.toFixed(2)}s - resuming normal spawns`);
+      this.isBossSpawning = false;
+    }
+
     // Check for boss spawns FIRST - this sets isBossSpawning flag
     const bossSpawned: boolean = this.checkBossSpawns(gameTime);
     
@@ -150,7 +168,15 @@ export class WaveSystem {
     // 2. Not currently spawning a boss  
     // 3. Has current wave
     // 4. Timer is not frozen
-    if (!this.activeBoss && !this.isBossSpawning && this.currentWave && !this.gameTimer.isGameTimerFrozen()) {
+    const canSpawnEnemies = !this.activeBoss && !this.isBossSpawning && this.currentWave && !this.gameTimer.isGameTimerFrozen();
+    
+    // Only log if enemies are allowed to spawn during critical boss times (this is the bug!)
+    if ((Math.abs(gameTime - 179) < 0.5 || Math.abs(gameTime - 359) < 0.5) && canSpawnEnemies) {
+      console.log(`🚨 BUG DETECTED: Enemies can spawn at boss time ${gameTime.toFixed(2)}s!`);
+      console.log(`  - activeBoss: ${!!this.activeBoss}, isBossSpawning: ${this.isBossSpawning}, timerFrozen: ${this.gameTimer.isGameTimerFrozen()}`);
+    }
+    
+    if (canSpawnEnemies) {
       this.updateEnemySpawns(deltaTime);
     }
   }
@@ -158,10 +184,8 @@ export class WaveSystem {
   private checkBossSpawns(gameTime: number): boolean {
     const bossConfig = shouldSpawnBoss(gameTime);
     
-    // Debug timing around boss spawn times
-    if (Math.abs(gameTime - 179) < 2 || Math.abs(gameTime - 359) < 2) {
-      console.log(`⏰ WaveSystem: Near boss spawn time - gameTime: ${gameTime.toFixed(2)}s, bossConfig:`, bossConfig);
-    }
+    // Only log when boss actually spawns
+    // (removed excessive debug logging)
     
     if (bossConfig && !this.spawnedBossAtTimes.has(bossConfig.time)) {
       console.log(`👹 WaveSystem: Boss spawn triggered at gameTime=${gameTime.toFixed(2)}s for boss scheduled at ${bossConfig.time}s - STOPPING enemy spawns immediately`);
@@ -221,10 +245,13 @@ export class WaveSystem {
       return;
     }
 
-    // Log current wave being processed occasionally
-    if (Math.random() < 0.01) { 
-      console.log(`🌊 WaveSystem: Processing enemy spawns for wave "${this.currentWave.description}" with ${this.currentWave.enemyTypes.length} enemy types`);
+    // Extra safety check at the start of enemy spawning
+    if (this.activeBoss || this.isBossSpawning || this.gameTimer?.isGameTimerFrozen()) {
+      console.log(`🚨 WaveSystem: EMERGENCY STOP - Boss detected during updateEnemySpawns!`);
+      return;
     }
+
+    // (removed excessive wave processing logs)
 
     for (const enemyConfig of this.currentWave.enemyTypes) {
       this.updateEnemyTypeSpawn(enemyConfig, deltaTime);
@@ -251,7 +278,17 @@ export class WaveSystem {
     // Check if it's time to spawn
     const spawnInterval = enemyConfig.spawnRate / 1000; // Convert ms to seconds
     if (newTimer >= spawnInterval) {
-      console.log(`🌊 WaveSystem: Spawning ${typeKey} enemy (timer: ${newTimer.toFixed(2)}s, interval: ${spawnInterval}s)`);
+      // FINAL safety check before spawning
+      if (this.activeBoss || this.isBossSpawning || this.gameTimer?.isGameTimerFrozen()) {
+        console.log(`🚨 WaveSystem: LAST SECOND BLOCK - Boss detected right before spawn of ${typeKey}!`);
+        return;
+      }
+      
+      // Only log enemy spawns during boss times (when it's a bug)
+      const gameTime = this.gameTimer?.getGameTime() || 0;
+      if (Math.abs(gameTime - 179) < 1 || Math.abs(gameTime - 359) < 1) {
+        console.log(`🚨 ENEMY SPAWNED DURING BOSS TIME: ${typeKey} at ${gameTime.toFixed(2)}s`);
+      }
       this.spawnEnemyWithConfig(enemyConfig);
       this.enemySpawnTimers.set(typeKey, 0); // Reset timer
     }
@@ -265,7 +302,7 @@ export class WaveSystem {
     }
     
     try {
-      console.log(`🌊 WaveSystem: Attempting to spawn ${enemyConfig.type} enemy`);
+      // Only log spawns during boss times (removed normal spawn logging)
       // Solicitar informações da câmera via evento
       this.eventBus.emit('camera:get-info', {
         callback: (cameraInfo: { position: { x: number; y: number; z: number }; viewportSize: { width: number; height: number } }) => {
@@ -275,7 +312,7 @@ export class WaveSystem {
             return;
           }
           
-          console.log(`🌊 WaveSystem: Got camera info - position: (${cameraInfo.position.x.toFixed(2)}, ${cameraInfo.position.y.toFixed(2)}), viewport: ${cameraInfo.viewportSize.width.toFixed(1)}x${cameraInfo.viewportSize.height.toFixed(1)}`);
+          // (removed camera info logging)
           // Usar novo método de spawn com animação na tela
           Enemy.spawnEnemyWithWaveConfigOnScreen(
             this.eventBus,
@@ -287,7 +324,11 @@ export class WaveSystem {
             const currentCount = this.enemyCount.get(enemyConfig.type) || 0;
             this.enemyCount.set(enemyConfig.type, currentCount + 1);
             
-            console.log(`🌊 WaveSystem: Spawned ${enemyConfig.type} enemy with effect (${currentCount + 1}/${enemyConfig.maxConcurrent})`);
+            // Only log spawns during boss times (when it's a bug) 
+            const currentGameTime = this.gameTimer?.getGameTime() || 0;
+            if (Math.abs(currentGameTime - 179) < 1 || Math.abs(currentGameTime - 359) < 1) {
+              console.log(`🚨 ENEMY ACTUALLY SPAWNED DURING BOSS: ${enemyConfig.type} at ${currentGameTime.toFixed(2)}s`);
+            }
             
             // Emit spawn event
             this.eventBus.emit('wave:enemy-spawned', {
