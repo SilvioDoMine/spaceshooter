@@ -132,7 +132,13 @@ export class WaveSystem {
     const gameTime = this.gameTimer.getGameTime();
 
     // Check for boss spawns FIRST - this sets isBossSpawning flag
-    this.checkBossSpawns(gameTime);
+    const bossSpawned: boolean = this.checkBossSpawns(gameTime);
+    
+    // If boss was spawned this frame, IMMEDIATELY stop all enemy spawning for the rest of this frame
+    if (bossSpawned === true) {
+      console.log('🛑 WaveSystem: Boss spawned this frame - BLOCKING all enemy spawns');
+      return; // Exit early, no enemy spawns this frame
+    }
 
     // Update current wave only if not spawning a boss
     if (!this.isBossSpawning) {
@@ -149,7 +155,7 @@ export class WaveSystem {
     }
   }
 
-  private checkBossSpawns(gameTime: number): void {
+  private checkBossSpawns(gameTime: number): boolean {
     const bossConfig = shouldSpawnBoss(gameTime);
     
     // Debug timing around boss spawn times
@@ -179,7 +185,11 @@ export class WaveSystem {
         boss: bossConfig,
         gameTime: gameTime
       });
+      
+      return true; // Boss was spawned this frame
     }
+    
+    return false; // No boss spawned
   }
 
   private updateCurrentWave(gameTime: number): void {
@@ -248,11 +258,23 @@ export class WaveSystem {
   }
 
   private spawnEnemyWithConfig(enemyConfig: EnemyWaveConfig): void {
+    // DOUBLE CHECK: Never spawn enemies during boss fights
+    if (this.activeBoss || this.isBossSpawning || this.gameTimer?.isGameTimerFrozen()) {
+      console.log(`🛑 WaveSystem: BLOCKED enemy spawn - Boss active: ${!!this.activeBoss}, Boss spawning: ${this.isBossSpawning}, Timer frozen: ${this.gameTimer?.isGameTimerFrozen()}`);
+      return;
+    }
+    
     try {
       console.log(`🌊 WaveSystem: Attempting to spawn ${enemyConfig.type} enemy`);
       // Solicitar informações da câmera via evento
       this.eventBus.emit('camera:get-info', {
         callback: (cameraInfo: { position: { x: number; y: number; z: number }; viewportSize: { width: number; height: number } }) => {
+          // TRIPLE CHECK: Verify again in callback (asynchronous protection)
+          if (this.activeBoss || this.isBossSpawning || this.gameTimer?.isGameTimerFrozen()) {
+            console.log(`🛑 WaveSystem: BLOCKED enemy spawn in callback - Boss active: ${!!this.activeBoss}, Boss spawning: ${this.isBossSpawning}, Timer frozen: ${this.gameTimer?.isGameTimerFrozen()}`);
+            return;
+          }
+          
           console.log(`🌊 WaveSystem: Got camera info - position: (${cameraInfo.position.x.toFixed(2)}, ${cameraInfo.position.y.toFixed(2)}), viewport: ${cameraInfo.viewportSize.width.toFixed(1)}x${cameraInfo.viewportSize.height.toFixed(1)}`);
           // Usar novo método de spawn com animação na tela
           Enemy.spawnEnemyWithWaveConfigOnScreen(
