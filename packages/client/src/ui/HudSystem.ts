@@ -344,6 +344,12 @@ export class HudSystem {
       this.elements.bossBar.style.display = 'block';
       console.log('👹 Boss health bar shown in HUD');
     }
+    
+    // Reset boss health bar to full when showing (new boss spawned)
+    if (this.elements.bossProgressFill) {
+      this.elements.bossProgressFill.style.width = '100%';
+      console.log('👹 Boss health bar reset to 100% for new boss');
+    }
   }
 
   public hideBossBar(): void {
