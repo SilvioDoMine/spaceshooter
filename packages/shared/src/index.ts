@@ -1205,7 +1205,9 @@ export function getCurrentWave(gameTime: number): WaveConfig | null {
  */
 export function shouldSpawnBoss(gameTime: number): BossWaveConfig | null {
   for (const boss of WAVE_SYSTEM_CONFIG.bosses) {
-    if (Math.abs(gameTime - boss.time) < 0.5) { // Tolerância de 0.5 segundos
+    // Spawn boss só quando o gameTime passar do tempo agendado (não antes)
+    // Tolerância de 0.3 segundos após o tempo
+    if (gameTime >= boss.time && gameTime < boss.time + 0.3) {
       return boss;
     }
   }

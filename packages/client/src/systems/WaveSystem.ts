@@ -70,7 +70,7 @@ export class WaveSystem {
       this.isActive = true;
     });
 
-    this.eventBus.on('boss:defeated', (data) => {
+    this.eventBus.on('boss:defeated', () => {
       console.log('👹 WaveSystem: Boss defeated, resuming normal enemy spawning');
       this.activeBoss = null;
       this.isBossSpawning = false; // Reset boss spawning flag
@@ -151,8 +151,14 @@ export class WaveSystem {
 
   private checkBossSpawns(gameTime: number): void {
     const bossConfig = shouldSpawnBoss(gameTime);
+    
+    // Debug timing around boss spawn times
+    if (Math.abs(gameTime - 179) < 2 || Math.abs(gameTime - 359) < 2) {
+      console.log(`⏰ WaveSystem: Near boss spawn time - gameTime: ${gameTime.toFixed(2)}s, bossConfig:`, bossConfig);
+    }
+    
     if (bossConfig && !this.spawnedBossAtTimes.has(bossConfig.time)) {
-      console.log(`👹 WaveSystem: Boss spawn detected at ${gameTime}s - STOPPING enemy spawns immediately`);
+      console.log(`👹 WaveSystem: Boss spawn triggered at gameTime=${gameTime.toFixed(2)}s for boss scheduled at ${bossConfig.time}s - STOPPING enemy spawns immediately`);
       
       // IMMEDIATELY stop all enemy spawning
       this.isBossSpawning = true;
