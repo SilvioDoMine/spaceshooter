@@ -27,6 +27,9 @@ export class WaveSystem {
   // Boss tracking
   private activeBoss: Enemy | null = null;
   private spawnedBossAtTimes: Set<number> = new Set();
+  
+  // Boss spawn prevention
+  private isBossSpawning: boolean = false;
 
   constructor(eventBus: EventBus, gameTimer?: GameTimer) {
     this.eventBus = eventBus;
@@ -68,8 +71,9 @@ export class WaveSystem {
     });
 
     this.eventBus.on('boss:defeated', (data) => {
-      console.log('👹 WaveSystem: Boss defeated, resuming time');
+      console.log('👹 WaveSystem: Boss defeated, resuming normal enemy spawning');
       this.activeBoss = null;
+      this.isBossSpawning = false; // Reset boss spawning flag
       // Note: GameTimer handles time unfreezing automatically via this event
     });
 
@@ -95,6 +99,7 @@ export class WaveSystem {
     this.currentWave = null;
     this.activeBoss = null;
     this.spawnedBossAtTimes.clear();
+    this.isBossSpawning = false; // Reset boss spawning flag
     
     // Reset all counters and timers
     this.enemySpawnTimers.clear();
@@ -118,6 +123,7 @@ export class WaveSystem {
     this.isActive = false;
     this.currentWave = null;
     this.activeBoss = null;
+    this.isBossSpawning = false;
   }
 
   public update(deltaTime: number): void {
@@ -125,14 +131,20 @@ export class WaveSystem {
 
     const gameTime = this.gameTimer.getGameTime();
 
-    // Check for boss spawns
+    // Check for boss spawns FIRST - this sets isBossSpawning flag
     this.checkBossSpawns(gameTime);
 
-    // Update current wave
-    this.updateCurrentWave(gameTime);
+    // Update current wave only if not spawning a boss
+    if (!this.isBossSpawning) {
+      this.updateCurrentWave(gameTime);
+    }
 
-    // Spawn enemies based on current wave (only if not in boss fight)
-    if (!this.activeBoss && this.currentWave && !this.gameTimer.isGameTimerFrozen()) {
+    // Spawn enemies only if ALL conditions are met:
+    // 1. No active boss
+    // 2. Not currently spawning a boss  
+    // 3. Has current wave
+    // 4. Timer is not frozen
+    if (!this.activeBoss && !this.isBossSpawning && this.currentWave && !this.gameTimer.isGameTimerFrozen()) {
       this.updateEnemySpawns(deltaTime);
     }
   }
@@ -140,13 +152,18 @@ export class WaveSystem {
   private checkBossSpawns(gameTime: number): void {
     const bossConfig = shouldSpawnBoss(gameTime);
     if (bossConfig && !this.spawnedBossAtTimes.has(bossConfig.time)) {
-      console.log(`👹 WaveSystem: Spawning boss at ${gameTime}s - ${bossConfig.description}`);
+      console.log(`👹 WaveSystem: Boss spawn detected at ${gameTime}s - STOPPING enemy spawns immediately`);
+      
+      // IMMEDIATELY stop all enemy spawning
+      this.isBossSpawning = true;
       
       // Mark this boss time as spawned
       this.spawnedBossAtTimes.add(bossConfig.time);
       
       // Clear all existing enemies
       this.eventBus.emit('wave:clear-enemies', {});
+      
+      console.log(`👹 WaveSystem: Enemies cleared, spawning boss - ${bossConfig.description}`);
       
       // Spawn boss
       this.spawnBoss(bossConfig);
