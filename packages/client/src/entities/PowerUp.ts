@@ -18,19 +18,15 @@ export class PowerUp extends Entity {
     initialPosition: Position
   ) {
     const config = POWERUP_CONFIG[powerUpType];
-    
     if (!config) {
       console.error(`❌ PowerUp config not found for type: ${powerUpType}`);
       throw new Error(`PowerUp config not found for type: ${powerUpType}`);
     }
-    
-    super(eventBus, id, initialPosition, { x: 0, y: -config.speed });
-    
+    // PowerUp estacionário: velocidade zero
+    super(eventBus, id, initialPosition, { x: 0, y: 0 });
     this.powerUpType = powerUpType;
     this.config = config;
     this.lifetime = (this.config?.lifetime || 10000) / 1000; // Convert ms to seconds
-    
-    // Create visual after all properties are set
     this.createVisual();
   }
 
@@ -148,7 +144,6 @@ export class PowerUp extends Entity {
   public static spawnPowerUp(eventBus: EventBus): PowerUp {
     const currentTime = Date.now();
     const powerUpId = `powerup_${currentTime}_${Math.random()}`;
-    
     // Determinar tipo de power-up (70% ammo, 25% health, 5% shield)
     const rand = Math.random();
     let powerUpType: PowerUpData['type'];
@@ -159,16 +154,14 @@ export class PowerUp extends Entity {
     } else {
       powerUpType = 'shield';
     }
-    
+    // Spawn em posição aleatória dentro do mapa
+    const bounds = { minX: -8, maxX: 8, minY: -6, maxY: 6 };
     const spawnPosition: Position = {
-      x: (Math.random() - 0.5) * 8, // Random X entre -4 e 4 (same as main2.ts)
-      y: 6 // Spawn no topo (same as main2.ts)
+      x: bounds.minX + Math.random() * (bounds.maxX - bounds.minX),
+      y: bounds.minY + Math.random() * (bounds.maxY - bounds.minY)
     };
-    
     const powerUp = new PowerUp(eventBus, powerUpId, powerUpType, spawnPosition);
-    
     console.log(`PowerUp spawned: ${powerUpType}`, powerUpId);
-    
     return powerUp;
   }
 }

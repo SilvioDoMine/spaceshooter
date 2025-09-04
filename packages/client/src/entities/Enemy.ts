@@ -2,36 +2,67 @@ import * as THREE from 'three';
 import { Entity, Position } from './Entity';
 import { EventBus } from '../core/EventBus';
 import { assetManager } from '../services/AssetManager';
-import { ENEMY_CONFIG } from '@spaceshooter/shared';
-import type { Enemy as EnemyData } from '@spaceshooter/shared';
+import { ENEMY_CONFIG, PLAYER_CONFIG } from '@spaceshooter/shared';
+import type { Enemy as EnemyData, EnemyWaveConfig, BossWaveConfig } from '@spaceshooter/shared';
+import { EnemyRangeIndicator } from '../effects/EnemyRangeIndicator';
 
 export class Enemy extends Entity {
+  /**
+   * Se true, o inimigo morre ao colidir com o player.
+   * Controlado por ENEMY_CONFIG.
+   */
+  private diesOnPlayerCollision: boolean;
   private enemyType: EnemyData['type'];
   private health: number;
   private maxHealth: number;
   private config: typeof ENEMY_CONFIG[keyof typeof ENEMY_CONFIG];
+  private speedMultiplier: number = 1.0;
+  
+  // Barra de vida do inimigo
+  private healthBarGroup?: THREE.Group;
+  private healthBarBackground?: THREE.Mesh;
+  private healthBarForeground?: THREE.Mesh;
+  
+  // Sistema de tiro
+  private lastShotTime: number = 0; // Agora representa o tempo do jogo
+  
+  // Range indicator
+  private rangeIndicator?: EnemyRangeIndicator;
 
   constructor(
     eventBus: EventBus,
     id: string,
     enemyType: EnemyData['type'],
-    initialPosition: Position
+    initialPosition: Position,
+    waveConfig?: EnemyWaveConfig,
+    bossConfig?: BossWaveConfig
   ) {
     const config = ENEMY_CONFIG[enemyType];
-    
     if (!config) {
       console.error(`❌ Enemy config not found for type: ${enemyType}`);
       throw new Error(`Enemy config not found for type: ${enemyType}`);
     }
+    // Inicializa com velocidade zero, será calculada no update
+    super(eventBus, id, initialPosition, { x: 0, y: 0 });
+  this.enemyType = enemyType;
+  this.config = config;
+  this.diesOnPlayerCollision = config.diesOnPlayerCollision ?? true;
     
-    super(eventBus, id, initialPosition, { x: 0, y: -config.speed });
+    // Apply wave multipliers
+    let healthMultiplier = 1.0;
+    let speedMultiplier = 1.0;
     
-    this.enemyType = enemyType;
-    this.config = config;
-    this.health = config.health;
-    this.maxHealth = config.health;
+    if (waveConfig) {
+      healthMultiplier = waveConfig.healthMultiplier;
+      speedMultiplier = waveConfig.speedMultiplier;
+    } else if (bossConfig) {
+      healthMultiplier = bossConfig.healthMultiplier;
+      speedMultiplier = 1.0; // Boss speed não é modificado por enquanto
+    }
     
-    // Now create visual after all properties are set
+    this.health = Math.round(config.health * healthMultiplier);
+    this.maxHealth = Math.round(config.health * healthMultiplier);
+    this.speedMultiplier = speedMultiplier;
     this.createVisual();
   }
 
@@ -65,25 +96,76 @@ export class Enemy extends Entity {
     const radius = this.config.radius || (this.config.size || 0.3);
     this.createCollisionVisualizer(radius);
     
+    // Create range indicator if enemy can shoot
+    if (this.config.projectile?.canShoot && this.config.projectile.shootRange) {
+      this.rangeIndicator = new EnemyRangeIndicator(
+        this.eventBus, 
+        this.config.projectile.shootRange,
+        this.config.color
+      );
+      
+      // Add range indicator to scene
+      const rangeMesh = this.rangeIndicator.getMesh();
+      if (rangeMesh) {
+        this.eventBus.emit('scene:add-object', { object: rangeMesh });
+      }
+    }
+    
     this.eventBus.emit('scene:add-object', { object: this.object });
   }
 
-  protected onUpdate(deltaTime: number): void {
+  protected onUpdate(deltaTime: number, gameTime?: number): void {
     if (!this.isActive) return;
+    
+    // Update range indicator position
+    if (this.rangeIndicator) {
+      this.rangeIndicator.setPosition(this.position.x, this.position.y, 0);
+      this.rangeIndicator.update(deltaTime);
+    }
 
-    this.checkBoundsAndDestroy();
+    // Persegue o jogador
+    const game = (window as any).game;
+    if (game && typeof game.getEntitySystem === 'function') {
+      const entitySystem = game.getEntitySystem();
+      if (entitySystem && typeof entitySystem.getPlayer === 'function') {
+        const player = entitySystem.getPlayer();
+        if (player && typeof player.getPosition === 'function') {
+          const playerPos = player.getPosition();
+          const dx = playerPos.x - this.position.x;
+          const dy = playerPos.y - this.position.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist > 0.01) {
+            const modifiedSpeed = this.config.speed * this.speedMultiplier;
+            this.velocity.x = (dx / dist) * modifiedSpeed;
+            this.velocity.y = (dy / dist) * modifiedSpeed;
+          }
+        }
+      }
+    }
+    // Move
+    this.setPosition({
+      x: this.position.x + this.velocity.x * deltaTime,
+      y: this.position.y + this.velocity.y * deltaTime
+    });
+
+    // Atualiza posição da barra de vida
+    this.updateHealthBarPosition();
+
+    // Sistema de tiro (se configurado)
+    if (gameTime !== undefined) {
+      this.tryShoot(deltaTime, gameTime);
+    } else {
+      this.tryShoot(deltaTime);
+    }
+
     this.checkPlayerCollision();
   }
 
   private checkBoundsAndDestroy(): void {
-    const bounds = { minX: -10, maxX: 10, minY: -6, maxY: 10 };
-    
+    // Remove inimigo se sair muito longe do mapa
+    const bounds = { minX: -15, maxX: 15, minY: -12, maxY: 12 };
     if (!this.checkBounds(bounds.minX, bounds.maxX, bounds.minY, bounds.maxY)) {
-      if (this.position.y < bounds.minY) {
-        this.handleEscape();
-      } else {
-        this.destroy();
-      }
+      this.destroy();
     }
   }
 
@@ -107,6 +189,12 @@ export class Enemy extends Entity {
     
     console.log(`Enemy ${this.enemyType} escaped! -${escapePenalty} HP`);
     
+    // Cleanup range indicator
+    if (this.rangeIndicator) {
+      this.rangeIndicator.dispose();
+      this.rangeIndicator = undefined;
+    }
+    
     this.destroy();
   }
 
@@ -125,7 +213,8 @@ export class Enemy extends Entity {
       entityType: 'enemy',
       position: this.position,
       radius: this.config.radius,
-      damage: this.getCollisionDamage()
+      damage: this.getCollisionDamage(),
+      diesOnPlayerCollision: this.diesOnPlayerCollision
     });
   }
 
@@ -140,6 +229,19 @@ export class Enemy extends Entity {
 
   public takeDamage(damage: number): boolean {
     this.health = Math.max(0, this.health - damage);
+    
+    // Se for boss, emite evento para atualizar barra do HUD
+    if (this.enemyType === 'boss') {
+      this.eventBus.emit('boss:damage-taken', {
+        health: this.health,
+        maxHealth: this.maxHealth
+      });
+    }
+    
+    // Mostra a barra de vida quando o inimigo toma dano
+    if (this.health < this.maxHealth && this.health > 0) {
+      this.showHealthBar();
+    }
     
     if (this.health <= 0) {
       this.onDeath();
@@ -157,28 +259,48 @@ export class Enemy extends Entity {
     return this.health;
   }
 
+  public getType(): EnemyData['type'] {
+    return this.enemyType;
+  }
+
   public getMaxHealth(): number {
     return this.maxHealth;
   }
 
   private onDeath(): void {
     const scorePoints = this.getScoreValue();
+    // Generate random XP from the configured range
+    const xpRange = this.config.xpRange;
+    const xpReward = Math.floor(Math.random() * (xpRange.max - xpRange.min + 1)) + xpRange.min;
     
     // Emit enemy death event - other systems will handle score/rewards
     this.eventBus.emit('enemy:destroyed', { 
       points: scorePoints,
+      xp: xpReward,
       enemyType: this.enemyType,
-      enemyId: this.id
+      enemyId: this.id,
+      position: { x: this.position.x, y: this.position.y, z: 0 }
     });
-    
+
+    // Se for boss, emitir evento para remover barra do HUD
+    if (this.enemyType === 'boss') {
+      this.eventBus.emit('boss:defeated', { enemyId: this.id });
+    }
+
     this.eventBus.emit('audio:play', { soundId: 'explosion', options: { volume: 0.4 } });
-    
+
     this.eventBus.emit('particles:explosion', {
       position: { x: this.position.x, y: this.position.y, z: 0 }
     });
 
     console.log(`Enemy ${this.enemyType} destroyed! +${scorePoints} points`);
-    
+
+    // Cleanup range indicator
+    if (this.rangeIndicator) {
+      this.rangeIndicator.dispose();
+      this.rangeIndicator = undefined;
+    }
+
     this.destroy();
   }
 
@@ -191,14 +313,219 @@ export class Enemy extends Entity {
     }
   }
 
+  private createGradientTexture(width: number, height: number): THREE.CanvasTexture {
+    // Criar canvas para o gradiente
+    const canvas = document.createElement('canvas');
+    const canvasWidth = 256; // Resolução da textura
+    const canvasHeight = 32;
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
+    
+    const context = canvas.getContext('2d')!;
+    
+    // Criar gradiente vertical totalmente vermelho (cima para baixo) para indicar inimigo
+    const gradient = context.createLinearGradient(0, 0, 0, canvasHeight);
+    gradient.addColorStop(0, '#ff0000'); // Vermelho puro no topo
+    gradient.addColorStop(0.5, '#dd0000'); // Vermelho puro no meio
+    gradient.addColorStop(1, '#aa0000'); // Vermelho puro escuro embaixo (sombra)
+    
+    // Preencher o canvas com o gradiente
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, canvasWidth, canvasHeight);
+    
+    // Criar textura Three.js
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.needsUpdate = true;
+    texture.generateMipmaps = false;
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    texture.wrapS = THREE.ClampToEdgeWrapping;
+    texture.wrapT = THREE.ClampToEdgeWrapping;
+    
+    return texture;
+  }
+
+  private createEnemyHealthBar(): void {
+    const group = new THREE.Group();
+    
+    // Dimensões da barra de vida do inimigo (igual ao player)
+    const barWidth = 0.7; // Mesma largura do player (mais curta)
+    const barHeight = 0.08; // Mesma altura do player
+    
+    // Borda preta (mesma espessura do player)
+    const borderThickness = 0.02; // Mesma espessura do player
+    const borderGeom = new THREE.PlaneGeometry(barWidth + borderThickness * 2, barHeight + borderThickness * 2);
+    const borderMat = new THREE.MeshBasicMaterial({ 
+      color: 0x000000, 
+      transparent: false, 
+      depthTest: false 
+    });
+    const border = new THREE.Mesh(borderGeom, borderMat);
+    border.position.z = -0.002;
+    border.renderOrder = 9997;
+    group.add(border);
+    
+    // Fundo cinza escuro para mostrar barra total quando danificado
+    const bgGeom = new THREE.PlaneGeometry(barWidth, barHeight);
+    const bgMat = new THREE.MeshBasicMaterial({ 
+      color: 0x333333, // Cinza escuro como os segmentos vazios do player
+      transparent: false, 
+      depthTest: false 
+    });
+    this.healthBarBackground = new THREE.Mesh(bgGeom, bgMat);
+    this.healthBarBackground.position.z = -0.001;
+    this.healthBarBackground.renderOrder = 9998;
+    group.add(this.healthBarBackground);
+    
+    // Barra de vida com gradiente laranja-vermelho (foreground)
+    const fgGeom = new THREE.PlaneGeometry(barWidth, barHeight * 0.9);
+    const gradientTexture = this.createGradientTexture(barWidth, barHeight * 0.9);
+    const fgMat = new THREE.MeshBasicMaterial({ 
+      map: gradientTexture,
+      transparent: false, 
+      depthTest: false 
+    });
+    this.healthBarForeground = new THREE.Mesh(fgGeom, fgMat);
+    this.healthBarForeground.position.z = 0.001;
+    this.healthBarForeground.renderOrder = 9999;
+    group.add(this.healthBarForeground);
+    
+    // Posição acima do inimigo
+    const enemySize = this.config.size || 0.3;
+    group.position.set(this.position.x, this.position.y + enemySize * 0.8, 0);
+    group.rotation.set(0, 0, 0); // Sempre reta
+    group.renderOrder = 10000;
+    
+    this.healthBarGroup = group;
+    this.eventBus.emit('scene:add-object', { object: group });
+  }
+  
+  private showHealthBar(): void {
+    if (!this.healthBarGroup) {
+      this.createEnemyHealthBar();
+    }
+    this.updateHealthBar();
+  }
+  
+  private updateHealthBar(): void {
+    if (!this.healthBarGroup || !this.healthBarForeground) return;
+    
+    const healthPercentage = this.health / this.maxHealth;
+    
+    // Atualiza a escala da barra vermelha baseada na vida
+    this.healthBarForeground.scale.x = Math.max(0, healthPercentage);
+    
+    // Ajusta posição para manter alinhamento à esquerda
+    const barWidth = 0.7; // Mesma largura do player (mais curta)
+    const originalX = 0;
+    this.healthBarForeground.position.x = originalX - (barWidth * (1 - healthPercentage)) / 2;
+  }
+  
+  private updateHealthBarPosition(): void {
+    if (this.healthBarGroup) {
+      const enemySize = this.config.size || 0.3;
+      this.healthBarGroup.position.set(
+        this.position.x, 
+        this.position.y + enemySize * 0.8, 
+        0
+      );
+    }
+  }
+  
+  private hideHealthBar(): void {
+    if (this.healthBarGroup) {
+      this.eventBus.emit('scene:remove-object', { object: this.healthBarGroup });
+      this.healthBarGroup = undefined;
+      this.healthBarBackground = undefined;
+      this.healthBarForeground = undefined;
+    }
+  }
+
   protected onDestroy(): void {
+    // Remove a barra de vida ao destruir o inimigo
+    this.hideHealthBar();
     this.eventBus.emit('scene:remove-object', { object: this.object });
   }
 
+  private tryShoot(deltaTime: number, gameTime?: number): void {
+    // Verifica se essa entidade pode atirar
+    const projectileConfig = this.config.projectile;
+    if (!projectileConfig || !projectileConfig.canShoot) {
+      return;
+    }
+
+    const currentTime = gameTime !== undefined ? gameTime : Date.now() / 1000;
+    const cooldownTime = projectileConfig.cooldown || 2.0;
+
+    // Verifica cooldown
+    if (currentTime - this.lastShotTime < cooldownTime) {
+      return;
+    }
+
+    // Busca o jogador
+    const game = (window as any).game;
+    if (!game || typeof game.getEntitySystem !== 'function') {
+      return;
+    }
+
+    const entitySystem = game.getEntitySystem();
+    if (!entitySystem || typeof entitySystem.getPlayer !== 'function') {
+      return;
+    }
+
+    const player = entitySystem.getPlayer();
+    if (!player || typeof player.getPosition !== 'function') {
+      return;
+    }
+
+    const playerPos = player.getPosition();
+    const dx = playerPos.x - this.position.x;
+    const dy = playerPos.y - this.position.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    // Calculate edge-to-edge distance for shooting range check
+    if (projectileConfig.shootRange) {
+      const playerRadius = PLAYER_CONFIG.radius || 0.15;
+      const enemyRadius = this.config.radius || 0.25;
+      const edgeToEdgeDistance = distance - playerRadius - enemyRadius;
+      
+      if (edgeToEdgeDistance > projectileConfig.shootRange) {
+        return;
+      }
+    }
+
+    // Calcula direção para o jogador
+    if (distance > 0.01) {
+      const speed = projectileConfig.speed || 8;
+      const velocity = {
+        x: (dx / distance) * speed,
+        y: (dy / distance) * speed
+      };
+
+      // Cria o projétil
+      this.eventBus.emit('entity:shoot', {
+        ownerId: this.id,
+        position: { x: this.position.x, y: this.position.y },
+        velocity: velocity,
+        damage: projectileConfig.damage || 10,
+        config: {
+          size: projectileConfig.size,
+          radius: projectileConfig.radius,
+          color: projectileConfig.color,
+          lifetime: projectileConfig.lifetime
+        }
+      });
+
+  this.lastShotTime = currentTime;
+      console.log(`💥 ${this.enemyType} shot at player! Distance: ${distance.toFixed(2)}`);
+    }
+  }
+
   public static spawnEnemy(eventBus: EventBus): Enemy {
-    const currentTime = Date.now();
-    const enemyId = `enemy_${currentTime}_${Math.random()}`;
-    
+  // Use gameTime para ID se disponível, senão fallback para Date.now()
+  const game = (window as any).game;
+  const gameTime = game && typeof game.getGameTime === 'function' ? game.getGameTime() : Date.now() / 1000;
+  const enemyId = `enemy_${gameTime}_${Math.random()}`;
     const rand = Math.random();
     let enemyType: EnemyData['type'];
     if (rand < 0.7) {
@@ -208,16 +535,178 @@ export class Enemy extends Entity {
     } else {
       enemyType = 'heavy';
     }
-    
-    const spawnPosition: Position = {
-      x: (Math.random() - 0.5) * 8, // Random X between -4 and 4
-      y: 6  // Top of screen
-    };
-    
+    // Spawn em uma borda aleatória do mapa
+    const edge = Math.floor(Math.random() * 4); // 0:top, 1:bottom, 2:left, 3:right
+    let x = 0, y = 0;
+    const bounds = { minX: -10, maxX: 10, minY: -7.5, maxY: 7.5 };
+    if (edge === 0) { // topo
+      x = bounds.minX + Math.random() * (bounds.maxX - bounds.minX);
+      y = bounds.maxY;
+    } else if (edge === 1) { // baixo
+      x = bounds.minX + Math.random() * (bounds.maxX - bounds.minX);
+      y = bounds.minY;
+    } else if (edge === 2) { // esquerda
+      x = bounds.minX;
+      y = bounds.minY + Math.random() * (bounds.maxY - bounds.minY);
+    } else { // direita
+      x = bounds.maxX;
+      y = bounds.minY + Math.random() * (bounds.maxY - bounds.minY);
+    }
+    const spawnPosition: Position = { x, y };
     const enemy = new Enemy(eventBus, enemyId, enemyType, spawnPosition);
-    
-    console.log(`Enemy spawned: ${enemyType} at (${spawnPosition.x.toFixed(1)}, ${spawnPosition.y})`);
-    
+    console.log(`Enemy spawned: ${enemyType} at (${spawnPosition.x.toFixed(1)}, ${spawnPosition.y.toFixed(1)})`);
     return enemy;
+  }
+
+  public static spawnBoss(eventBus: EventBus): Enemy {
+  const game = (window as any).game;
+  const gameTime = game && typeof game.getGameTime === 'function' ? game.getGameTime() : Date.now() / 1000;
+  const bossId = `boss_${gameTime}_${Math.random()}`;
+    const enemyType: EnemyData['type'] = 'boss';
+    
+    // Spawn boss em uma borda aleatória do mapa
+    const edge = Math.floor(Math.random() * 4); // 0:top, 1:bottom, 2:left, 3:right
+    let x = 0, y = 0;
+    const bounds = { minX: -10, maxX: 10, minY: -7.5, maxY: 7.5 };
+    if (edge === 0) { // topo
+      x = bounds.minX + Math.random() * (bounds.maxX - bounds.minX);
+      y = bounds.maxY;
+    } else if (edge === 1) { // baixo
+      x = bounds.minX + Math.random() * (bounds.maxX - bounds.minX);
+      y = bounds.minY;
+    } else if (edge === 2) { // esquerda
+      x = bounds.minX;
+      y = bounds.minY + Math.random() * (bounds.maxY - bounds.minY);
+    } else { // direita
+      x = bounds.maxX;
+      y = bounds.minY + Math.random() * (bounds.maxY - bounds.minY);
+    }
+    
+    const spawnPosition: Position = { x, y };
+    const boss = new Enemy(eventBus, bossId, enemyType, spawnPosition);
+    console.log(`👹 BOSS spawned at (${spawnPosition.x.toFixed(1)}, ${spawnPosition.y.toFixed(1)})!`);
+    return boss;
+  }
+
+  /**
+   * Calcula uma posição de spawn na tela do player (visível)
+   */
+  private static getScreenSpawnPosition(
+    cameraPosition: { x: number; y: number; z: number },
+    viewportSize: { width: number; height: number }
+  ): Position {
+    // Calcular os limites da tela
+    const halfWidth = viewportSize.width / 2;
+    const halfHeight = viewportSize.height / 2;
+    
+    // Spawn dentro da tela visível, com margem das bordas
+    const marginX = viewportSize.width * 0.1; // 10% de margem horizontal
+    const marginY = viewportSize.height * 0.1; // 10% de margem vertical
+    
+    // Posição aleatória dentro da área visível
+    const x = cameraPosition.x + (Math.random() - 0.5) * (viewportSize.width - marginX * 2);
+    const y = cameraPosition.y + (Math.random() - 0.5) * (viewportSize.height - marginY * 2);
+    
+    console.log(`🌀 Enemy spawn position calculated: (${x.toFixed(2)}, ${y.toFixed(2)}) relative to camera (${cameraPosition.x.toFixed(2)}, ${cameraPosition.y.toFixed(2)})`);
+    
+    return { x, y };
+  }
+
+  /**
+   * Spawn enemy with wave-based configuration using screen-based positioning
+   */
+  public static spawnEnemyWithWaveConfigOnScreen(
+    eventBus: EventBus, 
+    waveConfig: EnemyWaveConfig,
+    cameraPosition: { x: number; y: number; z: number },
+    viewportSize: { width: number; height: number }
+  ): Promise<Enemy> {
+    return new Promise((resolve) => {
+      const currentTime = Date.now();
+      const enemyId = `enemy_${currentTime}_${Math.random()}`;
+      const enemyType = waveConfig.type;
+      
+      // Calcular posição na tela
+      const spawnPosition = Enemy.getScreenSpawnPosition(cameraPosition, viewportSize);
+      
+      // Solicitar efeito de spawn
+      console.log(`🌀 Requesting spawn effect for ${enemyType} at position (${spawnPosition.x.toFixed(2)}, ${spawnPosition.y.toFixed(2)})`);
+      eventBus.emit('spawn:request-effect', {
+        position: { x: spawnPosition.x, y: spawnPosition.y, z: 0 },
+        id: enemyId,
+        onComplete: () => {
+          // Criar inimigo após o efeito
+          const enemy = new Enemy(eventBus, enemyId, enemyType, spawnPosition, waveConfig);
+          console.log(`🌊 Wave enemy spawned with effect: ${enemyType} at screen position (${spawnPosition.x.toFixed(1)}, ${spawnPosition.y.toFixed(1)})`);
+          resolve(enemy);
+        }
+      });
+    });
+  }
+
+  /**
+   * Spawn enemy with wave-based configuration (legacy method - mantido para compatibilidade)
+   */
+  public static spawnEnemyWithWaveConfig(eventBus: EventBus, waveConfig: EnemyWaveConfig): Enemy {
+    const currentTime = Date.now();
+    const enemyId = `enemy_${currentTime}_${Math.random()}`;
+    
+    // Use enemy type from wave config
+    const enemyType = waveConfig.type;
+    
+    // Choose spawn position (same logic as regular spawn)
+    const edge = Math.floor(Math.random() * 4); // 0:top, 1:bottom, 2:left, 3:right
+    let x = 0, y = 0;
+    const bounds = { minX: -10, maxX: 10, minY: -7.5, maxY: 7.5 };
+    if (edge === 0) { // topo
+      x = bounds.minX + Math.random() * (bounds.maxX - bounds.minX);
+      y = bounds.maxY;
+    } else if (edge === 1) { // baixo
+      x = bounds.minX + Math.random() * (bounds.maxX - bounds.minX);
+      y = bounds.minY;
+    } else if (edge === 2) { // esquerda
+      x = bounds.minX;
+      y = bounds.minY + Math.random() * (bounds.maxY - bounds.minY);
+    } else { // direita
+      x = bounds.maxX;
+      y = bounds.minY + Math.random() * (bounds.maxY - bounds.minY);
+    }
+    
+    const spawnPosition: Position = { x, y };
+    const enemy = new Enemy(eventBus, enemyId, enemyType, spawnPosition, waveConfig);
+    console.log(`🌊 Wave enemy spawned: ${enemyType} (${waveConfig.healthMultiplier}x HP, ${waveConfig.speedMultiplier}x speed) at (${spawnPosition.x.toFixed(1)}, ${spawnPosition.y.toFixed(1)})`);
+    return enemy;
+  }
+
+  /**
+   * Spawn boss with wave-based configuration
+   */
+  public static spawnBossWithWaveConfig(eventBus: EventBus, bossConfig: BossWaveConfig): Enemy {
+    const currentTime = Date.now();
+    const bossId = `boss_${currentTime}_${Math.random()}`;
+    const enemyType = bossConfig.type;
+    
+    // Spawn boss em uma borda aleatória do mapa
+    const edge = Math.floor(Math.random() * 4); // 0:top, 1:bottom, 2:left, 3:right
+    let x = 0, y = 0;
+    const bounds = { minX: -10, maxX: 10, minY: -7.5, maxY: 7.5 };
+    if (edge === 0) { // topo
+      x = bounds.minX + Math.random() * (bounds.maxX - bounds.minX);
+      y = bounds.maxY;
+    } else if (edge === 1) { // baixo
+      x = bounds.minX + Math.random() * (bounds.maxX - bounds.minX);
+      y = bounds.minY;
+    } else if (edge === 2) { // esquerda
+      x = bounds.minX;
+      y = bounds.minY + Math.random() * (bounds.maxY - bounds.minY);
+    } else { // direita
+      x = bounds.maxX;
+      y = bounds.minY + Math.random() * (bounds.maxY - bounds.minY);
+    }
+    
+    const spawnPosition: Position = { x, y };
+    const boss = new Enemy(eventBus, bossId, enemyType, spawnPosition, undefined, bossConfig);
+    console.log(`👹 ${bossConfig.description} spawned (${bossConfig.healthMultiplier}x HP) at (${spawnPosition.x.toFixed(1)}, ${spawnPosition.y.toFixed(1)})!`);
+    return boss;
   }
 }

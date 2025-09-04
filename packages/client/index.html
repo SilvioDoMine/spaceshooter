@@ -5,6 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Space Shooter</title>
     <style>
+        /* Timer notch discreto abaixo da HUD de level */
+        #stage-timer.timer-notch {
+            position: relative;
+            background: rgba(255,255,255,0.18);
+            color: #f1f1f1;
+            font-size: 1.1rem;
+            font-family: 'Inter', Arial, sans-serif;
+            padding: 5px 22px;
+            border-radius: 18px;
+            box-shadow: none;
+            border: none;
+            min-width: 70px;
+            text-align: center;
+            letter-spacing: 1px;
+            font-weight: 500;
+            pointer-events: none;
+            opacity: 0.92;
+        }
+        #stage-timer #timer-text {
+            font-variant-numeric: tabular-nums;
+            font-size: 1.08em;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
         * {
             margin: 0;
             padding: 0;
@@ -50,7 +74,7 @@
         #debug-panel {
             position: absolute;
             top: 10px;
-            right: 10px;
+            left: 10px;
             background: rgba(0, 0, 0, 0.85);
             color: #00ff00;
             font-family: 'Courier New', monospace;
@@ -60,8 +84,10 @@
             border-radius: 3px;
             min-width: 200px;
             max-width: 250px;
+            max-height: 80vh;
             z-index: 1000;
             display: none;
+            overflow: hidden;
         }
         
         #debug-panel.visible {
@@ -93,6 +119,33 @@
 
         #debug-panel.collapsed {
             height: auto;
+        }
+
+        #debug-panel .debug-content {
+            max-height: calc(80vh - 40px);
+            overflow-y: auto;
+            overflow-x: hidden;
+            scrollbar-width: thin;
+            scrollbar-color: #00ff00 rgba(0, 0, 0, 0.3);
+        }
+
+        #debug-panel .debug-content::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #debug-panel .debug-content::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 3px;
+        }
+
+        #debug-panel .debug-content::-webkit-scrollbar-thumb {
+            background: #00ff00;
+            border-radius: 3px;
+            box-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+        }
+
+        #debug-panel .debug-content::-webkit-scrollbar-thumb:hover {
+            background: #00aa00;
         }
 
         #debug-panel.collapsed .debug-content {
@@ -177,11 +230,14 @@
         /* Responsive adjustments */
         @media (max-width: 768px) {
             #debug-panel {
-                top: 5px;
-                right: 5px;
                 min-width: 180px;
                 max-width: 200px;
                 font-size: 9px;
+                max-height: 70vh;
+            }
+            
+            #debug-panel .debug-content {
+                max-height: calc(70vh - 35px);
             }
         }
 
@@ -190,6 +246,11 @@
                 min-width: 160px;
                 max-width: 180px;
                 font-size: 8px;
+                max-height: 60vh;
+            }
+            
+            #debug-panel .debug-content {
+                max-height: calc(60vh - 30px);
             }
         }
 
@@ -201,19 +262,25 @@
             transform: translateX(-50%);
             width: 120px;
             height: 120px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 2px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.08);
+            border: 2px solid rgba(255, 255, 255, 0.2);
             border-radius: 50%;
             touch-action: none;
             user-select: none;
             display: none;
             z-index: 999;
-            /* No transition on the container - instant teleport */
+            opacity: 0.4;
+            transition: opacity 0.3s ease, background 0.3s ease, border-color 0.3s ease;
         }
-
 
         #virtual-joystick.visible {
             display: block;
+        }
+
+        #virtual-joystick.active {
+            opacity: 1;
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.3);
         }
 
         #joystick-knob {
@@ -222,15 +289,16 @@
             left: 50%;
             width: 40px;
             height: 40px;
-            background: rgba(0, 255, 0, 0.8);
-            border: 2px solid rgba(0, 255, 0, 1);
+            background: rgba(0, 255, 0, 0.6);
+            border: 2px solid rgba(0, 255, 0, 0.8);
             border-radius: 50%;
             transform: translate(-50%, -50%);
-            transition: background 0.1s ease, transform 0.1s ease;
+            transition: background 0.1s ease, transform 0.1s ease, border-color 0.1s ease;
         }
 
         #joystick-knob.active {
             background: rgba(0, 255, 0, 1);
+            border-color: rgba(0, 255, 0, 1);
             box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
         }
 
@@ -240,10 +308,965 @@
                 display: block;
             }
         }
+
+        /* Mobile Landscape - Position joystick on left side */
+        @media (orientation: landscape) and (max-height: 500px) {
+            #virtual-joystick {
+                left: 80px;
+                bottom: 40px;
+                transform: none;
+                width: 100px;
+                height: 100px;
+                opacity: 0.3;
+            }
+
+            #joystick-knob {
+                width: 35px;
+                height: 35px;
+                background: rgba(0, 255, 0, 0.5);
+                border-color: rgba(0, 255, 0, 0.7);
+            }
+
+            #virtual-joystick.active {
+                opacity: 1;
+            }
+
+            #joystick-knob.active {
+                background: rgba(0, 255, 0, 1);
+                border-color: rgba(0, 255, 0, 1);
+            }
+        }
+
+        /* Extra narrow landscape - even smaller and more to the left */
+        @media (orientation: landscape) and (max-height: 400px) {
+            #virtual-joystick {
+                left: 60px;
+                bottom: 30px;
+                width: 80px;
+                height: 80px;
+                opacity: 0.55;
+            }
+
+            #joystick-knob {
+                width: 28px;
+                height: 28px;
+                background: rgba(0, 255, 0, 0.4);
+                border-color: rgba(0, 255, 0, 0.6);
+            }
+
+            #virtual-joystick.active {
+                opacity: 1;
+            }
+        }
+
+        /* Skill Selection Modal - Space Theme */
+        #skill-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, rgba(0, 20, 40, 0.9) 0%, rgba(0, 0, 0, 0.95) 100%);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            font-family: 'Courier New', monospace;
+        }
+
+        #skill-modal.show {
+            display: flex;
+        }
+
+        .skill-modal-content {
+            background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 50%, #0f1f2f 100%);
+            border: 2px solid #00ffff;
+            border-radius: 8px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 
+                0 0 30px rgba(0, 255, 255, 0.4),
+                inset 0 0 30px rgba(0, 255, 255, 0.1),
+                0 0 60px rgba(0, 100, 255, 0.2);
+            animation: modalAppear 0.4s ease-out;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .skill-modal-content::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #00ffff, #0080ff, #00ffff, #0040ff);
+            background-size: 400% 400%;
+            animation: borderGlow 3s ease-in-out infinite;
+            border-radius: 8px;
+            z-index: -1;
+        }
+
+        @keyframes borderGlow {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        @keyframes modalAppear {
+            from {
+                opacity: 0;
+                transform: scale(0.7) translateY(-50px);
+                filter: blur(10px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+                filter: blur(0);
+            }
+        }
+
+        .skill-modal-title {
+            color: #00ffff;
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 25px;
+            text-shadow: 
+                0 0 10px rgba(0, 255, 255, 0.8),
+                0 0 20px rgba(0, 255, 255, 0.4),
+                0 0 30px rgba(0, 255, 255, 0.2);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            animation: titlePulse 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes titlePulse {
+            from { 
+                text-shadow: 
+                    0 0 10px rgba(0, 255, 255, 0.8),
+                    0 0 20px rgba(0, 255, 255, 0.4),
+                    0 0 30px rgba(0, 255, 255, 0.2);
+            }
+            to { 
+                text-shadow: 
+                    0 0 15px rgba(0, 255, 255, 1),
+                    0 0 25px rgba(0, 255, 255, 0.6),
+                    0 0 35px rgba(0, 255, 255, 0.4);
+            }
+        }
+
+        .skill-options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .skill-option {
+            background: linear-gradient(135deg, #0a0f1a 0%, #1a2040 50%, #0f1a30 100%);
+            border: 1px solid #00aaff;
+            border-radius: 6px;
+            padding: 18px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .skill-option::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.1), transparent);
+            transition: left 0.4s ease;
+        }
+
+        .skill-option:hover::before {
+            left: 100%;
+        }
+
+        .skill-option::after {
+            content: '';
+            position: absolute;
+            top: -1px;
+            left: -1px;
+            right: -1px;
+            bottom: -1px;
+            background: linear-gradient(45deg, #00ffff, #0080ff, #00aaff, #0040ff);
+            border-radius: 6px;
+            z-index: -1;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .skill-option:hover {
+            border-color: #00ffff;
+            box-shadow: 
+                0 0 20px rgba(0, 255, 255, 0.5),
+                inset 0 0 20px rgba(0, 255, 255, 0.1);
+            transform: translateY(-3px) scale(1.02);
+            background: linear-gradient(135deg, #0f1a25 0%, #2a3050 50%, #1a2545 100%);
+        }
+
+        .skill-option:hover::after {
+            opacity: 0.3;
+        }
+
+        .skill-option:active {
+            transform: translateY(-1px) scale(1.01);
+        }
+
+        .skill-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .skill-name {
+            color: #00ffff;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: left;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.6);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .skill-key {
+            background: linear-gradient(135deg, #003366, #0066aa);
+            color: #00ffff;
+            border: 2px solid #00aaff;
+            padding: 6px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 14px;
+            min-width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 
+                0 0 10px rgba(0, 170, 255, 0.4),
+                inset 0 0 10px rgba(0, 255, 255, 0.2);
+            animation: keyPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes keyPulse {
+            0%, 100% {
+                box-shadow: 
+                    0 0 10px rgba(0, 170, 255, 0.4),
+                    inset 0 0 10px rgba(0, 255, 255, 0.2);
+            }
+            50% {
+                box-shadow: 
+                    0 0 15px rgba(0, 170, 255, 0.6),
+                    inset 0 0 15px rgba(0, 255, 255, 0.4);
+            }
+        }
+
+        .skill-description {
+            color: #aaccff;
+            font-size: 14px;
+            text-align: left;
+            line-height: 1.5;
+            text-shadow: 0 0 5px rgba(170, 204, 255, 0.3);
+        }
+
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            .skill-modal-content {
+                padding: 20px;
+                margin: 20px;
+            }
+
+            .skill-modal-title {
+                font-size: 24px;
+            }
+
+            .skill-name {
+                font-size: 16px;
+            }
+
+            .skill-description {
+                font-size: 13px;
+            }
+
+            .skill-options {
+                gap: 12px;
+            }
+
+            .skill-option {
+                padding: 15px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .skill-modal-title {
+                font-size: 20px;
+                margin-bottom: 20px;
+            }
+
+            .skill-option {
+                padding: 12px;
+            }
+
+            .skill-name {
+                font-size: 15px;
+            }
+
+            .skill-description {
+                font-size: 12px;
+            }
+        }
+
+        /* Mobile Landscape - Fix overflow and add scrolling for 3+ skills */
+        @media (orientation: landscape) and (max-height: 500px) {
+            #skill-modal {
+                padding: 10px;
+                align-items: flex-start;
+                justify-content: center;
+                overflow-y: auto;
+            }
+
+            .skill-modal-content {
+                padding: 15px;
+                margin: 10px auto;
+                max-width: 90%;
+                max-height: 85vh;
+                width: auto;
+                min-width: 320px;
+                overflow: hidden;
+            }
+
+            .skill-modal-title {
+                font-size: 18px;
+                margin-bottom: 12px;
+                line-height: 1.2;
+            }
+
+            .skill-options {
+                gap: 8px;
+                max-height: 60vh;
+                overflow-y: auto;
+                overflow-x: hidden;
+                padding-right: 5px;
+                /* Custom scrollbar for better mobile experience */
+                scrollbar-width: thin;
+                scrollbar-color: #00ffff rgba(0, 0, 0, 0.3);
+            }
+
+            .skill-options::-webkit-scrollbar {
+                width: 6px;
+            }
+
+            .skill-options::-webkit-scrollbar-track {
+                background: rgba(0, 0, 0, 0.3);
+                border-radius: 3px;
+            }
+
+            .skill-options::-webkit-scrollbar-thumb {
+                background: #00ffff;
+                border-radius: 3px;
+                box-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+            }
+
+            .skill-options::-webkit-scrollbar-thumb:hover {
+                background: #00aaff;
+            }
+
+            .skill-option {
+                padding: 10px;
+                margin-bottom: 2px;
+                flex-shrink: 0;
+            }
+
+            .skill-header {
+                margin-bottom: 8px;
+            }
+
+            .skill-name {
+                font-size: 14px;
+                line-height: 1.2;
+            }
+
+            .skill-key {
+                padding: 4px;
+                min-width: 26px;
+                height: 26px;
+                font-size: 12px;
+            }
+
+            .skill-description {
+                font-size: 11px;
+                line-height: 1.3;
+            }
+
+            .skill-meta {
+                margin-bottom: 6px;
+            }
+        }
+
+        /* Extra narrow landscape - even more compact */
+        @media (orientation: landscape) and (max-height: 400px) {
+            .skill-modal-content {
+                padding: 10px;
+                margin: 5px auto;
+                max-height: 90vh;
+                min-width: 280px;
+            }
+
+            .skill-modal-title {
+                font-size: 16px;
+                margin-bottom: 8px;
+            }
+
+            .skill-options {
+                gap: 6px;
+                max-height: 65vh;
+            }
+
+            .skill-option {
+                padding: 8px;
+            }
+
+            .skill-name {
+                font-size: 13px;
+            }
+
+            .skill-key {
+                padding: 3px;
+                min-width: 22px;
+                height: 22px;
+                font-size: 11px;
+            }
+
+            .skill-description {
+                font-size: 10px;
+                line-height: 1.2;
+            }
+
+            .skill-header {
+                margin-bottom: 6px;
+            }
+        }
+
+        /* Portrait mobile with limited height */
+        @media (orientation: portrait) and (max-height: 600px) {
+            .skill-modal-content {
+                max-height: 85vh;
+                padding: 15px;
+                margin: 10px;
+            }
+
+            .skill-options {
+                max-height: 55vh;
+                overflow-y: auto;
+                gap: 10px;
+            }
+
+            .skill-modal-title {
+                font-size: 20px;
+                margin-bottom: 15px;
+            }
+        }
+
+        /* Game HUD Styles */
+        #game-hud {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+            font-family: 'Courier New', monospace;
+            color: white;
+        }
+
+        /* Top HUD Container - Flex Layout */
+        #top-hud-container {
+            position: absolute;
+            top: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            z-index: 1100;
+            pointer-events: none;
+        }
+
+        /* Level Bar - Top Center - Archero Style */
+        #level-bar {
+            position: relative;
+            width: 200px;
+            height: 50px;
+            pointer-events: none;
+        }
+
+        #level-bar .level-label {
+            position: absolute;
+            top: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(to bottom, #666, #333);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 8px 8px 0 0;
+            font-weight: bold;
+            font-size: 12px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+            border: 3px solid #555;
+            border-bottom: none;
+            box-shadow: 
+                inset 0 1px 2px rgba(255, 255, 255, 0.1),
+                0 2px 8px rgba(0, 0, 0, 0.5);
+            z-index: 2;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: fit-content;
+            pointer-events: auto;
+        }
+
+        #level-bar .level-glow {
+            position: absolute;
+            top: -5px;
+            left: -5px;
+            right: -5px;
+            bottom: -5px;
+            background: radial-gradient(ellipse at center, 
+                rgba(255, 235, 59, 0.3) 0%,
+                rgba(255, 193, 7, 0.2) 50%,
+                transparent 70%
+            );
+            border-radius: 35px;
+            animation: glowPulse 3s ease-in-out infinite alternate;
+            z-index: 1;
+        }
+
+        #level-bar .level-bar-inner {
+            width: 100%;
+            height: 30px;
+            background: linear-gradient(to bottom, #333, #111);
+            border-radius: 5px;
+            border: 3px solid #555;
+            box-shadow: 
+                inset 0 2px 4px rgba(0, 0, 0, 0.8),
+                0 4px 15px rgba(0, 0, 0, 0.6);
+            position: absolute;
+            bottom: 0;
+            overflow: hidden;
+            z-index: 2;
+        }
+
+        #level-progress-fill {
+            height: 100%;
+            width: 0%; /* Começa zerada */
+            background: linear-gradient(to bottom, 
+                #ffeb3b 0%,
+                #ffc107 20%,
+                #ff9800 40%,
+                #ff5722 60%,
+                #f44336 80%,
+                #d32f2f 100%
+            );
+            border-radius: 3px;
+            position: relative;
+            animation: healthPulse 2s ease-in-out infinite alternate;
+            transition: width 0.3s ease;
+        }
+
+        #level-bar .level-shine {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            right: 4px;
+            height: 6px;
+            background: linear-gradient(to right, 
+                rgba(255, 255, 255, 0.6) 0%,
+                rgba(255, 255, 255, 0.9) 50%,
+                rgba(255, 255, 255, 0.6) 100%
+            );
+            border-radius: 0.5px;
+            opacity: 0.7;
+        }
+
+        @keyframes healthPulse {
+            0% {
+                box-shadow: 
+                    inset 0 2px 4px rgba(0, 0, 0, 0.3),
+                    0 0 20px rgba(255, 235, 59, 0.5);
+            }
+            100% {
+                box-shadow: 
+                    inset 0 2px 4px rgba(0, 0, 0, 0.3),
+                    0 0 30px rgba(255, 235, 59, 0.8);
+            }
+        }
+
+        @keyframes glowPulse {
+            0% { opacity: 0.3; }
+            100% { opacity: 0.6; }
+        }
+
+        /* Boss Health Bar - Similar to Level Bar but Red */
+        #boss-bar {
+            position: relative;
+            width: 250px;
+            height: 50px;
+            pointer-events: none;
+        }
+
+        #boss-bar .boss-label {
+            position: absolute;
+            top: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(to bottom, #800000, #400000);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 8px 8px 0 0;
+            font-weight: bold;
+            font-size: 12px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+            border: 3px solid #cc0000;
+            border-bottom: none;
+            box-shadow: 
+                inset 0 1px 2px rgba(255, 255, 255, 0.1),
+                0 2px 8px rgba(0, 0, 0, 0.5);
+            z-index: 2;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: fit-content;
+        }
+
+        #boss-bar .boss-glow {
+            position: absolute;
+            top: -5px;
+            left: -5px;
+            right: -5px;
+            bottom: -5px;
+            background: radial-gradient(ellipse at center, 
+                rgba(255, 0, 0, 0.4) 0%,
+                rgba(204, 0, 0, 0.3) 50%,
+                transparent 70%
+            );
+            border-radius: 35px;
+            animation: bossGlowPulse 2s ease-in-out infinite alternate;
+            z-index: 1;
+        }
+
+        #boss-bar .boss-bar-inner {
+            width: 100%;
+            height: 30px;
+            background: linear-gradient(to bottom, #333, #111);
+            border-radius: 5px;
+            border: 3px solid #cc0000;
+            box-shadow: 
+                inset 0 2px 4px rgba(0, 0, 0, 0.8),
+                0 4px 15px rgba(0, 0, 0, 0.6);
+            position: absolute;
+            bottom: 0;
+            overflow: hidden;
+            z-index: 2;
+        }
+
+        #boss-progress-fill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(to bottom, 
+                #ff3333 0%,
+                #ff0000 20%,
+                #cc0000 40%,
+                #990000 60%,
+                #660000 80%,
+                #330000 100%
+            );
+            border-radius: 3px;
+            position: relative;
+            animation: bossPulse 1.5s ease-in-out infinite alternate;
+            transition: width 0.3s ease;
+        }
+
+        #boss-bar .boss-shine {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            right: 4px;
+            height: 6px;
+            background: linear-gradient(to right, 
+                rgba(255, 255, 255, 0.6) 0%,
+                rgba(255, 255, 255, 0.9) 50%,
+                rgba(255, 255, 255, 0.6) 100%
+            );
+            border-radius: 0.5px;
+            opacity: 0.7;
+        }
+
+        @keyframes bossPulse {
+            0% {
+                box-shadow: 
+                    inset 0 2px 4px rgba(0, 0, 0, 0.3),
+                    0 0 20px rgba(255, 0, 0, 0.5);
+            }
+            100% {
+                box-shadow: 
+                    inset 0 2px 4px rgba(0, 0, 0, 0.3),
+                    0 0 30px rgba(255, 0, 0, 0.8);
+            }
+        }
+
+        @keyframes bossGlowPulse {
+            0% { opacity: 0.4; }
+            100% { opacity: 0.7; }
+        }
+
+        /* Left Side Notches */
+        #left-notches {
+            position: absolute;
+            left: -25px;
+            top: 65px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            align-items: flex-start;
+        }
+
+        .hud-notch {
+            display: flex;
+            align-items: center;
+            background: linear-gradient(135deg, rgba(0, 20, 40, 0.9), rgba(0, 10, 30, 0.95));
+            border: 2px solid;
+            border-radius: 25px;
+            padding: 8px 18px;
+            min-width: 90px;
+            pointer-events: auto;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+            transition: all 0.3s ease;
+        }
+
+         #left-notches .hud-notch {
+            justify-content: end;
+        }
+
+        #ammo-notch {
+            border-color: #ff6600;
+            box-shadow: 0 0 15px rgba(255, 102, 0, 0.3);
+        }
+
+        #score-notch {
+            border-color: #ffdd00;
+            box-shadow: 0 0 15px rgba(255, 221, 0, 0.3);
+        }
+
+        .hud-notch:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+        }
+
+        .notch-icon {
+            font-size: 20px;
+            margin-right: 10px;
+            filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.5));
+        }
+
+        .notch-value {
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 0 0 5px rgba(255, 255, 255, 0.8);
+        }
+
+        /* Right Side Notch (Pause) */
+        #right-notches {
+            position: absolute;
+            right: -20px;
+            top: 65px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            align-items: flex-end;
+        }
+
+        #pause-notch {
+            border-color: #00ffff;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+            cursor: pointer;
+        }
+
+        #pause-notch:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.6);
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            #top-hud-container {
+                top: 5px;
+                gap: 6px;
+            }
+
+            #level-bar {
+                top: 0px;
+                padding: 3px;
+                width: 180px;
+                height: 45px;
+            }
+
+            #level-bar .level-label {
+                top: 0px;
+            }
+
+            #boss-bar {
+                width: 220px;
+                height: 45px;
+            }
+
+            #boss-bar .boss-label {
+                font-size: 11px;
+                padding: 2px 6px;
+                height: 14px;
+            }
+
+            #boss-bar .boss-bar-inner {
+                height: 26px;
+            }
+
+            #stage-timer.timer-notch {
+                font-size: 1rem;
+                padding: 4px 18px;
+                min-width: 60px;
+            }
+
+            #level-text {
+                font-size: 12px;
+                padding: 4px 8px;
+                min-width: 40px;
+                margin-right: 6px;
+                text-align: center;
+            }
+
+            #level-progress {
+                width: 140px;
+                height: 10px;
+                margin-right: 6px;
+            }
+
+            #left-notches {
+                left: -60px;
+                top: 45px;
+                gap: 10px;
+            }
+
+            #right-notches {
+                right: -20px;
+                top: 45px;
+                gap: 10px;
+            }
+
+            .hud-notch {
+                padding: 5px 10px;
+                min-width: 100px;
+            }
+
+            .notch-icon {
+                font-size: 18px;
+                margin-right: 8px;
+            }
+
+            .notch-value {
+                font-size: 14px;
+            }
+
+            #right-controls {
+                right: 10px;
+                top: 15px;
+            }
+
+            #pause-button {
+                width: 40px;
+                height: 40px;
+                font-size: 18px;
+            }
+        }
     </style>
 </head>
 <body>
     <div id="game-container"></div>
+
+    <!-- Game HUD Overlay -->
+    <div id="game-hud">
+        <!-- Top HUD Container - Flex Layout -->
+        <div id="top-hud-container">
+            <!-- Top Level Bar (Novo visual estilizado) -->
+            <div id="level-bar">
+                <div class="level-label"><span id="level-text">1</span></div>
+                <div class="level-glow"></div>
+                <div class="level-bar-inner">
+                    <div id="level-progress-fill">
+                        <div class="level-shine"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Timer discreto abaixo da HUD de level -->
+            <div id="stage-timer" class="timer-notch">
+                <span id="timer-text">00:00</span>
+            </div>
+
+            <!-- Boss Health Bar - Similar to Level Bar but Red -->
+            <div id="boss-bar" style="display: none;">
+                <div class="boss-label"><span id="boss-text">👹 BOSS</span></div>
+                <div class="boss-glow"></div>
+                <div class="boss-bar-inner">
+                    <div id="boss-progress-fill">
+                        <div class="boss-shine"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Left Side Notches (agora: pausa e fullscreen) -->
+        <div id="left-notches">
+            <div class="hud-notch" id="pause-notch" title="Pause Game">
+                <div class="notch-icon">❚❚</div>
+            </div>
+            <div class="hud-notch" id="fullscreen-notch" title="Tela cheia">
+                <div class="notch-icon" style="padding: 0px; margin:0px;">⛶</div>
+            </div>
+        </div>
+
+        <!-- Right Side Notches (agora: munição e ouro) -->
+        <div id="right-notches">
+            <div class="hud-notch" id="ammo-notch">
+                <div class="notch-icon">🔫</div>
+                <div class="notch-value" id="ammo-count">30</div>
+            </div>
+            <div class="hud-notch" id="score-notch">
+                <div class="notch-icon">💰</div>
+                <div class="notch-value" id="score-count">0</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Skill Selection Modal -->
+    <div id="skill-modal">
+        <div class="skill-modal-content">
+            <h2 class="skill-modal-title">[UPGRADE AVAILABLE]</h2>
+            <div class="skill-options" id="skill-options-container">
+                <!-- Skills will be dynamically added here -->
+            </div>
+        </div>
+    </div>
 
     <!-- Virtual Joystick -->
     <div id="virtual-joystick">
@@ -251,7 +1274,7 @@
     </div>
     
     <div id="debug-panel">
-        <h3>DEBUG (Click OPEN/CLOSE - U toggle)</h3>
+        <h3>DEBUG (Click/U)</h3>
         <div class="debug-content">
         <div class="debug-section">
             <h4>Performance</h4>
@@ -327,6 +1350,10 @@
                 <input type="checkbox" id="debug-god-mode">
                 <label for="debug-god-mode">God Mode</label>
             </div>
+            <div class="debug-checkbox">
+                <input type="checkbox" id="debug-infinite-ammo">
+                <label for="debug-infinite-ammo">Infinite Ammo</label>
+            </div>
         </div>
         
         <div class="debug-section">
@@ -338,6 +1365,30 @@
             <div class="debug-checkbox">
                 <input type="checkbox" id="debug-show-joystick">
                 <label for="debug-show-joystick">Show Virtual Joystick</label>
+            </div>
+            <div class="debug-checkbox">
+                <input type="checkbox" id="debug-show-player-range">
+                <label for="debug-show-player-range">Show Player Range</label>
+            </div>
+            <div class="debug-checkbox">
+                <input type="checkbox" id="debug-show-enemy-ranges">
+                <label for="debug-show-enemy-ranges">Show Enemy Ranges</label>
+            </div>
+        </div>
+        
+        <div class="debug-section">
+            <h4>Collision Inspector</h4>
+            <div class="debug-item">
+                <span class="debug-label">Mouse Over:</span>
+                <span class="debug-value" id="debug-collision-hover">None</span>
+            </div>
+            <div class="debug-item">
+                <span class="debug-label">Collision Status:</span>
+                <span class="debug-value" id="debug-collision-status">N/A</span>
+            </div>
+            <div class="debug-item">
+                <span class="debug-label">Collider Name:</span>
+                <span class="debug-value" id="debug-collider-name">N/A</span>
             </div>
         </div>
         

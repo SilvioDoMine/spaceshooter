@@ -157,6 +157,10 @@ export class AudioSystem {
           duration = 0.4; // 400ms
           frequency = 600;
           break;
+        case 'level-up':
+          duration = 1.0; // 1000ms - som mais longo para level up
+          frequency = 800;
+          break;
         default:
           duration = 0.1;
           frequency = 500;
@@ -178,6 +182,13 @@ export class AudioSystem {
           // Tom crescente para power-up (efeito positivo)
           const pitchMod = 1 + (t / duration) * 0.5; // Pitch sobe 50%
           channelData[i] = Math.sin(2 * Math.PI * frequency * pitchMod * t) * envelope * 0.25;
+        } else if (name === 'level-up') {
+          // Sequência harmoniosa ascendente para level up (muito especial!)
+          const pitchMod = 1 + (t / duration) * 1.5; // Pitch sobe 150%
+          const harmonic1 = Math.sin(2 * Math.PI * frequency * pitchMod * t);
+          const harmonic2 = Math.sin(2 * Math.PI * frequency * 1.25 * pitchMod * t) * 0.5;
+          const harmonic3 = Math.sin(2 * Math.PI * frequency * 1.5 * pitchMod * t) * 0.25;
+          channelData[i] = (harmonic1 + harmonic2 + harmonic3) * envelope * 0.3;
         } else {
           // Tom puro para tiro e hit
           channelData[i] = Math.sin(2 * Math.PI * frequency * t) * envelope * 0.2;

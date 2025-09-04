@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { EventBus } from '../core/EventBus';
+import { UISkillModal } from './UISkillModal';
 
 /**
  * Sistema de UI/HUD totalmente em Three.js
@@ -23,24 +24,23 @@ import { EventBus } from '../core/EventBus';
  * ```
  */
 export class UISystem {
-  private scene: THREE.Scene;
-  private camera: THREE.OrthographicCamera;
-  private renderer: THREE.WebGLRenderer;
-  
+  private scene!: THREE.Scene;
+  private camera!: THREE.OrthographicCamera;
+  private renderer!: THREE.WebGLRenderer;
   // UI Elements
-  private hudGroup: THREE.Group;
-  private scoreText?: THREE.Sprite;
-  private healthText?: THREE.Sprite;
-  private ammoText?: THREE.Sprite;
-  private healthBar?: THREE.Mesh;
-  private healthBarBg?: THREE.Mesh;
+  private hudGroup!: THREE.Group;
+  // Removidos overlays 3D de score, ammo e level
+  // Removidos xpBar e xpBarBg (barra de XP 3D)
+  private skillModal?: THREE.Group;
+  private skillOptions: any[] = [];
+  private skillModalKeyHandler: ((event: KeyboardEvent) => void) | null = null;
+  private htmlSkillModal: UISkillModal;
+  // Boss health bar removido - agora gerenciado pelo HUD HTML
 
   // Canvas global não mais necessário - cada sprite tem seu próprio canvas
   
   // State
   private currentScore: number = 0;
-  private currentHealth: number = 100;
-  private maxHealth: number = 100;
   private currentAmmo: number = 30;
   private maxAmmo: number = 30;
 
@@ -48,11 +48,12 @@ export class UISystem {
 
   constructor(eventBus: EventBus, renderingSystem?: THREE.Scene & THREE.WebGLRenderer) {
     this.eventBus = eventBus;
+    this.htmlSkillModal = new UISkillModal((skillType) => this.selectSkill(skillType));
     this.setupEventListeners();
   }
   
   public setRenderingSystem(scene: THREE.Scene, renderer: THREE.WebGLRenderer): void {
-    this.initialize({ scene, renderer });
+  this.initialize({ renderer });
   }
   
   private initialize(data: { renderer: THREE.WebGLRenderer }): void {
@@ -72,7 +73,7 @@ export class UISystem {
     this.hudGroup = new THREE.Group();
     this.scene.add(this.hudGroup);
     
-    this.createUIElements();
+  this.createUIElements();
     
     // Handler para resize
     window.addEventListener('resize', this.onWindowResize.bind(this));
@@ -92,72 +93,30 @@ export class UISystem {
       this.initialize(data);
     });
 
-    this.eventBus.on('ui:update-health', (data: { current: number; max?: number }) => {
-      this.updateHealth(data.current, data.max);
-    });
+  // Removido: não há mais barra de vida no HUD
 
-    this.eventBus.on('ui:update-ammo', (data: { current: number; max: number }) => {
-      this.updateAmmo(data.current, data.max);
-    });
+  // Removidos listeners de update-ammo e update-score (HUD HTML agora cuida disso)
 
-    this.eventBus.on('ui:update-score', (data: { score: number }) => {
-      this.updateScore(data.score);
+  // Removido: update-level, level-up-effect (XP/nível agora só no HUD HTML)
+
+    this.eventBus.on('ui:show-skill-selection', (data: { skillOptions: any[] }) => {
+      this.showSkillSelectionModal(data.skillOptions);
     });
 
     this.eventBus.on('game:started', () => {
       this.resetUI();
     });
+
+    // Boss health bar removida - agora gerenciada pelo HUD HTML
+
+    // Boss events removidos - agora gerenciados pelo HUD HTML
+
+    // Wave system events
+  // Removido: eventos de wave timer (timer agora só no HUD HTML)
   }
 
   private createUIElements(): void {
-    const aspect = window.innerWidth / window.innerHeight;
-    const baseScale = 0.15; // Fixed base scale instead of responsive
-    
-    // Score (top-left)
-    this.scoreText = this.createTextSprite(`Score: ${this.currentScore}`);
-    this.scoreText.position.set(-aspect * 0.9, 0.85, 0);
-    this.scoreText.scale.setScalar(baseScale);
-    this.hudGroup.add(this.scoreText);
-    
-    // Health text (top-center) with correct initial color
-    const healthPercent = (this.currentHealth / this.maxHealth) * 100;
-    let healthColor = '#00ff00'; // Green
-    if (healthPercent < 50) healthColor = '#ffff00'; // Yellow
-    if (healthPercent < 25) healthColor = '#ff0000'; // Red
-    
-    this.healthText = this.createTextSprite(`Health: ${this.currentHealth}/${this.maxHealth}`, healthColor);
-    this.healthText.position.set(0, 0.85, 0);
-    this.healthText.scale.setScalar(baseScale);
-    this.hudGroup.add(this.healthText);
-    
-    // Health bar background (top-center, below text)
-    const barWidth = Math.min(aspect * 0.3, 0.5);
-    const healthBarBgGeometry = new THREE.PlaneGeometry(barWidth, 0.05);
-    const healthBarBgMaterial = new THREE.MeshBasicMaterial({ 
-      color: 0x330000,
-      transparent: true,
-      opacity: 0.8
-    });
-    this.healthBarBg = new THREE.Mesh(healthBarBgGeometry, healthBarBgMaterial);
-    this.healthBarBg.position.set(0, 0.65, 0);
-    this.hudGroup.add(this.healthBarBg);
-    
-    // Health bar (foreground)
-    const healthBarGeometry = new THREE.PlaneGeometry(barWidth, 0.05);
-    const healthBarMaterial = new THREE.MeshBasicMaterial({ 
-      color: 0x00ff00,
-      transparent: true,
-      opacity: 0.9
-    });
-    this.healthBar = new THREE.Mesh(healthBarGeometry, healthBarMaterial);
-    this.healthBar.position.set(0, 0.65, 0.001); // Slightly in front
-    this.hudGroup.add(this.healthBar);
-    
-    // Ammo (top-right)
-    this.ammoText = this.createTextSprite(`Ammo: ${this.currentAmmo}/${this.maxAmmo}`);
-    this.ammoText.position.set(aspect * 0.9, 0.85, 0);
-    this.ammoText.scale.setScalar(baseScale);
-    this.hudGroup.add(this.ammoText);
+  // Removidos overlays 3D de score, ammo, level, XP e wave timer
   }
   
   private createTextSprite(text: string, color: string = '#ffffff'): THREE.Sprite {
@@ -290,119 +249,59 @@ export class UISystem {
     console.log('🔄 Resetting UI to initial values');
     
     // Reset all values to initial state
-    this.currentScore = 0;
-    this.currentHealth = 100;
-    this.maxHealth = 100;
-    this.currentAmmo = 30;
-    this.maxAmmo = 30;
+  this.currentScore = 0;
+  this.currentAmmo = 30;
+  this.maxAmmo = 30;
     
     // Update all UI elements
-    if (this.scoreText) {
-      this.updateTextSprite(this.scoreText, `Score: ${this.currentScore}`);
-    }
-    
-    if (this.healthText) {
-      const healthPercent = (this.currentHealth / this.maxHealth) * 100;
-      let healthColor = '#00ff00'; // Green
-      if (healthPercent < 50) healthColor = '#ffff00'; // Yellow
-      if (healthPercent < 25) healthColor = '#ff0000'; // Red
-      
-      this.updateTextSprite(this.healthText, `Health: ${this.currentHealth}/${this.maxHealth}`, healthColor);
-    }
-    
-    if (this.ammoText) {
-      this.updateTextSprite(this.ammoText, `Ammo: ${this.currentAmmo}/${this.maxAmmo}`);
-    }
+  // Removidos overlays 3D de score, ammo e level
     
     // Update health bar
-    if (this.healthBar) {
-      const healthBarScale = Math.max(0, this.currentHealth / this.maxHealth);
-      this.healthBar.scale.setX(healthBarScale);
-    }
+  // healthBar removido
+    
+    // Update XP bar
+  // Removida barra de XP 3D
   }
   
-  public updateScore(score: number): void {
-    if (this.scoreText === undefined) {
-      console.warn('Score text not initialized yet, skipping update');
-      return;
-    }
-
-    this.currentScore = score;
-    this.updateTextSprite(this.scoreText, `Score: ${score}`, '#ffffff');
+  // Removidos métodos de atualização de score
+  
+  // updateHealth removido: barra de vida do HUD não existe mais
+  
+  // Removido método de atualização de ammo
+  
+  public updateLevel(level: number, currentXP: number, xpToNext: number, progress: number): void {
+  // Removido: update de level/XP (HUD HTML cuida disso)
   }
   
-  public addScore(points: number): void {
-    if (this.scoreText === undefined) {
-      console.warn('Score text not initialized yet, skipping update');
-      return;
-    }
-
-    this.currentScore += points;
-    this.updateTextSprite(this.scoreText, `Score: ${this.currentScore}`);
+  public showLevelUpEffect(oldLevel: number, newLevel: number): void {
+  // Removido: efeito visual de level up (HUD HTML cuida disso)
   }
   
-  public updateHealth(current: number, max?: number): void {
-    console.log(`Atualizando saúde: ${current}/${max}`);
-
-    if (
-      this.healthBar === undefined 
-      || this.healthBarBg === undefined
-      || this.healthText === undefined
-    ) {
-      console.warn('Health bar not initialized yet, skipping update');
-      return;
-    }
-
-    this.currentHealth = Math.max(0, current);
-    if (max !== undefined) {
-      this.maxHealth = max;
-    }
+  public showSkillSelectionModal(skillOptions: any[]): void {
+    this.skillOptions = skillOptions;
     
-    // Update health text with color
-    const healthPercent = (this.currentHealth / this.maxHealth) * 100;
-    let healthColor = '#00ff00'; // Green
-    if (healthPercent < 50) healthColor = '#ffff00'; // Yellow
-    if (healthPercent < 25) healthColor = '#ff0000'; // Red
+    // Pause the game completely while modal is open
+  this.eventBus.emit('game:pause-for-skill-selection', {});
+    console.log('⏸️ Game paused for skill selection');
     
-    this.updateTextSprite(
-      this.healthText,
-      `Health: ${this.currentHealth}/${this.maxHealth}`,
-      healthColor
-    );
-    
-    // Update health bar
-    const healthBarScale = Math.max(0, this.currentHealth / this.maxHealth);
-    this.healthBar.scale.x = healthBarScale;
-    this.healthBar.position.x = -0.2 * (1 - healthBarScale);
-    
-    // Update health bar color
-    const healthBarMaterial = this.healthBar.material as THREE.MeshBasicMaterial;
-    if (healthPercent > 50) {
-      healthBarMaterial.color.setHex(0x00ff00);
-    } else if (healthPercent > 25) {
-      healthBarMaterial.color.setHex(0xffff00);
-    } else {
-      healthBarMaterial.color.setHex(0xff0000);
-    }
+    // Show HTML modal
+    this.htmlSkillModal.show(skillOptions);
   }
   
-  public updateAmmo(current: number, max: number): void {    
-    // Update ammo text with color
-    const ammoPercent = (current / max) * 100;
-    let ammoColor = '#ffffff';
-    if (ammoPercent < 30) ammoColor = '#ffff00';
-    if (ammoPercent === 0) ammoColor = '#ff0000';
-
-    if (this.ammoText === undefined) {
-      console.warn('Ammo text not initialized yet, skipping update');
-      return;
-    }
-
-    this.updateTextSprite(
-      this.ammoText,
-      `Ammo: ${current}/${max}`,
-      ammoColor
-    );
+  
+  private selectSkill(skillType: string): void {
+    // Emit skill selection event
+    this.eventBus.emit('ui:skill-selected', { skillType });
+    
+    this.skillOptions = [];
+    
+    // Resume game after skill selection
+  this.eventBus.emit('game:resume-after-skill-selection', {});
+    console.log('▶️ Game resumed after skill selection');
+    
+    // Grant 0.5 seconds of invulnerability
+    this.eventBus.emit('player:set-invulnerable', { duration: 0.5 });
+    console.log('🛡️ Player granted 0.5s invulnerability');
   }
 
   private onWindowResize(): void {
@@ -412,39 +311,15 @@ export class UISystem {
     this.camera.updateProjectionMatrix();
     
     // Reposicionar elementos com escala fixa
-    const baseScale = 0.15;
-
-    if (
-      this.scoreText === undefined 
-      || this.healthText === undefined 
-      || this.healthBar === undefined
-      || this.healthBarBg === undefined
-      || this.ammoText === undefined
-    ) {
-      console.warn('One or more UI elements not initialized yet, skipping update');
-      return;
-    }
-
-    // Update positions
-    this.scoreText.position.x = -aspect * 0.9;
-    this.scoreText.scale.setScalar(baseScale);
-    
-    this.healthText.scale.setScalar(baseScale);
-    
-    this.ammoText.position.x = aspect * 0.9;
-    this.ammoText.scale.setScalar(baseScale);
-    
-    // Update health bar width
-    const barWidth = Math.min(aspect * 0.3, 0.5);
-    const originalWidth = Math.min(window.innerWidth / window.innerHeight * 0.3, 0.5);
-    this.healthBarBg.scale.x = barWidth / originalWidth;
-    this.healthBar.scale.x = (barWidth / originalWidth) * (this.currentHealth / this.maxHealth);
-    this.healthBar.position.x = -barWidth * 0.5 * (1 - (this.currentHealth / this.maxHealth));
+  // Removido: ajuste de wave timer e barra de XP 3D
   }
   
   
   public dispose(): void {
     window.removeEventListener('resize', this.onWindowResize.bind(this));
+    
+    // Dispose HTML skill modal
+    this.htmlSkillModal.dispose();
     
     // Dispose materials and geometries
     this.hudGroup.traverse((object) => {
@@ -468,11 +343,13 @@ export class UISystem {
     return this.currentScore;
   }
   
-  public getHealth(): { current: number; max: number } {
-    return { current: this.currentHealth, max: this.maxHealth };
-  }
+  // getHealth removido: barra de vida do HUD não existe mais
   
   public getAmmo(): { current: number; max: number } {
-    return { current: this.currentAmmo, max: this.maxAmmo };
+  return { current: this.currentAmmo, max: this.maxAmmo };
   }
+
+  // Boss health bar methods removidos - agora gerenciados pelo HUD HTML
+
+  // Wave timer methods removidos - agora gerenciados pelo HUD HTML
 }

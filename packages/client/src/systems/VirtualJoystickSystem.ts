@@ -112,14 +112,16 @@ export class VirtualJoystickSystem {
     // Listen for touches anywhere on the screen
     document.addEventListener('touchstart', (e) => {
       if (!this.isVisible() || this.isDragging) return;
-      
+
       const touch = e.touches[0];
       const targetElement = e.target as Element;
-      
-      // Don't interfere with other UI elements
+
+      // Não interferir com elementos interativos da HUD
       if (targetElement && (
         targetElement.closest('#debug-panel') ||
-        targetElement.closest('#virtual-joystick')
+        targetElement.closest('#virtual-joystick') ||
+        targetElement.closest('#game-hud') ||
+        targetElement.closest('.hud-notch')
       )) {
         return;
       }
@@ -201,11 +203,11 @@ export class VirtualJoystickSystem {
     this.isFloating = false;
     this.joystickContainer.classList.remove('floating');
 
-    // Reset to original CSS positioning
-    this.joystickContainer.style.left = '50%';
-    this.joystickContainer.style.top = 'auto';
-    this.joystickContainer.style.bottom = '50px';
-    this.joystickContainer.style.transform = 'translateX(-50%)';
+    // Reset to original CSS positioning (let CSS media queries handle positioning)
+    this.joystickContainer.style.left = '';
+    this.joystickContainer.style.top = '';
+    this.joystickContainer.style.bottom = '';
+    this.joystickContainer.style.transform = '';
 
     // Update center position
     this.updateDimensions();
@@ -215,6 +217,7 @@ export class VirtualJoystickSystem {
     if (!this.joystickContainer || !this.joystickKnob) return;
 
     this.isDragging = true;
+    this.joystickContainer.classList.add('active');
     this.joystickKnob.classList.add('active');
     this.handleInteraction(event);
   }
@@ -252,9 +255,10 @@ export class VirtualJoystickSystem {
   }
 
   private endInteraction(): void {
-    if (!this.joystickKnob) return;
+    if (!this.joystickContainer || !this.joystickKnob) return;
 
     this.isDragging = false;
+    this.joystickContainer.classList.remove('active');
     this.joystickKnob.classList.remove('active');
 
     // Reset knob to center

@@ -12,7 +12,8 @@ export enum GameStateEnum {
   MENU = 'menu',
   PLAYING = 'playing',
   PAUSED = 'paused',
-  GAME_OVER = 'game_over'
+  GAME_OVER = 'game_over',
+  VICTORY = 'victory'
 }
 
 export interface GameStats {
@@ -22,6 +23,8 @@ export interface GameStats {
   shotsFired: number;
   accuracy: number;
   enemiesEscaped: number;
+  matchDuration?: number; // Real-time duration for victory screen
+  isVictory?: boolean; // Indicates if this was a victory
 }
 
 export class GameStateManager implements Subject {
@@ -92,10 +95,20 @@ export class GameStateManager implements Subject {
     this.eventBus.on('game:paused', () => this.pauseGame());
     this.eventBus.on('game:resumed', () => this.resumeGame());
     
+    // Eventos do HudSystem
+    this.eventBus.on('game:pause', () => this.pauseGame());
+    this.eventBus.on('game:resume', () => this.resumeGame());
+    
     // Listen to game:over from Player and change state
     this.eventBus.on('game:over', (data) => {
       console.log('🔚 GameStateManager received game:over with stats:', data.stats);
       this.setState(GameStateEnum.GAME_OVER);
+    });
+
+    // Listen to game:victory from GameTimer
+    this.eventBus.on('game:victory', (data: { gameTime: number; matchDuration: number }) => {
+      console.log('🎉 GameStateManager received game:victory - 6 minutes survived!', data);
+      this.setState(GameStateEnum.VICTORY);
     });
     this.eventBus.on('game:exit', () => {
       this.resetGameStats();
@@ -254,6 +267,13 @@ export class GameStateManager implements Subject {
   }
 
   /**
+   * Verifica se o jogo foi vencido
+   */
+  public isVictory(): boolean {
+    return this.currentState === GameStateEnum.VICTORY;
+  }
+
+  /**
    * Reseta as estatísticas do jogo
    */
   private resetGameStats(): void {
@@ -263,8 +283,11 @@ export class GameStateManager implements Subject {
       enemiesDestroyed: 0,
       shotsFired: 0,
       accuracy: 0,
-      enemiesEscaped: 0
+      enemiesEscaped: 0,
+      matchDuration: 0,
+      isVictory: false
     };
+    console.log('📊 GameStateManager: Stats reset for new game');
   }
 
   /**
@@ -272,7 +295,7 @@ export class GameStateManager implements Subject {
    */
   private updateTimeAlive(): void {
     if (this.gameStartTime > 0) {
-      this.gameStats.timeAlive = Date.now() - this.gameStartTime;
+      this.gameStats.timeAlive = (Date.now() - this.gameStartTime) / 1000; // Convert to seconds
     }
   }
 
@@ -287,6 +310,7 @@ export class GameStateManager implements Subject {
     }
   }
 
+
   /**
    * Manipula mudanças de estado específicas
    */
@@ -295,6 +319,10 @@ export class GameStateManager implements Subject {
       case GameStateEnum.MENU:
         // Limpar dados do jogo anterior se necessário
         this.resetGameStats();
+        
+        // Clear all temporary game objects when returning to menu
+        this.eventBus.emit('particles:clear', {});
+        this.eventBus.emit('xp-orbs:clear', {});
 
         this.eventBus.emit('game:main', {});
         break;
@@ -320,6 +348,18 @@ export class GameStateManager implements Subject {
       case GameStateEnum.GAME_OVER:
         // Don't emit game:over here - let the Player emit it with correct stats
         console.log('Game state changed to GAME_OVER');
+        
+        // Clear all temporary game objects like particles and XP orbs
+        this.eventBus.emit('particles:clear', {});
+        this.eventBus.emit('xp-orbs:clear', {});
+        break;
+      
+      case GameStateEnum.VICTORY:
+        console.log('Game state changed to VICTORY - 6 minutes survived!');
+        
+        // Clear all temporary game objects like particles and XP orbs
+        this.eventBus.emit('particles:clear', {});
+        this.eventBus.emit('xp-orbs:clear', {});
         break;
     }
   }
@@ -407,6 +447,18 @@ export class GameStateManager implements Subject {
             break;
           default:
             console.warn('Unknown game over action:', data.action);
+        }
+        break;
+      case 'victory':
+        switch (data.action) {
+          case 'restart':
+            this.eventBus.emit('game:started', { difficulty: 'normal' });
+            break;
+          case 'exit':
+            this.eventBus.emit('game:main', {});
+            break;
+          default:
+            console.warn('Unknown victory action:', data.action);
         }
         break;
       default:

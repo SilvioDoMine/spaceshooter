@@ -20,6 +20,8 @@ export interface Particle {
   createdAt: number;
   lifetime: number;
   initialSize: number;
+  startColor: THREE.Color;
+  endColor: THREE.Color;
   
   // Lifecycle management
   get isDead(): boolean;
@@ -32,10 +34,14 @@ export class ParticleImpl implements Particle {
   createdAt!: number;
   lifetime!: number;
   initialSize!: number;
+  startColor!: THREE.Color;
+  endColor!: THREE.Color;
   
   constructor(geometry: THREE.BufferGeometry) {
     this.mesh = new THREE.Mesh(geometry);
     this.velocity = new THREE.Vector3();
+    this.startColor = new THREE.Color();
+    this.endColor = new THREE.Color();
   }
   
   get isDead(): boolean {
@@ -61,6 +67,10 @@ export class ParticleImpl implements Particle {
     
     // Reset scale
     this.mesh.scale.setScalar(this.initialSize);
+    
+    // Store colors for interpolation
+    this.startColor.copy(config.color.start);
+    this.endColor.copy(config.color.end);
     
     // Reset color
     const material = this.mesh.material as THREE.MeshBasicMaterial;
@@ -99,6 +109,17 @@ export class ParticleSystem {
     color: { 
       start: new THREE.Color(0xffff00), // Amarelo
       end: new THREE.Color(0xff8800)    // Laranja
+    }
+  };
+
+  private static readonly LEVEL_UP_CONFIG: ParticleConfig = {
+    count: 25, // Mais partículas para efeito mais impressionante
+    lifetime: 2000, // 2 segundos - efeito mais duradouro
+    speed: { min: 1, max: 5 },
+    size: { min: 0.08, max: 0.2 }, // Partículas maiores
+    color: { 
+      start: new THREE.Color(0xffd700), // Dourado brilhante
+      end: new THREE.Color(0xffaa00)    // Dourado mais escuro
     }
   };
 
@@ -170,6 +191,11 @@ export class ParticleSystem {
       this.createHitEffect(position);
     });
     
+    this.eventBus.on('particles:level-up', (data) => {
+      const position = new THREE.Vector3(data.position.x, data.position.y, data.position.z);
+      this.createLevelUpEffect(position);
+    });
+    
     // ParticleSystem update is now called directly from Game loop
     
     this.eventBus.on('particles:clear', () => {
@@ -189,6 +215,13 @@ export class ParticleSystem {
    */
   createHitEffect(position: THREE.Vector3): void {
     this.createParticleEffect(position, ParticleSystem.HIT_CONFIG);
+  }
+
+  /**
+   * Cria um efeito de level up na posição especificada
+   */
+  createLevelUpEffect(position: THREE.Vector3): void {
+    this.createParticleEffect(position, ParticleSystem.LEVEL_UP_CONFIG);
   }
 
   /**
@@ -295,10 +328,8 @@ export class ParticleSystem {
       // Atualizar cor e transparência
       const material = particle.mesh.material as THREE.MeshBasicMaterial;
       
-      // Interpolação de cor
-      const startColor = ParticleSystem.EXPLOSION_CONFIG.color.start;
-      const endColor = ParticleSystem.EXPLOSION_CONFIG.color.end;
-      material.color.lerpColors(startColor, endColor, normalizedAge);
+      // Interpolação de cor usando as cores da partícula
+      material.color.lerpColors(particle.startColor, particle.endColor, normalizedAge);
       
       // Fade out
       material.opacity = 1 - normalizedAge;
@@ -370,10 +401,4 @@ export class ParticleSystem {
     return this.activeParticles.size;
   }
 
-  /**
-   * Gera número aleatório entre min e max
-   */
-  private randomBetween(min: number, max: number): number {
-    return min + Math.random() * (max - min);
-  }
 }

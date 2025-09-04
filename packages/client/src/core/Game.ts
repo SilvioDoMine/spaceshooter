@@ -8,11 +8,15 @@ import { MenuSystem } from '../systems/MenuSystem';
 import { EntitySystem } from '../systems/EntitySystem';
 import { RenderingSystem } from '../systems/RenderingSystem';
 import { ParticleSystem } from '../systems/ParticleSystem';
+import { XPOrbSystem } from '../systems/XPOrbSystem';
 import { BackgroundSystem } from '../systems/BackgroundSystem';
 import { DebugSystem } from '../systems/DebugSystem';
 import { VirtualJoystickSystem } from '../systems/VirtualJoystickSystem';
 import { CameraSystem } from '../systems/CameraSystem';
+import { SpawnEffectSystem } from '../systems/SpawnEffectSystem';
 import { UIManager } from '../managers/UIManager';
+import { HudSystem } from '../ui/HudSystem';
+import { GameTimer } from '../systems/GameTimer';
 
 /**
  * Game - Core game class that manages all systems and lifecycle
@@ -28,6 +32,15 @@ export class Game {
   private isRunning: boolean = false;
   private lastFrameTime: number = 0;
   private animationId: number | null = null;
+  
+  // Slow motion and pause system
+  private baseTimeScale: number = 1.0;
+  private currentTimeScale: number = 1.0;
+  private targetTimeScale: number = 1.0;
+  private slowMotionTimer: number = 0;
+  private slowMotionDuration: number = 0;
+  private isSlowMotionActive: boolean = false;
+  private isPausedForSkillSelection: boolean = false;
 
   // Direct system references - no more Map lookup hell
   private renderingSystem!: RenderingSystem;
@@ -35,6 +48,7 @@ export class Game {
   private audioSystem!: AudioSystem;  
   private uiSystem!: UISystem;
   private particleSystem!: ParticleSystem;
+  private xpOrbSystem!: XPOrbSystem;
   private menuSystem!: MenuSystem;
   private gameStateManager!: GameStateManager;
   private entitySystem!: EntitySystem;
@@ -42,11 +56,15 @@ export class Game {
   private debugSystem!: DebugSystem;
   private virtualJoystickSystem!: VirtualJoystickSystem;
   private cameraSystem!: CameraSystem;
+  private spawnEffectSystem!: SpawnEffectSystem;
   private uiManager!: UIManager;
+  private hudSystem!: HudSystem;
+  private gameTimer!: GameTimer;
 
   constructor() {
     this.eventBus = new EventBus();
     this.setupGlobalErrorHandling();
+    this.setupSlowMotionAndPauseHandlers();
   }
 
   /**
@@ -125,7 +143,10 @@ export class Game {
     if (this.backgroundSystem) this.backgroundSystem.dispose();
     if (this.debugSystem) this.debugSystem.dispose();
     if (this.virtualJoystickSystem) this.virtualJoystickSystem.dispose();
+    if (this.spawnEffectSystem) this.spawnEffectSystem.dispose();
     if (this.cameraSystem) this.cameraSystem.dispose();
+    if (this.hudSystem) this.hudSystem.dispose();
+    // GameTimer doesn't need disposal, it's event-based
     
     assetManager.dispose();
     
@@ -159,18 +180,27 @@ export class Game {
     this.uiSystem = new UISystem(this.eventBus);
     this.uiManager = new UIManager(this.eventBus);
     this.particleSystem = new ParticleSystem(this.eventBus);
+    this.xpOrbSystem = new XPOrbSystem(this.eventBus);
     this.menuSystem = new MenuSystem(this.eventBus);
     this.gameStateManager = new GameStateManager(this.eventBus);
     this.backgroundSystem = new BackgroundSystem(this.eventBus);
     this.debugSystem = new DebugSystem(this.eventBus);
     this.virtualJoystickSystem = new VirtualJoystickSystem(this.eventBus);
     this.cameraSystem = new CameraSystem(this.eventBus, this.renderingSystem.camera);
+    this.spawnEffectSystem = new SpawnEffectSystem(this.eventBus, this.renderingSystem.scene);
+    this.hudSystem = new HudSystem(this.eventBus);
     
     // Setup world bounds synchronization
     this.setupWorldBoundsSynchronization();
     
     // EntitySystem needs RenderingSystem for direct scene manipulation
     this.entitySystem = new EntitySystem(this.eventBus, this.renderingSystem);
+    
+    // Initialize GameTimer after all dependent systems are created
+    this.gameTimer = new GameTimer(this.eventBus, this.gameStateManager);
+    
+    // Connect GameTimer to systems that need it
+    this.entitySystem.setGameTimer(this.gameTimer);
     
     // BackgroundSystem needs RenderingSystem reference
     this.backgroundSystem.setRenderingSystem(this.renderingSystem);
@@ -205,16 +235,25 @@ export class Game {
     let deltaTime = ((currentTime - this.lastFrameTime) / 1000);
     this.lastFrameTime = currentTime;
 
-    // Apply debug time scale
-    const timeScale = this.debugSystem.getTimeScale();
-    deltaTime *= timeScale;
+    // Update slow motion
+    this.updateSlowMotion(deltaTime);
+
+    // Apply our time scale (includes slow motion and pause)
+    const finalTimeScale = this.isPausedForSkillSelection ? 0 : this.currentTimeScale;
+    
+    // Apply debug time scale as well
+    const debugTimeScale = this.debugSystem.getTimeScale();
+    deltaTime *= (finalTimeScale * debugTimeScale);
 
     // Update systems directly - no events needed for core game loop
     if (this.gameStateManager.isPlaying()) {
+      this.gameTimer.update(deltaTime); // Update centralized timer first
       this.cameraSystem.update(deltaTime);
       this.backgroundSystem.update(deltaTime);
-      this.entitySystem.update(deltaTime);
+      this.spawnEffectSystem.update(deltaTime);
+      this.entitySystem.update(deltaTime); // EntitySystem now includes WaveSystem
       this.particleSystem.update(deltaTime);
+      this.xpOrbSystem.update(deltaTime);
     }
 
     // Render frame directly
@@ -241,6 +280,59 @@ export class Game {
       
       console.log('🌍 World bounds synchronized across systems:', worldBounds);
     });
+  }
+
+  private setupSlowMotionAndPauseHandlers(): void {
+    this.eventBus.on('game:slow-motion', (data) => {
+      this.startSlowMotion(data.duration, data.targetScale);
+    });
+
+    this.eventBus.on('game:pause-for-skill-selection', () => {
+      this.pauseForSkillSelection();
+    });
+
+    this.eventBus.on('game:resume-after-skill-selection', () => {
+      this.resumeAfterSkillSelection();
+    });
+  }
+
+  private startSlowMotion(duration: number, targetScale: number): void {
+    console.log(`🐌 Starting slow motion: ${targetScale}x for ${duration}s`);
+    this.isSlowMotionActive = true;
+    this.slowMotionDuration = duration;
+    this.slowMotionTimer = 0;
+    this.targetTimeScale = targetScale;
+  }
+
+  private updateSlowMotion(rawDeltaTime: number): void {
+    if (!this.isSlowMotionActive) return;
+
+    this.slowMotionTimer += rawDeltaTime;
+    
+    // Linear interpolation from 1.0 to targetTimeScale over duration
+    const progress = Math.min(this.slowMotionTimer / this.slowMotionDuration, 1.0);
+    this.currentTimeScale = 1.0 - (progress * (1.0 - this.targetTimeScale));
+    
+    if (progress >= 1.0) {
+      this.currentTimeScale = this.targetTimeScale;
+      this.isSlowMotionActive = false;
+      console.log(`🐌 Slow motion complete. Final scale: ${this.currentTimeScale}`);
+      
+      // Emit event when slow motion is complete
+      this.eventBus.emit('game:slow-motion-complete');
+    }
+  }
+
+  private pauseForSkillSelection(): void {
+    console.log('⏸️ Game paused for skill selection');
+    this.isPausedForSkillSelection = true;
+  }
+
+  private resumeAfterSkillSelection(): void {
+    console.log('▶️ Game resumed after skill selection');
+    this.isPausedForSkillSelection = false;
+    this.currentTimeScale = 1.0; // Reset to normal speed
+    this.isSlowMotionActive = false; // Clear any slow motion
   }
 
   private setupGlobalErrorHandling(): void {

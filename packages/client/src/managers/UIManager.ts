@@ -36,6 +36,36 @@ export class UIManager {
       });
     });
 
+    this.eventBus.on('player:level-changed', (data: { level: number; currentXP: number; xpToNext: number; progress: number }) => {
+      this.eventBus.emit('ui:update-level', {
+        level: data.level,
+        currentXP: data.currentXP,
+        xpToNext: data.xpToNext,
+        progress: data.progress
+      });
+    });
+
+    this.eventBus.on('player:level-up', (data: { oldLevel: number; newLevel: number; currentXP: number; skillOptions: any[] }) => {
+      this.eventBus.emit('ui:level-up-effect', {
+        oldLevel: data.oldLevel,
+        newLevel: data.newLevel,
+        currentXP: data.currentXP
+      });
+      
+      // Show skill selection if there are options available
+      if (data.skillOptions && data.skillOptions.length > 0) {
+        this.eventBus.emit('ui:show-skill-selection', {
+          skillOptions: data.skillOptions
+        });
+      }
+    });
+
+    this.eventBus.on('ui:skill-selected', (data: { skillType: string }) => {
+      this.eventBus.emit('player:skill-selected', {
+        skillType: data.skillType
+      });
+    });
+
     // Listen to game state changes for UI updates
     this.eventBus.on('game:started', () => {
       // Reset UI to initial state

@@ -5,10 +5,12 @@
 
 import { EventBus } from '../core/EventBus';
 import { GameStats } from './GameStateManager';
+import { PlayerSkill, SKILLS_CONFIG, SKILL_RARITY_MAP } from '@spaceshooter/shared';
 
 export class MenuSystem {
   private container: HTMLElement;
   private eventBus: EventBus;
+  private playerSkills: PlayerSkill[] = [];
 
   constructor(eventBus: EventBus) {
     this.eventBus = eventBus;
@@ -31,16 +33,27 @@ export class MenuSystem {
       this.showGameOverScreen(data.stats);
     });
 
+    this.eventBus.on('game:victory-stats', (data) => {
+      // Show victory screen with real player stats
+      this.showVictoryScreen(data.stats);
+    });
+
     this.eventBus.on('game:paused', () => {
       this.showPauseScreen();
     });
 
     this.eventBus.on('game:started', () => {
       this.hideAllMenus();
+      // Reset skills on game start
+      this.playerSkills = [];
     });
 
     this.eventBus.on('game:resumed', () => {
       this.hideAllMenus();
+    });
+
+    this.eventBus.on('player:skills-updated', (data: { skills: PlayerSkill[] }) => {
+      this.playerSkills = data.skills || [];
     });
   }
 
@@ -121,13 +134,67 @@ export class MenuSystem {
   }
 
   /**
+   * Mostra a tela de vitória com estatísticas especiais
+   */
+  showVictoryScreen(stats: GameStats): void {
+    console.log('🎉 MenuSystem: Showing victory screen with stats:', stats);
+    
+    const matchDurationFormatted = stats.matchDuration ? this.formatTime(stats.matchDuration) : 'N/A';
+    
+    this.container.innerHTML = `
+      <div class="menu-screen" id="victory">
+        <div class="menu-content">
+          <h1 class="victory-title">🎉 VITÓRIA! 🎉</h1>
+          <div class="victory-subtitle">Você sobreviveu aos 6 minutos!</div>
+          <div class="stats-container">
+            <div class="stat-item highlight">
+              <span class="stat-label">⏰ Tempo de Jogo:</span>
+              <span class="stat-value">06:00</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">⌛ Duração Real da Partida:</span>
+              <span class="stat-value">${matchDurationFormatted}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Pontuação Final:</span>
+              <span class="stat-value">${stats.score}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Inimigos Destruídos:</span>
+              <span class="stat-value">${stats.enemiesDestroyed}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Tiros Disparados:</span>
+              <span class="stat-value">${stats.shotsFired}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Precisão:</span>
+              <span class="stat-value">${stats.accuracy.toFixed(1)}%</span>
+            </div>
+          </div>
+          <div class="menu-buttons">
+            <button class="menu-button" id="restart-button">Jogar Novamente</button>
+            <button class="menu-button secondary" id="menu-button">Menu Principal</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    this.container.style.display = 'flex';
+    this.setupVictoryEvents();
+  }
+
+  /**
    * Mostra a tela de pause
    */
   showPauseScreen(): void {
+    const abilitiesGridHTML = this.generateAbilitiesGrid();
+    
     this.container.innerHTML = `
       <div class="menu-screen" id="pause-menu">
         <div class="menu-content">
           <h1 class="pause-title">PAUSADO</h1>
+          ${abilitiesGridHTML}
           <div class="menu-buttons">
             <button class="menu-button" id="resume-button">Continuar</button>
             <button class="menu-button secondary" id="menu-button">Menu Principal</button>
@@ -136,9 +203,9 @@ export class MenuSystem {
       </div>
     `;
 
-
     this.container.style.display = 'flex';
     this.setupPauseEvents();
+    this.setupAbilityTooltips();
   }
 
   /**
@@ -212,6 +279,51 @@ export class MenuSystem {
         color: #ff4444;
         text-shadow: 0 0 10px rgba(255, 68, 68, 0.5);
         letter-spacing: 2px;
+      }
+
+      .victory-title {
+        font-size: 2.5em;
+        margin: 0 0 30px 0;
+        color: #00ff00;
+        text-shadow: 0 0 20px rgba(0, 255, 0, 0.8);
+        letter-spacing: 2px;
+        animation: victoryGlow 2s ease-in-out infinite alternate;
+      }
+
+      .victory-subtitle {
+        color: #88ff88;
+        font-size: 1.2em;
+        margin: -20px 0 30px 0;
+        text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+        font-weight: bold;
+      }
+
+      @keyframes victoryGlow {
+        0% { 
+          text-shadow: 0 0 20px rgba(0, 255, 0, 0.8), 0 0 30px rgba(255, 255, 0, 0.3); 
+        }
+        100% { 
+          text-shadow: 0 0 30px rgba(0, 255, 0, 1), 0 0 50px rgba(255, 255, 0, 0.6); 
+        }
+      }
+
+      .stat-item.highlight {
+        background: rgba(0, 255, 0, 0.1);
+        border: 1px solid rgba(0, 255, 0, 0.3);
+        border-radius: 5px;
+        padding: 12px;
+        margin: 15px 0;
+      }
+
+      .stat-item.highlight .stat-label {
+        color: #88ff88;
+        font-weight: bold;
+      }
+
+      .stat-item.highlight .stat-value {
+        color: #00ff00;
+        font-weight: bold;
+        font-size: 1.2em;
       }
 
       .pause-title {
@@ -312,7 +424,7 @@ export class MenuSystem {
           padding: 25px;
         }
         
-        .game-title, .game-over-title, .pause-title {
+        .game-title, .game-over-title, .pause-title, .victory-title {
           font-size: 2.2em;
           margin-bottom: 25px;
         }
@@ -347,7 +459,7 @@ export class MenuSystem {
           overflow-y: auto;
         }
         
-        .game-title, .game-over-title, .pause-title {
+        .game-title, .game-over-title, .pause-title, .victory-title {
           font-size: 1.8em;
           margin: 0 0 20px 0;
           line-height: 1.2;
@@ -402,7 +514,7 @@ export class MenuSystem {
           justify-content: flex-start;
         }
         
-        .game-title, .game-over-title, .pause-title {
+        .game-title, .game-over-title, .pause-title, .victory-title {
           font-size: 1.8em;
           margin: 10px 0 20px 0;
         }
@@ -423,7 +535,7 @@ export class MenuSystem {
           margin: 0;
         }
         
-        .game-title, .game-over-title, .pause-title {
+        .game-title, .game-over-title, .pause-title, .victory-title {
           font-size: 1.4em;
           margin: 5px 0 15px 0;
           line-height: 1.1;
@@ -470,7 +582,7 @@ export class MenuSystem {
           overflow-y: auto;
         }
         
-        .game-title, .game-over-title, .pause-title {
+        .game-title, .game-over-title, .pause-title, .victory-title {
           font-size: 1.2em;
           margin: 5px 0 10px 0;
         }
@@ -484,6 +596,352 @@ export class MenuSystem {
         .menu-buttons {
           gap: 8px;
           margin-top: 10px;
+        }
+      }
+
+      /* Abilities Section Styles */
+      .abilities-section {
+        margin: 20px 0;
+        text-align: center;
+      }
+
+      .abilities-title {
+        color: #00ffff;
+        font-size: 1.2em;
+        margin: 0 0 15px 0;
+        text-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
+      }
+
+      .abilities-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(50px, 55px));
+        gap: 5px;
+        max-width: 400px;
+        margin: 0 auto;
+      }
+
+      .ability-item {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        cursor: pointer;
+        transition: transform 0.2s ease;
+      }
+
+      .ability-item:hover {
+        transform: scale(1.1);
+      }
+
+      .ability-icon {
+        width: 50px;
+        height: 50px;
+        border: 3px solid #3fa7ff;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5em;
+        background: rgba(0, 20, 40, 0.8);
+        box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+        margin-bottom: 5px;
+        position: relative;
+      }
+
+      .ability-level {
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        background: #ff4444;
+        color: white;
+        font-size: 0.5em;
+        font-weight: bold;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #fff;
+        z-index: 10;
+      }
+
+      .abilities-empty {
+        color: #888;
+        font-style: italic;
+        line-height: 1.6;
+      }
+
+      .abilities-empty p {
+        margin: 8px 0;
+      }
+
+      /* Tooltip Styles */
+      .ability-tooltip {
+        position: fixed;
+        background: rgba(0, 20, 40, 0.95);
+        border: 2px solid #00ffff;
+        border-radius: 8px;
+        padding: 12px;
+        color: white;
+        font-family: 'Courier New', monospace;
+        font-size: 0.9em;
+        max-width: 250px;
+        z-index: 2000;
+        display: none;
+        box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+      }
+
+      .tooltip-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+
+      .tooltip-icon {
+        font-size: 1.2em;
+      }
+
+      .tooltip-name {
+        font-weight: bold;
+        color: #00ffff;
+        flex: 1;
+      }
+
+      .tooltip-level {
+        background: #ff4444;
+        color: white;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 0.8em;
+      }
+
+      .tooltip-rarity {
+        font-weight: bold;
+        font-size: 0.8em;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 8px;
+      }
+
+      .tooltip-description {
+        color: #ccc;
+        line-height: 1.4;
+        margin-bottom: 8px;
+      }
+
+      .tooltip-effect {
+        color: #88ff88;
+        line-height: 1.4;
+        font-size: 0.85em;
+      }
+
+      /* Mobile Responsive for Abilities */
+      @media (max-width: 600px) {
+        .abilities-grid {
+          grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+          gap: 12px;
+          max-width: 300px;
+        }
+
+        .ability-icon {
+          width: 45px;
+          height: 45px;
+          font-size: 1.3em;
+        }
+
+        .ability-level {
+          top: -6px;
+          right: -6px;
+          width: 18px;
+          height: 18px;
+          font-size: 0.7em;
+        }
+
+        .ability-tooltip {
+          font-size: 0.8em;
+          max-width: 200px;
+          padding: 10px;
+        }
+      }
+
+      @media (max-width: 400px) {
+        .abilities-grid {
+          grid-template-columns: repeat(auto-fit, minmax(50px, 1fr));
+          gap: 10px;
+          max-width: 250px;
+        }
+
+        .ability-icon {
+          width: 40px;
+          height: 40px;
+          font-size: 1.1em;
+        }
+
+        .ability-level {
+          top: -5px;
+          right: -5px;
+          width: 16px;
+          height: 16px;
+          font-size: 0.6em;
+        }
+      }
+
+      /* Mobile landscape - specifically for abilities grid */
+      @media (orientation: landscape) and (max-height: 500px) {
+        #menu-container {
+          padding: 5px;
+          overflow-y: auto;
+          align-items: flex-start;
+          padding-top: 10px;
+        }
+
+        .menu-content {
+          min-width: 90%;
+          max-width: none;
+          padding: 10px;
+          margin: auto;
+          max-height: 90vh;
+          overflow-y: auto;
+        }
+
+        .game-title, .game-over-title, .pause-title, .victory-title {
+          font-size: 1.4em;
+          margin: 5px 0 10px 0;
+          line-height: 1.1;
+        }
+
+        .abilities-section h3 {
+          margin: 5px 0 8px 0;
+          font-size: 1em;
+        }
+
+        .abilities-grid {
+          grid-template-columns: repeat(auto-fit, minmax(35px, 40px));
+          gap: 6px;
+          max-width: 320px;
+          margin: 0 auto 10px auto;
+        }
+
+        .ability-icon {
+          width: 35px;
+          height: 35px;
+          font-size: 1em;
+          border-radius: 6px;
+          border-width: 2px;
+          margin-bottom: 3px;
+        }
+
+        .ability-level {
+          top: -4px;
+          right: -4px;
+          width: 14px;
+          height: 14px;
+          font-size: 0.55em;
+          border-width: 1px;
+        }
+
+        .menu-buttons {
+          gap: 8px;
+          margin-top: 10px;
+        }
+
+        .menu-button {
+          font-size: 0.9em;
+          padding: 8px 15px;
+          min-height: 36px;
+        }
+
+        .stats-container {
+          margin: 8px 0;
+        }
+
+        .stat-item {
+          margin: 4px 0;
+          padding: 4px 0;
+          font-size: 0.8em;
+        }
+
+        .ability-tooltip {
+          font-size: 0.75em;
+          max-width: 200px;
+          padding: 8px;
+          border-radius: 6px;
+        }
+
+        .tooltip-header {
+          font-size: 0.85em;
+          margin-bottom: 4px;
+        }
+
+        .tooltip-description {
+          font-size: 0.8em;
+          line-height: 1.2;
+        }
+      }
+
+      /* Extra narrow landscape (phones rotated) */
+      @media (orientation: landscape) and (max-height: 400px) {
+        .abilities-grid {
+          grid-template-columns: repeat(auto-fit, minmax(30px, 35px));
+          gap: 4px;
+          max-width: 280px;
+        }
+
+        .ability-icon {
+          width: 30px;
+          height: 30px;
+          font-size: 0.9em;
+          border-radius: 5px;
+          margin-bottom: 2px;
+        }
+
+        .ability-level {
+          top: -3px;
+          right: -3px;
+          width: 12px;
+          height: 12px;
+          font-size: 0.5em;
+        }
+
+        .game-title, .game-over-title, .pause-title, .victory-title {
+          font-size: 1.2em;
+          margin: 3px 0 8px 0;
+        }
+
+        .abilities-section h3 {
+          margin: 3px 0 5px 0;
+          font-size: 0.9em;
+        }
+
+        .menu-button {
+          font-size: 0.8em;
+          padding: 6px 12px;
+          min-height: 32px;
+        }
+
+        .menu-buttons {
+          gap: 6px;
+          margin-top: 8px;
+        }
+
+        .ability-tooltip {
+          font-size: 0.7em;
+          max-width: 180px;
+          padding: 6px;
+          border-radius: 4px;
+          border-width: 1px;
+        }
+
+        .tooltip-header {
+          font-size: 0.8em;
+          margin-bottom: 3px;
+        }
+
+        .tooltip-description {
+          font-size: 0.75em;
+          line-height: 1.1;
         }
       }
     `;
@@ -579,6 +1037,34 @@ export class MenuSystem {
   }
 
   /**
+   * Configura eventos para a tela de vitória
+   */
+  private setupVictoryEvents(): void {
+    const restartButton = document.getElementById('restart-button');
+    const menuButton = document.getElementById('menu-button');
+
+    if (restartButton) {
+      this.addButtonEvent(restartButton, () => {
+        console.log('🎉🔄 Victory Restart button clicked/touched');
+        this.eventBus.emit('menu:click', {
+          type: 'victory',
+          action: 'restart'
+        });
+      });
+    }
+
+    if (menuButton) {
+      this.addButtonEvent(menuButton, () => {
+        console.log('🎉🏠 Victory Menu button clicked/touched');
+        this.eventBus.emit('menu:click', {
+          type: 'victory',
+          action: 'exit'
+        });
+      });
+    }
+  }
+
+  /**
    * Configura eventos da tela de pause
    */
   private setupPauseEvents(): void {
@@ -605,6 +1091,181 @@ export class MenuSystem {
         });
       });
     }
+  }
+
+  /**
+   * Gera o HTML da grade de habilidades
+   */
+  private generateAbilitiesGrid(): string {
+    if (this.playerSkills.length === 0) {
+      return `
+        <div class="abilities-section">
+          <h3 class="abilities-title">Habilidades</h3>
+          <div class="abilities-empty">
+            <p>Nenhuma habilidade desbloqueada ainda.</p>
+            <p>Destrua inimigos para ganhar XP e subir de nível!</p>
+          </div>
+        </div>
+      `;
+    }
+
+    const skillsHTML = this.playerSkills.map(skill => {
+      const config = SKILLS_CONFIG[skill.type];
+      const rarity = SKILL_RARITY_MAP[skill.type] || 'rara';
+      const rarityColors = {
+        'rara': '#3fa7ff',
+        'epica': '#b86cff', 
+        'lendaria': '#ffd700'
+      };
+      const rarityColor = rarityColors[rarity];
+      
+      return `
+        <div class="ability-item" data-skill-type="${skill.type}">
+          <div class="ability-icon" style="border-color: ${rarityColor};">
+            ${config.icon || '⭐'}
+            <div class="ability-level">${skill.level}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <div class="abilities-section">
+        <h3 class="abilities-title">Habilidades Ativas</h3>
+        <div class="abilities-grid">
+          ${skillsHTML}
+        </div>
+      </div>
+    `;
+  }
+
+  /**
+   * Configura tooltips para as habilidades
+   */
+  private setupAbilityTooltips(): void {
+    const abilityItems = document.querySelectorAll('.ability-item');
+    const tooltip = this.createTooltip();
+    
+    abilityItems.forEach(item => {
+      const skillType = item.getAttribute('data-skill-type') as keyof typeof SKILLS_CONFIG;
+      if (!skillType) return;
+
+      const skill = this.playerSkills.find(s => s.type === skillType);
+      if (!skill) return;
+
+      const config = SKILLS_CONFIG[skillType];
+      const rarity = SKILL_RARITY_MAP[skillType];
+      const effect = config.effects[skill.level];
+      
+      const showTooltip = (e: Event) => {
+        const target = e.target as HTMLElement;
+        const rect = target.getBoundingClientRect();
+        
+        tooltip.innerHTML = `
+          <div class="tooltip-header">
+            <span class="tooltip-icon">${config.icon || '⭐'}</span>
+            <span class="tooltip-name">${config.name}</span>
+            <span class="tooltip-level">Nível ${skill.level}</span>
+          </div>
+          <div class="tooltip-rarity" style="color: ${this.getRarityColor(rarity)};">
+            ${this.getRarityLabel(rarity)}
+          </div>
+          <div class="tooltip-description">
+            ${config.description}
+          </div>
+          <div class="tooltip-effect">
+            <strong>Efeito atual:</strong> ${effect?.description || 'N/A'}
+          </div>
+        `;
+        
+        tooltip.style.display = 'block';
+        
+        // Calculate initial position
+        let left = rect.left + rect.width / 2;
+        let top = rect.top - 10;
+        let transformX = '-50%';
+        let transformY = '-100%';
+        
+        // Check viewport bounds and adjust position
+        const tooltipRect = tooltip.getBoundingClientRect();
+        const viewportWidth = window.innerWidth;
+        
+        // Horizontal bounds checking
+        if (left - tooltipRect.width / 2 < 10) {
+          // Too far left, align to left edge
+          left = rect.left;
+          transformX = '0%';
+        } else if (left + tooltipRect.width / 2 > viewportWidth - 10) {
+          // Too far right, align to right edge
+          left = rect.right;
+          transformX = '-100%';
+        }
+        
+        // Vertical bounds checking (especially important for landscape)
+        if (rect.top < tooltipRect.height + 20) {
+          // Not enough space above, show below
+          top = rect.bottom + 10;
+          transformY = '0%';
+        }
+        
+        tooltip.style.left = `${left}px`;
+        tooltip.style.top = `${top}px`;
+        tooltip.style.transform = `translate(${transformX}, ${transformY})`;
+      };
+      
+      const hideTooltip = () => {
+        tooltip.style.display = 'none';
+      };
+
+      // Desktop
+      item.addEventListener('mouseenter', showTooltip);
+      item.addEventListener('mouseleave', hideTooltip);
+      
+      // Mobile
+      item.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        showTooltip(e);
+        setTimeout(hideTooltip, 3000);
+      });
+    });
+  }
+
+  /**
+   * Cria elemento tooltip
+   */
+  private createTooltip(): HTMLElement {
+    let tooltip = document.getElementById('ability-tooltip');
+    if (!tooltip) {
+      tooltip = document.createElement('div');
+      tooltip.id = 'ability-tooltip';
+      tooltip.className = 'ability-tooltip';
+      document.body.appendChild(tooltip);
+    }
+    return tooltip;
+  }
+
+  /**
+   * Retorna a cor da raridade
+   */
+  private getRarityColor(rarity: string): string {
+    const colors = {
+      'rara': '#3fa7ff',
+      'epica': '#b86cff',
+      'lendaria': '#ffd700'
+    };
+    return colors[rarity as keyof typeof colors] || '#fff';
+  }
+
+  /**
+   * Retorna o label da raridade
+   */
+  private getRarityLabel(rarity: string): string {
+    const labels = {
+      'rara': 'Rara',
+      'epica': 'Épica', 
+      'lendaria': 'Lendária'
+    };
+    return labels[rarity as keyof typeof labels] || 'Comum';
   }
 
   /**
