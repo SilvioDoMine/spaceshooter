@@ -222,10 +222,6 @@ export class Game {
     await this.renderingSystem.loadAssets((progress) => {
       console.log(`Loading progress: ${progress.toFixed(1)}%`);
     });
-    
-    // Start the game automatically after everything is loaded
-    console.log('🎮 Starting game automatically...');
-    this.gameStateManager.startNewGame();
   }
 
   private gameLoop = (): void => {
