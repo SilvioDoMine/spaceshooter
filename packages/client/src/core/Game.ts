@@ -10,7 +10,7 @@ import { RenderingSystem } from '../systems/RenderingSystem';
 import { ParticleSystem } from '../systems/ParticleSystem';
 import { XPOrbSystem } from '../systems/XPOrbSystem';
 import { BackgroundSystem } from '../systems/BackgroundSystem';
-import { DebugSystem } from '../systems/DebugSystem';
+// import { DebugSystem } from '../systems/DebugSystem';
 import { VirtualJoystickSystem } from '../systems/VirtualJoystickSystem';
 import { CameraSystem } from '../systems/CameraSystem';
 import { SpawnEffectSystem } from '../systems/SpawnEffectSystem';
@@ -53,7 +53,7 @@ export class Game {
   private gameStateManager!: GameStateManager;
   private entitySystem!: EntitySystem;
   private backgroundSystem!: BackgroundSystem;
-  private debugSystem!: DebugSystem;
+  // private debugSystem!: DebugSystem;
   private virtualJoystickSystem!: VirtualJoystickSystem;
   private cameraSystem!: CameraSystem;
   private spawnEffectSystem!: SpawnEffectSystem;
@@ -141,7 +141,7 @@ export class Game {
     if (this.uiSystem) this.uiSystem.dispose();
     if (this.inputSystem) this.inputSystem.dispose();
     if (this.backgroundSystem) this.backgroundSystem.dispose();
-    if (this.debugSystem) this.debugSystem.dispose();
+    // if (this.debugSystem) this.debugSystem.dispose();
     if (this.virtualJoystickSystem) this.virtualJoystickSystem.dispose();
     if (this.spawnEffectSystem) this.spawnEffectSystem.dispose();
     if (this.cameraSystem) this.cameraSystem.dispose();
@@ -160,7 +160,7 @@ export class Game {
   public getEntitySystem(): EntitySystem { return this.entitySystem; }
   public getGameStateManager(): GameStateManager { return this.gameStateManager; }
   public getEventBus(): EventBus { return this.eventBus; }
-  public getDebugSystem(): DebugSystem { return this.debugSystem; }
+  // public getDebugSystem(): DebugSystem { return this.debugSystem; }
   public getCameraSystem(): CameraSystem { return this.cameraSystem; }
 
   // Private methods
@@ -184,7 +184,7 @@ export class Game {
     this.menuSystem = new MenuSystem(this.eventBus);
     this.gameStateManager = new GameStateManager(this.eventBus);
     this.backgroundSystem = new BackgroundSystem(this.eventBus);
-    this.debugSystem = new DebugSystem(this.eventBus);
+    // this.debugSystem = new DebugSystem(this.eventBus);
     this.virtualJoystickSystem = new VirtualJoystickSystem(this.eventBus);
     this.cameraSystem = new CameraSystem(this.eventBus, this.renderingSystem.camera);
     this.spawnEffectSystem = new SpawnEffectSystem(this.eventBus, this.renderingSystem.scene);
@@ -238,8 +238,8 @@ export class Game {
     const finalTimeScale = this.isPausedForSkillSelection ? 0 : this.currentTimeScale;
     
     // Apply debug time scale as well
-    const debugTimeScale = this.debugSystem.getTimeScale();
-    deltaTime *= (finalTimeScale * debugTimeScale);
+    // const debugTimeScale = this.debugSystem.getTimeScale();
+    // deltaTime *= (finalTimeScale * debugTimeScale);
 
     // Update systems directly - no events needed for core game loop
     if (this.gameStateManager.isPlaying()) {
